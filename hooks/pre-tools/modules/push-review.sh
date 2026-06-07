@@ -10,6 +10,12 @@
 # State file: .claude/tmp/push-review/<branch-slug>.json
 # Override via $STATE_DIR for testing.
 
+# pipefail so a `git diff | git hash-object` failure surfaces; without it,
+# an empty diff stream succeeds and yields the well-known empty-blob SHA,
+# which a stale state file can cache and reuse across any future empty-diff
+# state on the same branch (including post-force-reset).
+set -o pipefail
+
 : "${tool_name:=}"
 : "${input:=}"
 
@@ -69,10 +75,35 @@ if [[ "$current_branch" == "HEAD" || -z "$current_branch" ]]; then
 fi
 
 # Compute branch diff SHA (content-addressed, survives amend/rebase).
+# Well-known git empty-blob SHA — the value `git hash-object --stdin` produces
+# for an empty stream. We refuse to cache or trust this value: a state file
+# bearing it would be reusable across any future empty-diff state on the same
+# branch (e.g. after a force reset wipes commits).
+EMPTY_BLOB_SHA="e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+
 current_diff_sha=$(git diff --no-color "${base_branch}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
 if [[ -z "$current_diff_sha" ]]; then
   # git diff failed (disk full, etc). Allow push; underlying push will surface real failure.
   echo "push-review: git diff ${base_branch}...HEAD failed; allowing push to surface real error" >&2
+  exit 0
+fi
+
+if [[ "$current_diff_sha" == "$EMPTY_BLOB_SHA" ]]; then
+  # Empty diff against base: nothing to review and nothing to push. Treat as
+  # a sentinel that NEVER satisfies the cache check, then deny the push so
+  # the user is forced to confirm intent rather than push a no-op.
+  current_diff_sha="empty-diff"
+  jq -n --arg base "$base_branch" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": (
+        "Refusing to push: diff against " + $base + " is empty. " +
+        "Either no commits diverged from base, or the branch was force-reset. " +
+        "Verify intent before pushing."
+      )
+    }
+  }'
   exit 0
 fi
 
