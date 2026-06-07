@@ -1,0 +1,40 @@
+hooks/docs/session-start.md:18:- Max 3% code duplication (TS and Rust) — enforced by `jscpd` via `./tools/yamless/check.sh all`.
+hooks/docs/session-start.md:22:- `./tools/yamless/check.sh ts` — oxlint + oxfmt + tsc + imports + test location + no-mocks + duplication
+hooks/docs/session-start.md:23:- `./tools/yamless/check.sh rust` — fmt + clippy + file size + test location + mod-rs + layering + no-allow + duplication (fast gates; tests are separate)
+hooks/docs/session-start.md:24:- `./tools/yamless/test.sh rust` (or `./tools/yamless/test.sh`) — `cargo nextest run` split for orchestrator (rusqlite) vs rest (libsql)
+hooks/docs/session-start.md:30:- Dev sessions: Separate `yamless-*` tmux sessions per service (API :3000, Console :3001, Orchestrator :3002, AI :3003, Tasks :3004, Runner, Caddy). Attach with `tmux attach -t yamless-<name>` or `./dev attach <name>`; `./dev list` shows status. Start subset: `./dev start api orchestrator`. `./dev help` lists everything.
+hooks/pre-tools/modules/bash-commands.sh:8:#   3. Use yamless wrapper scripts for code checks
+hooks/pre-tools/modules/bash-commands.sh:74:# Rule 3: Enforce yamless wrapper scripts for code checks
+hooks/pre-tools/modules/bash-commands.sh:76:  if ! echo "$cmd_only" | grep -qE '(tools/yamless/(check|test|format)\.sh|bun run (ts:check|rust:check|rust:test|lint|format|check-types|build)|yamless\s+check)'; then
+hooks/pre-tools/modules/bash-commands.sh:81:        "permissionDecisionReason": "Use yamless wrapper scripts instead of running tools directly. Available: `./tools/yamless/check.sh ts`, `./tools/yamless/check.sh rust`, `./tools/yamless/check.sh all` (static gates), `./tools/yamless/test.sh rust`, `./tools/yamless/test.sh` (tests)."
+hooks/pre-tools/modules/protected-files.sh:29:if [[ "$file_path" == */tools/yamless/cmd/check.sh || "$file_path" == */tools/yamless/lib/checker.sh ]]; then
+hooks/pre-tools/modules/protected-files.sh:34:      "permissionDecisionReason": "Quality check code (tools/yamless/cmd/check.sh, tools/yamless/lib/checker.sh) is protected. Do not weaken quality gates to pass checks — fix the code instead."
+hooks/post-tools/modules/rust-quality.sh:44:if [[ "$FILE_PATH" != *yamless-secrets-runtime* && "$FILE_PATH" != *yamless-sandbox* ]]; then
+hooks/user-prompt-submit.sh:73:  hints+=("Max 3% duplication (jscpd). No #[allow()] or #[expect()] in Rust. Save decisions via mod.sh engram save.")
+hooks/docs/session-start.md:18:- Max 3% code duplication (TS and Rust) — enforced by `jscpd` via `./tools/yamless/check.sh all`.
+hooks/docs/session-start.md:24:- `./tools/yamless/test.sh rust` (or `./tools/yamless/test.sh`) — `cargo nextest run` split for orchestrator (rusqlite) vs rest (libsql)
+hooks/docs/session-start.md:25:- Rust tests: always `cargo nextest run`, NEVER `cargo test`
+hooks/pre-tools/modules/bash-commands.sh:5:#   0b. Block cargo test (use nextest)
+hooks/pre-tools/modules/bash-commands.sh:6:#   1. Use bun, not npm/yarn/pnpm/npx
+hooks/pre-tools/modules/bash-commands.sh:38:# Rule 0b: Block cargo test — use cargo nextest run instead
+hooks/pre-tools/modules/bash-commands.sh:39:if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)cargo\s+test(\s|$)'; then
+hooks/pre-tools/modules/bash-commands.sh:44:      "permissionDecisionReason": "Use `cargo nextest run` instead of `cargo test`. nextest provides better output, parallel execution, and is the project standard."
+hooks/pre-tools/modules/bash-commands.sh:50:# Rule 1: Block npm/npx/yarn/pnpm — use bun instead
+hooks/pre-tools/modules/bash-commands.sh:51:if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)(npm|npx|yarn|pnpm)\s'; then
+hooks/pre-tools/modules/bash-commands.sh:56:      "permissionDecisionReason": "This project uses bun, not npm/npx/yarn/pnpm. Use `bun` or `bun run <script>` instead."
+hooks/pre-tools/modules/bash-commands.sh:68:      "permissionDecisionReason": "This project does NOT use biome. Use package.json scripts: `bun run lint`, `bun run lint:fix`, `bun run format`, `bun run format:fix`."
+hooks/pre-tools/modules/bash-commands.sh:76:  if ! echo "$cmd_only" | grep -qE '(tools/yamless/(check|test|format)\.sh|bun run (ts:check|rust:check|rust:test|lint|format|check-types|build)|yamless\s+check)'; then
+hooks/pre-tools/modules/quality-gate.sh:35:  # Allow quality check/fix commands (scripts + bun run variants)
+hooks/pre-tools/modules/quality-gate.sh:36:  if echo "$cmd_only" | grep -qE '(bun run (check|check:fix|check:duplication|lint:fix|format|build|test)|bun test|vitest|tsc|oxlint|oxfmt|\.\/scripts\/ts-check\.sh)'; then
+hooks/session-start.sh:76:reminder="MANDATORY: recall via .claude/skills/code-intel/scripts/mod.sh engram search before explore. Save reusable learnings via mod.sh engram save. Do not proceed while quality gate fails. Max 3% duplication (jscpd). No #[allow()] or #[expect()] in Rust. TS tests in co-located __tests__/. Never run git push. Never bypass quality gates."
+hooks/post-tools/modules/rust-quality.sh:4:# Heavy checks (cargo clippy, nextest) run via explicit quality gate commands.
+hooks/post-tools/modules/ts-quality.sh:176:# Check: code duplication (jscpd, scoped to package directory)
+hooks/post-tools/modules/ts-quality.sh:178:# Hard enforcement happens via `bun run check`.
+hooks/post-tools/modules/ts-quality.sh:186:  if [[ -n "$_pkg_dir" && -d "$_pkg_dir" && -f "$PROJECT_ROOT/.jscpd.json" ]]; then
+hooks/post-tools/modules/ts-quality.sh:187:    _jscpd_out=$(timeout 10 bunx jscpd "$_pkg_dir" \
+hooks/post-tools/modules/ts-quality.sh:188:      --config "$PROJECT_ROOT/.jscpd.json" \
+hooks/post-tools/modules/ts-quality.sh:193:      DUPLICATION_WARNING="⚠ Code duplication detected involving $FILE_PATH — deduplicate or run 'bun run check' before commit"
+hooks/post-tools/modules/gate-status.sh:41:#   * TS/JS: bun run script aliases, bun test, vitest, jest, tsc, ./scripts/ts-check.sh
+hooks/post-tools/modules/gate-status.sh:42:#   * Rust: cargo clippy/test/build/nextest
+hooks/post-tools/modules/gate-status.sh:45:if ! echo "$command" | grep -qE '(tools/[A-Za-z0-9_.-]+/(check|test|format)\.sh|bun run (check|check:fix|check:duplication|ts:check|ts:check:fix|rust:check|rust:test|check-types|lint|lint:fix|format|format:check|format:fix|build|test)|bun test|vitest|jest|tsc|\./scripts/ts-check\.sh|cargo (clippy|test|build|nextest))'; then
+skills/ast-grep/SKILL.md:106:5. Run `bun run check:quick` to verify zero regressions.
