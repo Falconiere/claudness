@@ -53,7 +53,7 @@
         ]
       },
       {
-        "matcher": "mcp__engram",
+        "matcher": "mcp__",
         "hooks": [
           {
             "type": "command",

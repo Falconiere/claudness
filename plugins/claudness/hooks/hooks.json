@@ -51,6 +51,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tools/mod.sh"
           }
         ]
+      },
+      {
+        "matcher": "mcp__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tools/modules/mcp-blocker.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
