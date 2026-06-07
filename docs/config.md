@@ -12,7 +12,7 @@ Project values win on conflict. Missing keys default to **enabled**.
 ## Schema
 
 See `settings/claudness.config.example.json`. Categories: `skills`, `hooks`,
-`agents`, `commands`, `mcp`. Each entry is a boolean.
+`mcp`. Each entry is a boolean.
 
 ## Effects
 
@@ -21,10 +21,12 @@ See `settings/claudness.config.example.json`. Categories: `skills`, `hooks`,
   themselves stay on disk.
 - `hooks.<name> = false` — the named hook exits early and emits nothing.
 - `mcp.<name> = false` — the named MCP server is blocked at `PreToolUse`
-  (a block decision is returned with reason "MCP server ... is blocked").
-- `agents.*` and `commands.*` — read but not enforced in v1. Claude Code
-  loads agents and commands from the plugin manifest at session start;
-  there is no runtime hook to unregister them. v2 may add a sync command.
+  (the hook returns `permissionDecision: deny`).
+
+Agents and commands are loaded by Claude Code from the plugin manifest at
+session start, so they cannot be toggled at runtime. A future `claudness
+sync` command may rewrite the manifest from config; until then, install or
+uninstall the plugin to control them.
 
 ## Examples
 

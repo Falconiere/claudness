@@ -17,7 +17,5 @@
     "pre-compact": true,
     "session-end": true
   },
-  "agents": { "deep-explore": true },
-  "commands": { "commit": true, "review-and-commit": true },
   "mcp": { "engram": false }
 }
