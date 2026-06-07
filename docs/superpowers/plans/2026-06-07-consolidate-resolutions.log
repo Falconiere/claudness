@@ -22,3 +22,4 @@ skills/code-intel/scripts/mod.sh	Y	yamless default per owner decision
 skills/code-intel/scripts/modules/engram.sh	M	R filter logic + agnostic project detect
 skills/code-intel/SKILL.md	Y	yamless default per owner decision
 skills/context7/SKILL.md	Y	yamless default per owner decision
+skills/exa-search/SKILL.md	Y	yamless default per owner decision
