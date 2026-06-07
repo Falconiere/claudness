@@ -193,6 +193,37 @@ EOF
   [ "$found" -eq 1 ]
 }
 
+# Regression: well-known empty-blob SHA must never be trusted as cached state.
+# A branch with no diff against base would otherwise be pushable via a stale
+# state file written before a force-reset/clean.
+@test "push-review: empty diff against base is denied with sentinel reason (even with matching state file)" {
+  # Move HEAD back to base so the diff is empty.
+  git checkout -q development
+  git checkout -q -b feat/empty
+  # No commits diverged from base.
+
+  # Pre-write a state file claiming the empty-blob SHA with zero findings.
+  EMPTY_BLOB="e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+  write_state "$EMPTY_BLOB" 0
+
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("diff against")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("empty")'
+}
+
+@test "push-review: non-empty diff with matching SHA + zero findings still ALLOWED" {
+  # This is the happy-path regression: the sentinel guard must not break it.
+  sha=$(current_diff_sha)
+  write_state "$sha" 0
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "push-review: full loop — first push denied, fix loop, final push allowed" {
   # 1. First push: no state file → DENY.
   payload=$(build_input "git push")
