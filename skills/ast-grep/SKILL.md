@@ -19,7 +19,6 @@ This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ```
 engram   → "what was decided / where is X" (memory)
-grepai   → "what does this codebase do" (semantic vector)
 ast-grep → "find / rewrite this code shape" (AST structural)   ← here
 Grep     → "find exact literal `FOO_BAR`"                     (text)
 Glob     → "list paths matching `**/*.test.ts`"               (paths)
@@ -38,7 +37,7 @@ Read     → "open known file"                                   (verify)
 
 ## When NOT to Use ast-grep
 
-✗ Semantic intent ("how does auth work") → grepai
+✗ Semantic intent ("how does auth work") → check engram memory, then Grep on keywords + Read on hits
 ✗ Exact literal in config files (`*.toml`, `*.md`, `*.json`) → Grep
 ✗ Path/filename patterns → Glob
 ✗ Single-file targeted edit → Read + Edit
@@ -124,6 +123,5 @@ Hold off until pattern is proven across ≥3 files.
 
 ## Cross-Reference
 
-- Memory: `.claude/skills/agent-memory/SKILL.md`
-- Semantic search: `.claude/skills/grepai/SKILL.md`
+- Memory: `skills/agent-memory/SKILL.md`
 - Project rules: `CLAUDE.md`
