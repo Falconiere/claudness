@@ -7,10 +7,7 @@
     "email": "hello@falconiere.io"
   },
   "homepage": "https://github.com/falconiere/claudness",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/falconiere/claudness.git"
-  },
+  "repository": "https://github.com/falconiere/claudness.git",
   "license": "MIT",
   "keywords": [
     "claude-code",
