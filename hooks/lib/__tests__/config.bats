@@ -10,7 +10,12 @@ setup() {
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
   # shellcheck source=../config.sh
   . "$REPO_ROOT/hooks/lib/config.sh"
+  # Reset every loader-state variable so test order cannot leak: cache flag,
+  # jq-presence cache, and the cache file path (use a fresh path per test so
+  # an on-disk cache from a previous test never satisfies the next).
   CLAUDNESS_CFG_LOADED=0
+  _CLAUDNESS_HAS_JQ=""
+  CLAUDNESS_CFG_CACHE="$TMP/claudness-cfg.json"
 }
 
 teardown() {

@@ -9,6 +9,7 @@
 #   claudness_load_config          - load + cache the merged config
 #   claudness_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
 #   claudness_engram_state         - print 'available' | 'missing' | 'disabled'
+#   claudness_config_exists        - 0 if any config file is on disk (cheap stat-only check)
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
@@ -77,6 +78,18 @@ claudness_enabled() {
     "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
   [ "$val" = "false" ] && return 1
   return 0
+}
+
+# Return 0 if any config file is on disk. Stat-only; no jq, no load. Used by
+# hot-path hooks (e.g. mcp-blocker) to skip config-load entirely when no
+# user has opted in.
+claudness_config_exists() {
+  local user_cfg project_cfg
+  user_cfg=$(_claudness_user_cfg)
+  [ -f "$user_cfg" ] && return 0
+  project_cfg=$(_claudness_project_cfg)
+  [ -n "$project_cfg" ] && [ -f "$project_cfg" ] && return 0
+  return 1
 }
 
 # Print engram availability for hook reminder text:

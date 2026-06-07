@@ -27,12 +27,7 @@ esac
 # tool call through here. Skip config-load work entirely when there is no
 # blocklist file AND no user/project config to consult — the common case for
 # anyone who has not opted into the gate.
-USER_CFG="$HOME/.claude/claudness.config.json"
-PROJECT_ROOT_FAST="${CLAUDE_PROJECT_DIR:-}"
-[ -z "$PROJECT_ROOT_FAST" ] && PROJECT_ROOT_FAST=$(git rev-parse --show-toplevel 2>/dev/null || true)
-PROJECT_CFG=""
-[ -n "$PROJECT_ROOT_FAST" ] && PROJECT_CFG="$PROJECT_ROOT_FAST/.claude/claudness.config.json"
-if [ ! -f "$LIST_FILE" ] && [ ! -f "$USER_CFG" ] && { [ -z "$PROJECT_CFG" ] || [ ! -f "$PROJECT_CFG" ]; }; then
+if [ ! -f "$LIST_FILE" ] && ! claudness_config_exists; then
   exit 0
 fi
 
