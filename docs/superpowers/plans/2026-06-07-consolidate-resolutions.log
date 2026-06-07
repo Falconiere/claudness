@@ -1,2 +1,3 @@
 # Phase 2 per-file diff resolutions. One row per file: path<TAB>choice<TAB>reason
 agents/deep-explore.md	Y	yamless default per owner decision
+commands/commit.md	Y	yamless default per owner decision
