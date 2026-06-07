@@ -1,12 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # engram CLI wrapper — persistent memory for AI agents
-# Defaults to the current project (git toplevel basename) + strict project filtering.
-# Override with MY_CLAUDE_ENGRAM_PROJECT=<name>.
-# NOTE: this inline detection is a stand-in for the detect_project_name helper
-# that lands in Phase 4 (Task 35); Task 46 will swap this block for the helper.
+# Defaults to the current project (auto-detected via detect_project_name) +
+# strict project filtering. Override with MY_CLAUDE_ENGRAM_PROJECT=<name>.
+# Honors ENGRAM_PORT and ENGRAM_DIR (passed through to the engram CLI which
+# already reads them from the environment).
 set -euo pipefail
 
-PROJECT="${MY_CLAUDE_ENGRAM_PROJECT:-$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo unknown)}"
+# shellcheck source=../../../../hooks/lib/detect.sh
+. "${BASH_SOURCE%/*}/../../../../hooks/lib/detect.sh"
+
+# No engram CLI? Graceful no-op so dependent skills don't break.
+command -v engram >/dev/null 2>&1 || exit 0
+
+PROJECT="${MY_CLAUDE_ENGRAM_PROJECT:-$(detect_project_name)}"
+[ -z "$PROJECT" ] && PROJECT="unknown"
 
 subcmd="${1:-}"
 shift 2>/dev/null || true
