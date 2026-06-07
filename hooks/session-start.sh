@@ -117,8 +117,12 @@ fi
 HAS_ENGRAM="$(detect_engram)"
 HAS_ASTGREP="$(detect_ast_grep)"
 missing_tools=()
-[ "$HAS_ENGRAM" != "engram" ] && missing_tools+=("engram (persistent memory recall/save)")
-[ "$HAS_ASTGREP" != "ast-grep" ] && missing_tools+=("ast-grep (structural code search)")
+if [ "$HAS_ENGRAM" != "engram" ] && claudness_enabled skills engram; then
+  missing_tools+=("engram (persistent memory recall/save)")
+fi
+if [ "$HAS_ASTGREP" != "ast-grep" ] && claudness_enabled skills ast-grep; then
+  missing_tools+=("ast-grep (structural code search)")
+fi
 if [ "${#missing_tools[@]}" -gt 0 ]; then
   warn="WARN: optional tools missing — features that depend on them are disabled:"
   for t in "${missing_tools[@]}"; do
