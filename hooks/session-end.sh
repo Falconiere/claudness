@@ -5,6 +5,13 @@ HOOK_DIR="$(dirname "$0")"
 
 # shellcheck source=lib/detect.sh
 . "$HOOK_DIR/lib/detect.sh"
+# shellcheck source=lib/config.sh
+. "$HOOK_DIR/lib/config.sh"
+
+if ! claudness_enabled hooks session-end; then
+  cat > /dev/null 2>&1 || true
+  exit 0
+fi
 
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true

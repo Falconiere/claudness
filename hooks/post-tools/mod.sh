@@ -9,6 +9,15 @@
 #   - Otherwise, every module's advisory `additionalContext` is collected and
 #     merged into ONE final JSON object emitted at the end.
 
+HOOK_LIB="$(cd "$(dirname "$0")/../lib" && pwd)"
+# shellcheck source=../lib/config.sh
+. "$HOOK_LIB/config.sh"
+
+if ! claudness_enabled hooks post-tools; then
+  cat > /dev/null 2>&1 || true
+  exit 0
+fi
+
 input=$(cat 2>/dev/null || echo "{}")
 tool_name=$(echo "$input" | jq -r '.tool_name // ""' 2>/dev/null || echo "")
 
