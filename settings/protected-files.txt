@@ -1,0 +1,16 @@
+# Protected file globs (one per line; '#' starts a comment).
+# bash extended-glob patterns matched against the edited file path.
+#
+# Lint/format configs from the original hook.
+*.oxfmtrc.json
+*.oxlintrc.json
+# Always-protected: secrets and git internals.
+.env
+.env.*
+**/secrets/**
+.git/**
+# Trusted scripts — the hook framework itself and code-intel scripts.
+# Protecting these prevents bypass-by-edit (security review concern).
+hooks/lib/**
+hooks/**/*.sh
+skills/code-intel/scripts/**
