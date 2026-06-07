@@ -125,14 +125,17 @@ if [[ ! -f "$state_file" ]]; then
         "Diff SHA: " + $sha + "\n" +
         "Base branch: " + $base + "\n" +
         "State file: " + $file + " (missing)\n\n" +
-        "Run review in parallel (single message, two Agent tool calls):\n" +
-        "  1. Spawn caveman:cavecrew-reviewer on `git diff " + $base + "...HEAD`.\n" +
-        "  2. Spawn code-simplifier:code-simplifier on same diff.\n" +
-        "  3. Merge findings; atomically write state file at " + $file + " (write to '\''<file>.tmp'\'' then mv) with schema:\n" +
+        "Run all three reviewers in parallel (single message, three Agent tool calls) against `git diff " + $base + "...HEAD`:\n" +
+        "  1. Spawn `code-simplifier:code-simplifier` on the diff.\n" +
+        "  2. Spawn `caveman:cavecrew-reviewer` on the diff.\n" +
+        "  3. Invoke the `code-review` skill with args `xhigh --fix` (auto-applies findings to the working tree).\n" +
+        "  4. Merge all findings from the three reviewers. Apply any not auto-fixed by `code-review --fix`.\n" +
+        "  5. Stage and commit the fixes (diff SHA will change after each round).\n" +
+        "  6. Re-run all three reviewers on the new diff. Loop until every reviewer returns zero findings.\n" +
+        "  7. atomically write state file at " + $file + " (write to '\''<file>.tmp'\'' then mv) with schema:\n" +
         "     { version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings }\n" +
-        "  4. If findings_count > 0: address ALL findings (any finding blocks).\n" +
-        "     Re-commit. Re-run reviewers on new SHA. Write new state file.\n" +
-        "  5. Retry git push."
+        "     `reviewers` MUST be [\"code-simplifier\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\"] and `findings_count` MUST be 0.\n" +
+        "  8. Retry git push."
       )
     }
   }'
