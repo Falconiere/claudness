@@ -27,10 +27,7 @@ esac
 rest="${tool_name#mcp__}"
 server="${rest%%__*}"
 
-read_list() {
-  [ -f "$1" ] || return 0
-  grep -vE '^\s*(#|$)' "$1"
-}
+# read_list is sourced from lib/detect.sh.
 
 blocked=0
 while IFS= read -r name; do

@@ -69,6 +69,50 @@ detect_settings_dir() {
   fi
 }
 
+# Strip heredoc bodies from a shell command read on stdin.
+#
+# Handles `<<TAG`, `<<-TAG` (tab-stripped form), quoted/unquoted tags, and
+# tolerates trailing redirections/pipes on the heredoc-start line
+# (e.g. `<<EOF > /tmp/x`, `<<EOF | tee`). Any [A-Za-z_][A-Za-z0-9_]* identifier
+# is accepted as a tag — the previous sed recipe hardcoded `EOF` and silently
+# missed `<<-EOF`, `<<END`, or `<<EOF > file`.
+#
+# Why this matters: bash-commands.sh, quality-gate.sh, push-review.sh, and
+# search-nudge.sh all run their deny/match patterns over the command. Without
+# stripping the heredoc body, prose like a commit message containing the
+# substring `cargo test` would false-positive a deny rule.
+strip_heredocs() {
+  awk '
+    BEGIN { in_heredoc = 0; tag = ""; tag_tab = "" }
+    {
+      if (in_heredoc) {
+        line = $0
+        if (line == tag || line == tag_tab) { in_heredoc = 0; tag = ""; tag_tab = "" }
+        next
+      }
+      if (match($0, /<<-?[ \t]*"?'\''?[A-Za-z_][A-Za-z0-9_]*"?'\''?/)) {
+        m = substr($0, RSTART, RLENGTH)
+        # Strip leading `<<`, optional `-`, quotes, and surrounding whitespace.
+        gsub(/^<<-?[ \t]*"?'\''?/, "", m)
+        gsub(/"?'\''?$/, "", m)
+        tag = m
+        tag_tab = "\t" m
+        in_heredoc = 1
+        print
+        next
+      }
+      print
+    }
+  '
+}
+
+# Read non-comment non-blank lines from a settings file. Returns 0 with no
+# output if the file is missing.
+read_list() {
+  [ -f "$1" ] || return 0
+  grep -vE '^\s*(#|$)' "$1"
+}
+
 # Echo a repo-relative path for the given (potentially absolute) file_path.
 # Falls back to the input unchanged if it cannot determine the project root
 # or if the path is not under that root.

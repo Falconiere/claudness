@@ -20,10 +20,7 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 SETTINGS_DIR=$(detect_settings_dir)
 
-read_list() {
-  [ -f "$1" ] || return 0
-  grep -vE '^\s*(#|$)' "$1"
-}
+# read_list + strip_heredocs are sourced from lib/detect.sh.
 
 # bash_tokenize <command>
 # Tokenize a shell command into argv tokens, respecting single and double quotes.
@@ -134,7 +131,7 @@ bash_commands_decide() {
   denylist=$(read_list "$SETTINGS_DIR/bash-denylist.txt")
 
   # Strip heredoc bodies so we only check actual commands, not prose in commit messages.
-  cmd=$(echo "$cmd" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
+  cmd=$(printf '%s\n' "$cmd" | strip_heredocs)
 
   if hit=$(matches_deny "$cmd" "$denylist"); then
     echo "deny:$hit"

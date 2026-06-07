@@ -120,3 +120,58 @@ source_lib() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "strip_heredocs: <<EOF > /tmp/x body is stripped, trailing command preserved" {
+  source_lib
+  out=$(printf '%s\n' "cat <<EOF > /tmp/x" "body1" "body2" "EOF" "echo after" | strip_heredocs)
+  [[ "$out" == *"cat <<EOF > /tmp/x"* ]]
+  [[ "$out" == *"echo after"* ]]
+  [[ "$out" != *"body1"* ]]
+  [[ "$out" != *"body2"* ]]
+}
+
+@test "strip_heredocs: <<-END (tab-indented form) is stripped" {
+  source_lib
+  out=$(printf '%s\n' "cat <<-END" $'\tbody1' $'\tbody2' $'\tEND' "echo end" | strip_heredocs)
+  [[ "$out" == *"cat <<-END"* ]]
+  [[ "$out" == *"echo end"* ]]
+  [[ "$out" != *"body1"* ]]
+}
+
+@test "strip_heredocs: <<DOC alternate delimiter is stripped" {
+  source_lib
+  out=$(printf '%s\n' "cat <<DOC" "x" "y" "DOC" "echo end" | strip_heredocs)
+  [[ "$out" == *"echo end"* ]]
+  [[ "$out" != *"^x$"* ]]
+  printf '%s\n' "$out" | grep -qxF "x" && return 1
+  return 0
+}
+
+@test "strip_heredocs: plain command (no heredoc) passes through unchanged" {
+  source_lib
+  out=$(printf '%s\n' "echo hello" "ls -la" | strip_heredocs)
+  [ "$out" = "$(printf '%s\n' "echo hello" "ls -la")" ]
+}
+
+@test "strip_heredocs: <<EOF | tee (pipe after heredoc start) strips body" {
+  source_lib
+  out=$(printf '%s\n' "cat <<EOF | tee /tmp/x" "secret cargo test inside body" "EOF" "echo done" | strip_heredocs)
+  [[ "$out" != *"secret cargo test inside body"* ]]
+  [[ "$out" == *"echo done"* ]]
+}
+
+@test "read_list: missing file returns no output" {
+  source_lib
+  run read_list "$BATS_TEST_TMPDIR/nope.txt"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "read_list: skips comments and blank lines" {
+  source_lib
+  f="$BATS_TEST_TMPDIR/list.txt"
+  printf '%s\n' "# comment" "" "real-line" "  # indented comment" "another" > "$f"
+  run read_list "$f"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf '%s\n' 'real-line' 'another')" ]
+}

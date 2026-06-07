@@ -23,10 +23,7 @@ LIST_FILE="$SETTINGS_DIR/protected-files.txt"
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // ""')
 [ -z "$file_path" ] && exit 0
 
-read_list() {
-  [ -f "$1" ] || return 0
-  grep -vE '^\s*(#|$)' "$1"
-}
+# read_list is sourced from lib/detect.sh.
 
 # Normalize absolute paths (Edit/Write sends absolute) into repo-relative so
 # patterns like "hooks/lib/**" can match. Falls back to the input unchanged

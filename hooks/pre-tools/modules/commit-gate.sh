@@ -25,10 +25,7 @@ SETTINGS_DIR=$(detect_settings_dir)
 PREFIX_FILE="$SETTINGS_DIR/commit-prefixes.txt"
 BASE_BRANCH=$(detect_base_branch)
 
-read_list() {
-  [ -f "$1" ] || return 0
-  grep -vE '^\s*(#|$)' "$1"
-}
+# read_list is sourced from lib/detect.sh.
 
 # Extract the message from -m "..." if present; else allow (it's editor-driven).
 msg=""
