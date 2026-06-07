@@ -3,3 +3,4 @@ agents/deep-explore.md	Y	yamless default per owner decision
 commands/commit.md	Y	yamless default per owner decision
 commands/review-and-commit.md	Y	yamless default per owner decision
 hooks/docs/session-start.md	Y	yamless default per owner decision
+hooks/docs/vector-helper-recall.md	Y	yamless default per owner decision
