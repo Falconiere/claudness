@@ -9,13 +9,13 @@
 
 # shellcheck source=../../lib/detect.sh
 . "${BASH_SOURCE%/*}/../../lib/detect.sh"
+# shellcheck source=../../lib/config.sh
+. "${BASH_SOURCE%/*}/../../lib/config.sh"
 
 command -v jq >/dev/null 2>&1 || exit 0
 
 SETTINGS_DIR=$(detect_settings_dir)
 LIST_FILE="$SETTINGS_DIR/mcp-blocklist.txt"
-
-[ -f "$LIST_FILE" ] || exit 0
 
 # Only inspect mcp__<server>__* tool names.
 case "$tool_name" in
@@ -29,6 +29,16 @@ server="${rest%%__*}"
 
 # read_list is sourced from lib/detect.sh.
 
+disabled_from_cfg=""
+claudness_load_config
+if command -v jq >/dev/null 2>&1; then
+  disabled_from_cfg=$(jq -r '.mcp // {} | to_entries[] | select(.value == false) | .key' \
+    "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+fi
+
+combined="$(read_list "$LIST_FILE")
+$disabled_from_cfg"
+
 blocked=0
 while IFS= read -r name; do
   [ -z "$name" ] && continue
@@ -37,7 +47,7 @@ while IFS= read -r name; do
   case "$server" in
     "$name"*) blocked=1; break ;;
   esac
-done <<< "$(read_list "$LIST_FILE")"
+done <<< "$combined"
 
 if [ "$blocked" = 1 ]; then
   jq -n --arg s "$server" '{

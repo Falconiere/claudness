@@ -50,3 +50,23 @@ teardown() {
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.decision == "block"'
 }
+
+@test "config.mcp disables a server without touching the blocklist file" {
+  TMPHOME=$(mktemp -d)
+  HOME="$TMPHOME"
+  mkdir -p "$HOME/.claude"
+  cat > "$HOME/.claude/claudness.config.json" <<JSON
+{"version":1,"mcp":{"someserver":false}}
+JSON
+
+  payload=$(jq -n '{tool_name:"mcp__someserver__do",tool_input:{}}')
+  REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
+  tool_name=mcp__someserver__do input="$payload" HOME="$HOME" \
+    run bash "$REPO_ROOT/hooks/pre-tools/modules/mcp-blocker.sh" <<<"$payload"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"someserver"* ]]
+  [[ "$output" == *"block"* ]]
+
+  rm -rf "$TMPHOME"
+}
