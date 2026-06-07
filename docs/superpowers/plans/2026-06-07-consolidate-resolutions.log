@@ -9,3 +9,4 @@ hooks/post-tools/modules/gate-status.sh	M	R base + grafted Y rust/wrapper regex 
 hooks/post-tools/modules/ts-quality.sh	R	routo chosen for capability (per owner)
 hooks/pre-compact.sh	Y	yamless default per owner decision
 hooks/pre-tools/modules/bash-commands.sh	Y	yamless default per owner decision
+hooks/pre-tools/modules/code-edit-rules.sh	Y	yamless default per owner decision
