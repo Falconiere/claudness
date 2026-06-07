@@ -1,0 +1,66 @@
+{
+  "//": "code-edit-rules.sh data file. Each entry maps a file-glob pattern to a list of rule-doc references. The hook surfaces these reminders before edits. Schema: {rules: [{ match: string (glob), docs: [string], when_path_matches?: [string] (extra docs added when the file path also matches one of these)}]}",
+  "rules": [
+    {
+      "match": "*.rs",
+      "docs": [
+        "docs/rules/rust-quality.md",
+        "docs/rules/forbidden-syntax-rust.md",
+        "docs/rules/simplicity.md"
+      ]
+    },
+    {
+      "match": "*.ts",
+      "docs": [
+        "docs/rules/quality-gates.md",
+        "docs/rules/forbidden-syntax-typescript.md",
+        "docs/rules/simplicity.md"
+      ],
+      "when_path_matches": [
+        "*/features/*",
+        "*/components/*",
+        "*/routes/*"
+      ],
+      "extra_docs": [
+        "docs/rules/frontend-organization.md"
+      ]
+    },
+    {
+      "match": "*.tsx",
+      "docs": [
+        "docs/rules/quality-gates.md",
+        "docs/rules/forbidden-syntax-typescript.md",
+        "docs/rules/simplicity.md"
+      ],
+      "when_path_matches": [
+        "*/features/*",
+        "*/components/*",
+        "*/routes/*"
+      ],
+      "extra_docs": [
+        "docs/rules/frontend-organization.md"
+      ]
+    },
+    {
+      "match": "*.js",
+      "docs": [
+        "docs/rules/quality-gates.md",
+        "docs/rules/simplicity.md"
+      ]
+    },
+    {
+      "match": "*.jsx",
+      "docs": [
+        "docs/rules/quality-gates.md",
+        "docs/rules/simplicity.md"
+      ]
+    },
+    {
+      "match": "*.py",
+      "docs": [
+        "docs/rules/quality-gates.md",
+        "docs/rules/simplicity.md"
+      ]
+    }
+  ]
+}

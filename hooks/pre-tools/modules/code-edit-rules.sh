@@ -1,6 +1,6 @@
-#!/bin/bash
-# Pre-tool check: Remind to read rules before editing code files
-# Surfaces relevant rule docs based on file type
+#!/usr/bin/env bash
+# Pre-tool check: Remind to read rules before editing code files.
+# Data-driven: loads $SETTINGS_DIR/code-edit-rules.json. Empty/missing → no-op.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -9,27 +9,59 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
 [[ "$tool_name" != "Edit" && "$tool_name" != "Write" ]] && exit 0
+command -v jq >/dev/null 2>&1 || exit 0
+
+SETTINGS_DIR=$(detect_settings_dir)
+RULES_FILE="$SETTINGS_DIR/code-edit-rules.json"
+
+[ -f "$RULES_FILE" ] || exit 0
 
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // ""')
+[ -z "$file_path" ] && exit 0
 
-# Only apply to source code files
-case "$file_path" in
-  *.rs)
-    rules="docs/rules/rust-quality.md + docs/rules/forbidden-syntax-rust.md + docs/rules/simplicity.md"
-    ;;
-  *.ts|*.tsx|*.js|*.jsx|*.py)
-    rules="docs/rules/quality-gates.md + docs/rules/forbidden-syntax-typescript.md + docs/rules/simplicity.md"
-    if [[ "$file_path" == */features/* || "$file_path" == */components/* || "$file_path" == */routes/* ]]; then
-      rules="${rules} + docs/rules/frontend-organization.md"
+# glob_match <pattern> <path> — bash-native glob check
+glob_match() {
+  local pattern="$1"
+  local path="$2"
+  # shellcheck disable=SC2053  # intentional glob match on RHS
+  [[ "$path" == $pattern ]]
+}
+
+# Iterate rules and accumulate docs whose match-glob fits.
+docs=""
+rule_count=$(jq '.rules | length' "$RULES_FILE" 2>/dev/null || echo 0)
+[ "$rule_count" = "null" ] && rule_count=0
+
+for ((i=0; i<rule_count; i++)); do
+  match=$(jq -r ".rules[$i].match // \"\"" "$RULES_FILE")
+  [ -z "$match" ] && continue
+  if glob_match "$match" "$file_path"; then
+    # Base docs
+    base=$(jq -r ".rules[$i].docs // [] | join(\" + \")" "$RULES_FILE")
+    [ -n "$base" ] && [ "$base" != "null" ] && docs="${docs}${docs:+ + }${base}"
+    # Conditional extra docs
+    extra_paths_count=$(jq -r ".rules[$i].when_path_matches // [] | length" "$RULES_FILE")
+    if [ "$extra_paths_count" -gt 0 ]; then
+      for ((j=0; j<extra_paths_count; j++)); do
+        cond=$(jq -r ".rules[$i].when_path_matches[$j]" "$RULES_FILE")
+        if glob_match "$cond" "$file_path"; then
+          extra=$(jq -r ".rules[$i].extra_docs // [] | join(\" + \")" "$RULES_FILE")
+          [ -n "$extra" ] && [ "$extra" != "null" ] && docs="${docs}${docs:+ + }${extra}"
+          break
+        fi
+      done
     fi
-    ;;
-  *)
-    exit 0
-    ;;
-esac
+    break
+  fi
+done
 
-jq -n --arg msg "Read relevant rules before editing: ${rules}" --arg file "$file_path" '{
+[ -z "$docs" ] && exit 0
+
+jq -n --arg msg "Read relevant rules before editing: $docs" --arg file "$file_path" '{
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "additionalContext": ("File: " + $file + "\n" + $msg)
