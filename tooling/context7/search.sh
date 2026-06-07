@@ -1,12 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Context7 CLI — search libraries and query documentation
 # Usage: ./search.sh <command> [options]
+#
+# Reads CONTEXT7_API_KEY from the environment (never from .env).
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOOLING_ENV="$SCRIPT_DIR/../.env"
-C7_API_KEY="$(grep '^CONTEXT7_API_KEY=' "$TOOLING_ENV" 2>/dev/null | cut -d= -f2 || true)"
+command -v jq   >/dev/null 2>&1 || { echo "context7: jq required" >&2;   exit 1; }
+command -v curl >/dev/null 2>&1 || { echo "context7: curl required" >&2; exit 1; }
+
+C7_API_KEY="${CONTEXT7_API_KEY:-}"
 C7_URL="https://context7.com/api/v2"
 
 urlencode() {
@@ -121,6 +124,9 @@ usage() {
   echo "Context7 CLI — Library Documentation Lookup" >&2
   echo "" >&2
   echo "Usage: search.sh <command> [options]" >&2
+  echo "" >&2
+  echo "Environment:" >&2
+  echo "  CONTEXT7_API_KEY  Optional. If set and starts with 'ctx7sk', sent as Bearer token." >&2
   echo "" >&2
   echo "Commands:" >&2
   echo "  search  Find libraries by name (resolve library ID)" >&2

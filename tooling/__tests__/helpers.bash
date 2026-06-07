@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
-# Shared bats helpers for .tooling script tests.
+# Shared bats helpers for tooling/ script tests.
 #
-# Each test gets a fresh sandbox: a copy of the target script under
-# `<TMP>/<tool>/search.sh`, a writable `<TMP>/.env` next to it (mirroring
-# the real `.tooling/.env` parent-relative layout), and a `curl` stub on
-# PATH that records its argv to `<TMP>/curl.log` instead of hitting the
-# network. Tests assert against `curl.log` to verify env resolution.
+# Each test gets a fresh sandbox with a `curl` stub on PATH that records its
+# argv to <TMP>/curl.log instead of hitting the network. Tests assert against
+# curl.log to verify behavior. API keys are passed via the environment
+# variables CONTEXT7_API_KEY / EXA_API_KEY — never via a .env file.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 setup_sandbox() {
   local tool="$1"
-  export SANDBOX="$(mktemp -d)"
+  SANDBOX="$(mktemp -d)"
+  export SANDBOX
   export CURL_LOG="$SANDBOX/curl.log"
   export TOOL_DIR="$SANDBOX/$tool"
-  export ENV_FILE="$SANDBOX/.env"
 
   mkdir -p "$TOOL_DIR" "$SANDBOX/bin"
-  cp "$REPO_ROOT/.tooling/$tool/search.sh" "$TOOL_DIR/search.sh"
+  cp "$REPO_ROOT/tooling/$tool/search.sh" "$TOOL_DIR/search.sh"
   chmod +x "$TOOL_DIR/search.sh"
 
   cat > "$SANDBOX/bin/curl" <<'CURL'
@@ -35,6 +34,15 @@ teardown_sandbox() {
   [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
 }
 
-write_env() {
-  printf '%s\n' "$@" > "$ENV_FILE"
+# Set or unset an API key for the next script invocation.
+# Usage: set_api_key CONTEXT7_API_KEY ctx7sk_abc123
+#        set_api_key EXA_API_KEY ""        # explicit empty
+set_api_key() {
+  local name="$1"
+  local value="${2:-}"
+  if [ -z "$value" ]; then
+    unset "$name"
+  else
+    export "$name=$value"
+  fi
 }
