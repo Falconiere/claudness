@@ -103,7 +103,7 @@ Examples:
 2. Run preview: `ast-grep run -p '...' -r '...' -l <lang> <paths>`.
 3. Read the diff. Confirm metavariables map correctly.
 4. Apply: same command with `-U`.
-5. Run `bun run check:quick` to verify zero regressions.
+5. Run your project's typecheck/lint (use the detected package manager — see `detect_node_pm` / `detect_rust` in `hooks/lib/detect.sh`) to verify zero regressions.
 6. Save the pattern to engram if reusable: `--topic pattern/ast-grep-<name>`.
 
 ## Self-Check Before Editing
