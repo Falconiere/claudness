@@ -1,10 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Post-tool check: TypeScript / TSX quality rules
 # Lightweight file-level checks (fast, no external tool invocations).
-# Heavy checks (oxfmt, oxlint, tsc) run via explicit quality gate commands.
-#
-# On violation: writes gate status to .claude/tmp/quality-gate-status.json
-# so pre-tool hook can deny subsequent actions until fixed.
+# Project-agnostic: no-op outside TS projects; package-manager driven.
 #
 # Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
 #   $tool_name     - name of the tool being invoked
@@ -14,6 +11,31 @@
 : "${tool_name:=}"
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
+
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
+# Exit early if this isn't a TypeScript project.
+[ "$(detect_ts)" = "ts" ] || exit 0
+
+# Exit if no package manager is detected — we cannot recommend a typecheck command.
+pm="$(detect_node_pm)"
+[ -n "$pm" ] || exit 0
+command -v "$pm" >/dev/null 2>&1 || exit 0
+
+# Resolve the project's typecheck command per package manager.
+typecheck_cmd() {
+  case "$1" in
+    bun)  echo "bun run typecheck" ;;
+    pnpm) echo "pnpm -w typecheck" ;;
+    yarn) echo "yarn typecheck" ;;
+    npm)  echo "npm run typecheck" ;;
+    *)    echo "$1 run typecheck" ;;
+  esac
+}
+TYPECHECK_CMD="$(typecheck_cmd "$pm")"
+
+command -v jq >/dev/null 2>&1 || exit 0
 
 fp_from_input=""
 if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" ]]; then
@@ -145,7 +167,7 @@ if [[ -n "$DISABLE_LINES" ]]; then
 fi
 
 # Check: confirm()/alert() in frontend files
-if [[ "$FILE_PATH" == */apps/console/* || "$FILE_PATH" == */components/* || "$FILE_PATH" == */routes/* ]]; then
+if [[ "$FILE_PATH" == */components/* || "$FILE_PATH" == */routes/* ]]; then
   CONFIRM_LINES=$(grep -nE '\b(confirm|alert)\s*\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | grep -vE '(ConfirmDeleteAlert|AlertDialog|customAlert|customConfirm)' | head -3)
   if [[ -n "$CONFIRM_LINES" ]]; then
     add_error "Forbidden confirm()/alert() in $FILE_PATH — use AlertDialog component\n${CONFIRM_LINES}"
@@ -175,7 +197,6 @@ fi
 
 # Check: code duplication (jscpd, scoped to package directory)
 # Advisory only — warns but does NOT block (pre-existing duplication is not the editor's fault).
-# Hard enforcement happens via `bun run check`.
 DUPLICATION_WARNING=""
 if [[ -z "$MESSAGES" && ! "$FILE_PATH" =~ \.(test|spec)\. ]]; then
   _pkg_rel="${FILE_PATH#"$PROJECT_ROOT"/}"
@@ -183,14 +204,23 @@ if [[ -z "$MESSAGES" && ! "$FILE_PATH" =~ \.(test|spec)\. ]]; then
   if [[ "$_pkg_rel" == apps/* || "$_pkg_rel" == packages/* ]]; then
     _pkg_dir="$PROJECT_ROOT/$(echo "$_pkg_rel" | cut -d/ -f1-2)"
   fi
-  if [[ -n "$_pkg_dir" && -d "$_pkg_dir" && -f "$PROJECT_ROOT/.jscpd.json" ]]; then
-    _jscpd_out=$(timeout 10 bunx jscpd "$_pkg_dir" \
+  # jscpd runner — use whatever package manager runner is available.
+  jscpd_runner=""
+  case "$pm" in
+    bun)  command -v bunx >/dev/null 2>&1 && jscpd_runner="bunx jscpd" ;;
+    pnpm) command -v pnpm >/dev/null 2>&1 && jscpd_runner="pnpm dlx jscpd" ;;
+    yarn) command -v yarn >/dev/null 2>&1 && jscpd_runner="yarn dlx jscpd" ;;
+    npm)  command -v npx  >/dev/null 2>&1 && jscpd_runner="npx jscpd" ;;
+  esac
+  if [[ -n "$_pkg_dir" && -d "$_pkg_dir" && -f "$PROJECT_ROOT/.jscpd.json" && -n "$jscpd_runner" ]]; then
+    # shellcheck disable=SC2086  # $jscpd_runner is a multi-word command (e.g. "pnpm dlx jscpd") — intentional word split
+    _jscpd_out=$(timeout 10 $jscpd_runner "$_pkg_dir" \
       --config "$PROJECT_ROOT/.jscpd.json" \
       2>&1 || true)
     _file_base=$(basename "$FILE_PATH")
     if echo "$_jscpd_out" | grep -qi "found.*clone\|duplicat" && \
        echo "$_jscpd_out" | grep -q "$_file_base"; then
-      DUPLICATION_WARNING="⚠ Code duplication detected involving $FILE_PATH — deduplicate or run 'bun run check' before commit"
+      DUPLICATION_WARNING="Code duplication detected involving $FILE_PATH — deduplicate or run '$TYPECHECK_CMD' before commit"
     fi
   fi
 fi
