@@ -1,15 +1,15 @@
 {
-  "name": "my-claude",
+  "name": "claudness",
   "version": "0.1.0",
   "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
   },
-  "homepage": "https://github.com/falconiere/my-claude",
+  "homepage": "https://github.com/falconiere/claudness",
   "repository": {
     "type": "git",
-    "url": "https://github.com/falconiere/my-claude.git"
+    "url": "https://github.com/falconiere/claudness.git"
   },
   "license": "MIT",
   "keywords": [

@@ -1,5 +1,5 @@
 {
-  "name": "my-claude",
+  "name": "falconiere",
   "owner": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io",
@@ -7,8 +7,8 @@
   },
   "plugins": [
     {
-      "name": "my-claude",
-      "source": "./plugins/my-claude",
+      "name": "claudness",
+      "source": "./plugins/claudness",
       "description": "Omnibus bundle: all skills, agents, commands, and hooks in this repo.",
       "author": {
         "name": "Falconiere Barbosa",

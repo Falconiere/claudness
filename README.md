@@ -72,7 +72,7 @@ If a plugin lives under `plugins/<name>/`, install it from a local marketplace:
 ```bash
 # inside Claude Code
 /plugin marketplace add /Volumes/Projects/my-claude
-/plugin install <name>@my-claude
+/plugin install claudness@falconiere
 ```
 
 ## Adding something new
