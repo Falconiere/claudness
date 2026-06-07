@@ -76,17 +76,29 @@ extra_pattern='(vitest|tsc|oxlint|oxfmt|ruff|mypy)'
 allow_pattern="${allow_pattern:+$allow_pattern|}$extra_pattern"
 
 # Gate is failing — determine if this action is allowed.
+#
+# Allow patterns must match the FIRST shell statement of the command. The old
+# behavior (unanchored grep) let `cat tsconfig.json` slip through via the
+# `tsc` substring AND let `rm -rf node_modules && bun run check` ride the
+# allow rule from behind a destructive prefix. Anchor at start-of-string with
+# optional leading whitespace; terminate with a statement boundary so trailing
+# composition (`bun run check && bun run build`) still passes.
+ANCHOR_PREFIX='^[[:space:]]*'
+ANCHOR_SUFFIX='([[:space:]]|$|&&|\|\||;)'
 
 if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command=$(echo "$input" | jq -r '.tool_input.command // ""')
   cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-  if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "$allow_pattern"; then
+  if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "${ANCHOR_PREFIX}${allow_pattern}${ANCHOR_SUFFIX}"; then
     exit 0
   fi
 
-  # Always allow non-destructive git inspection + staging commands.
-  if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+(status|diff|log|add|commit|branch|stash)'; then
+  # Always allow non-destructive git inspection commands. `commit` and `add`
+  # are intentionally EXCLUDED here — committing while the gate is failing
+  # defeats the gate's stated purpose. To fix, run the failing check first
+  # so the gate clears.
+  if echo "$cmd_only" | grep -qE "${ANCHOR_PREFIX}git[[:space:]]+(status|diff|log|branch|stash)"; then
     exit 0
   fi
 fi

@@ -32,3 +32,58 @@ teardown() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# Regression: extra_pattern (vitest|tsc|...) was unanchored, so
+# `cat tsconfig.json` bypassed the failing gate via the `tsc` substring.
+@test "quality-gate: 'cat tsconfig.json' is DENIED during failing gate (substring match no longer bypasses)" {
+  payload=$(jq -n '{tool_input:{command:"cat tsconfig.json"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+# Regression: main allow_pattern was unanchored, so a destructive prefix
+# could ride along with an allowed allow_pattern command.
+@test "quality-gate: 'rm -rf node_modules && bun run check' is DENIED during failing gate" {
+  # Make sure bun is detected (need bun.lock).
+  touch bun.lock
+  payload=$(jq -n '{tool_input:{command:"rm -rf node_modules && bun run check"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  # The denylist must apply: rm comes first as the start-of-statement command,
+  # bun run check riding behind && is NOT a free pass.
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+# Regression: `git commit` was in the failing-gate allowlist, defeating the
+# gate's stated purpose.
+@test "quality-gate: 'git commit -m \"wip\"' is DENIED during failing gate" {
+  payload=$(jq -n '{tool_input:{command:"git commit -m \"wip\""}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "quality-gate: 'bun run check' (alone) is ALLOWED during failing gate" {
+  touch bun.lock
+  payload=$(jq -n '{tool_input:{command:"bun run check"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "quality-gate: 'git status' is ALLOWED during failing gate" {
+  payload=$(jq -n '{tool_input:{command:"git status"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# Compositional allow case: an allowed first statement + trailing composition.
+@test "quality-gate: 'bun run check && bun run build' allowed (first statement matches)" {
+  touch bun.lock
+  payload=$(jq -n '{tool_input:{command:"bun run check && bun run build"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
