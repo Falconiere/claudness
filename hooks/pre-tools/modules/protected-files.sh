@@ -28,6 +28,11 @@ read_list() {
   grep -vE '^\s*(#|$)' "$1"
 }
 
+# Normalize absolute paths (Edit/Write sends absolute) into repo-relative so
+# patterns like "hooks/lib/**" can match. Falls back to the input unchanged
+# outside a git repo (test sandboxes etc).
+rel_path=$(to_relative_path "$file_path")
+
 # glob_match <pattern> <path>
 glob_match() {
   local pattern="$1"
@@ -41,13 +46,21 @@ glob_match() {
 matched=""
 while IFS= read -r pattern; do
   [ -z "$pattern" ] && continue
-  if glob_match "$pattern" "$file_path"; then
+  # Try as-is.
+  if glob_match "$pattern" "$rel_path"; then
+    matched="$pattern"
+    break
+  fi
+  # For patterns that do not already start with **/, also try anchored
+  # anywhere under the repo. This keeps "hooks/lib/**" matching even when
+  # the path arrives as e.g. "subtree/hooks/lib/x.sh".
+  if [[ "$pattern" != \*\*/* ]] && glob_match "**/$pattern" "$rel_path"; then
     matched="$pattern"
     break
   fi
   # Also check basename for patterns without a path separator.
   if [[ "$pattern" != */* ]]; then
-    base=$(basename "$file_path")
+    base=$(basename "$rel_path")
     if glob_match "$pattern" "$base"; then
       matched="$pattern"
       break
