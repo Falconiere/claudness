@@ -6,3 +6,4 @@ hooks/docs/session-start.md	Y	yamless default per owner decision
 hooks/docs/vector-helper-recall.md	Y	yamless default per owner decision
 hooks/docs/vector-helper-save.md	Y	yamless default per owner decision
 hooks/post-tools/modules/gate-status.sh	M	R base + grafted Y rust/wrapper regex (yamless name generalized)
+hooks/post-tools/modules/ts-quality.sh	R	routo chosen for capability (per owner)
