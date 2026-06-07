@@ -1,0 +1,23 @@
+# bash-commands.sh denylist (one token per line; '#' starts a comment).
+#
+# Each line is matched argv-aware against the parsed command:
+#   "<bin> <flag>" — bin must be the first argv token and flag must be a later
+#   argv token (covers JSON-matcher gaps).
+#   single token — substring-matched against the whole command for tokens like
+#   "biome" or "cargo test".
+#
+# Security-hardened: argv-aware blocks the JSON matcher cannot reliably reject.
+node -e
+node -p
+node --eval
+node --print
+bun -e
+bun --eval
+git push --force
+git push --force-with-lease
+git push --force-if-includes
+git push -f
+git push origin main
+git push origin master
+# General policy: never run cargo test (use nextest instead).
+cargo test
