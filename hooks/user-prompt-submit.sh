@@ -7,6 +7,13 @@ HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # shellcheck source=lib/detect.sh
 . "$HOOK_DIR/lib/detect.sh"
+# shellcheck source=lib/config.sh
+. "$HOOK_DIR/lib/config.sh"
+
+if ! claudness_enabled hooks user-prompt-submit; then
+  cat > /dev/null 2>&1 || true
+  exit 0
+fi
 
 input=$(cat)
 prompt=""
@@ -58,8 +65,19 @@ fi
 HAS_ENGRAM="$(detect_engram)"
 HAS_ASTGREP="$(detect_ast_grep)"
 
+if ! claudness_enabled skills engram; then
+  HAS_ENGRAM=""
+  ENGRAM_DISABLED=1
+fi
+if ! claudness_enabled skills ast-grep; then
+  HAS_ASTGREP=""
+  ASTGREP_DISABLED=1
+fi
+
 if [ "$HAS_ENGRAM" = "engram" ]; then
   recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
+elif [ "${ENGRAM_DISABLED:-0}" = "1" ]; then
+  recall=""
 else
   recall="WARN: engram CLI not installed — persistent memory recall disabled. Install to enable: https://github.com/orgs/Falconiere/repositories?q=engram"
 fi
