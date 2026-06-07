@@ -74,6 +74,13 @@ if [[ "$current_branch" == "HEAD" || -z "$current_branch" ]]; then
   exit 0
 fi
 
+# Pushing the base branch itself (e.g. fast-forwarded main after a local merge)
+# is not a feature-review scenario — `<base>...<base>` has empty diff by
+# definition. Allow without state-file gate.
+if [[ "$current_branch" == "$base_branch" ]]; then
+  exit 0
+fi
+
 # Compute branch diff SHA (content-addressed, survives amend/rebase).
 # Well-known git empty-blob SHA — the value `git hash-object --stdin` produces
 # for an empty stream. We refuse to cache or trust this value: a state file

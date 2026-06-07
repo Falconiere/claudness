@@ -214,6 +214,18 @@ EOF
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("empty")'
 }
 
+@test "push-review: pushing the base branch itself is ALLOWED (no state file required)" {
+  # Switch to the base branch (development in the sandbox); diff against
+  # itself is empty, but we MUST NOT deny — this is the legitimate
+  # "fast-forward and push the integration branch" flow.
+  git checkout -q development
+
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "push-review: non-empty diff with matching SHA + zero findings still ALLOWED" {
   # This is the happy-path regression: the sentinel guard must not break it.
   sha=$(current_diff_sha)
