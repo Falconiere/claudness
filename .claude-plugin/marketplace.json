@@ -1,0 +1,22 @@
+{
+  "name": "my-claude",
+  "owner": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io",
+    "url": "https://github.com/falconiere"
+  },
+  "plugins": [
+    {
+      "name": "my-claude",
+      "source": "./plugins/my-claude",
+      "description": "Omnibus bundle: all skills, agents, commands, and hooks in this repo.",
+      "author": {
+        "name": "Falconiere Barbosa",
+        "email": "hello@falconiere.io"
+      },
+      "category": "productivity",
+      "keywords": ["caveman", "hooks", "skills", "agents"],
+      "license": "MIT"
+    }
+  ]
+}
