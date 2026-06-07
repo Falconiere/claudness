@@ -1,19 +1,50 @@
-#!/bin/bash
-# Block MCP tool usage — redirect to CLI scripts
-# Triggers on: mcp__engram tool calls
+#!/usr/bin/env bash
+# Block MCP tool usage for listed servers — redirect to CLI scripts.
+# Data-driven: server name prefixes come from $SETTINGS_DIR/mcp-blocklist.txt.
+#
+# Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
+#   $tool_name - name of the tool being invoked
 
 : "${tool_name:=}"
 
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
+command -v jq >/dev/null 2>&1 || exit 0
+
+SETTINGS_DIR=$(detect_settings_dir)
+LIST_FILE="$SETTINGS_DIR/mcp-blocklist.txt"
+
+[ -f "$LIST_FILE" ] || exit 0
+
+# Only inspect mcp__<server>__* tool names.
 case "$tool_name" in
-  mcp__engram__*)
-    ;;
-  *)
-    exit 0
-    ;;
+  mcp__*__*) ;;
+  *) exit 0 ;;
 esac
 
-jq -n '{
-  "decision": "block",
-  "reason": "MCP tools removed. Use CLI via code-intel scripts:\n  .claude/skills/code-intel/scripts/mod.sh engram search \"query\"\n\nInvoke the code-intel skill for full workflow guidance."
-}'
+# Extract the server segment: mcp__<server>__rest
+rest="${tool_name#mcp__}"
+server="${rest%%__*}"
+
+read_list() {
+  [ -f "$1" ] || return 0
+  grep -vE '^\s*(#|$)' "$1"
+}
+
+blocked=0
+while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  if [ "$name" = "$server" ]; then
+    blocked=1
+    break
+  fi
+done <<< "$(read_list "$LIST_FILE")"
+
+if [ "$blocked" = 1 ]; then
+  jq -n --arg s "$server" '{
+    "decision": "block",
+    "reason": ("MCP server \"" + $s + "\" is blocked. Use the corresponding CLI wrapper instead (see settings/mcp-blocklist.txt).")
+  }'
+fi
 exit 0
