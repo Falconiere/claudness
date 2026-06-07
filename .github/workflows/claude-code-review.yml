@@ -1,0 +1,41 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Claude review
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Review the pull request diff. Focus on:
+            - Correctness bugs (off-by-one, null deref, wrong condition, swallowed errors)
+            - Security (command injection, path traversal, unescaped shell input, secrets in logs)
+            - Hook correctness (stdin draining before exit, output JSON shape, exit codes)
+            - Bash safety (unquoted expansions, `set -e` gotchas, locale-sensitive sorts)
+            - Test coverage gaps for new branches
+
+            Skip nits and style preferences. Surface only findings a maintainer
+            would act on.
+
+            Comment inline on specific lines. End with a one-line verdict:
+            APPROVE / REQUEST_CHANGES / COMMENT — with the reason.
