@@ -14,3 +14,4 @@ hooks/pre-tools/modules/commit-gate.sh	Y	yamless default per owner decision
 hooks/pre-tools/modules/protected-files.sh	Y	yamless default per owner decision
 hooks/pre-tools/modules/quality-gate.sh	R	routo chosen for capability (per owner)
 hooks/pre-tools/modules/search-nudge.sh	Y	yamless default per owner decision
+hooks/session-end.sh	Y	yamless default per owner decision
