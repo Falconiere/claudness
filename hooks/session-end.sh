@@ -16,12 +16,14 @@ fi
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true
 
-if [ "$(detect_engram)" = "engram" ]; then
+if [ "$(detect_engram)" = "engram" ] && claudness_enabled skills engram; then
   save_doc="$HOOK_DIR/docs/vector-helper-save.md"
   save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via .claude/skills/code-intel/scripts/mod.sh engram save.")
   ctx="Session ending. $save_hint"
-else
+elif claudness_enabled skills engram; then
   ctx="Session ending. WARN: engram CLI not installed — session save skipped. Install engram to persist learnings across sessions."
+else
+  ctx="Session ending."
 fi
 
 jq -n --arg ctx "$ctx" '{

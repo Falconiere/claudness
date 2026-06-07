@@ -16,10 +16,12 @@ fi
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true
 
-if [ "$(detect_engram)" = "engram" ]; then
+if [ "$(detect_engram)" = "engram" ] && claudness_enabled skills engram; then
   reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run .claude/skills/code-intel/scripts/mod.sh engram summary then mod.sh engram context.")
-else
+elif claudness_enabled skills engram; then
   reminder="Context compacted. WARN: engram CLI not installed — memory summary/recall disabled. Continue from in-window context only."
+else
+  reminder="Context compacted. Continue from in-window context only."
 fi
 
 jq -n --arg reminder "$reminder" '{
