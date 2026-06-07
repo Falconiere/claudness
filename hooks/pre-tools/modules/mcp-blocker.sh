@@ -32,10 +32,11 @@ server="${rest%%__*}"
 blocked=0
 while IFS= read -r name; do
   [ -z "$name" ] && continue
-  if [ "$name" = "$server" ]; then
-    blocked=1
-    break
-  fi
+  # Prefix match: an entry of `claude_ai_` blocks `claude_ai_Canva`. An exact
+  # server name is the special case of a prefix with no extra characters.
+  case "$server" in
+    "$name"*) blocked=1; break ;;
+  esac
 done <<< "$(read_list "$LIST_FILE")"
 
 if [ "$blocked" = 1 ]; then
