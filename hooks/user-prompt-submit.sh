@@ -54,8 +54,15 @@ fi
 
 # ── Build context parts ──────────────────────────────────────────────────────
 
-# 1. Memory recall (generic — no project name)
-recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
+# 1. Memory recall — only when engram CLI is installed. Warn (once per prompt) otherwise.
+HAS_ENGRAM="$(detect_engram)"
+HAS_ASTGREP="$(detect_ast_grep)"
+
+if [ "$HAS_ENGRAM" = "engram" ]; then
+  recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
+else
+  recall="WARN: engram CLI not installed — persistent memory recall disabled. Install to enable: https://github.com/orgs/Falconiere/repositories?q=engram"
+fi
 
 # 2. Git branch + dirty state (with file count)
 git_ctx=""
@@ -84,13 +91,25 @@ if [[ "$prompt_lower" =~ (commit|push|[[:space:]]pr[[:space:]]|pull.?request) ]]
   hints+=("Never run git push. PR prep only. Verify diff covers only expected scope before committing.")
 fi
 if [[ "$prompt_lower" =~ (explore|find|understand|where|how\ does|trace|architecture|what\ does|who\ calls|caller|flow|search|look\ for|locate|what\ is|change|modify|update|move|rename|refactor|fix|debug|implement|add|create|build|write|delete|remove) ]]; then
-  hints+=("Search hierarchy: ast-grep FIRST for structural patterns on code files. Grep for exact literals on non-code files. Glob for file finding only.")
+  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+    hints+=("Search hierarchy: ast-grep FIRST for structural patterns on code files. Grep for exact literals on non-code files. Glob for file finding only.")
+  else
+    hints+=("Search hierarchy: Grep for exact literals on code/non-code files. Glob for file finding only. (ast-grep not installed — structural matching disabled.)")
+  fi
 fi
 if [[ "$prompt_lower" =~ (rename|move|extract|split) ]]; then
-  hints+=("Rename safely: find all references first (ast-grep + Grep on non-code configs), then rewrite.")
+  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+    hints+=("Rename safely: find all references first (ast-grep + Grep on non-code configs), then rewrite.")
+  else
+    hints+=("Rename safely: find all references first (Grep across codebase + configs), then rewrite.")
+  fi
 fi
 if [[ "$prompt_lower" =~ (pattern|struct|impl|trait|interface|all\ functions|all\ methods|all\ types|every\ function|every\ method|ast|syntax|code\ structure|derive|enum|generic|signature|return\ type|parameter|argument|where\ clause|lifetime|closure|macro|decorator|annotation|component|hook|provider|module|inject) ]]; then
-  hints+=("ast-grep MANDATORY: use for structural AST pattern matching. \`ast-grep run --pattern 'pattern' --lang <lang> .\` NEVER use Grep/rg for structural code patterns.")
+  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+    hints+=("ast-grep MANDATORY: use for structural AST pattern matching. \`ast-grep run --pattern 'pattern' --lang <lang> .\` NEVER use Grep/rg for structural code patterns.")
+  else
+    hints+=("WARN: ast-grep not installed — structural pattern matching unavailable. Install via \`cargo install ast-grep\` or \`brew install ast-grep\`. Fallback: use Grep with strict regex, expect false positives.")
+  fi
 fi
 if [[ "$prompt_lower" =~ (review|check\ (this|my|the)|look\ at) ]]; then
   hints+=("Review against project rules. Check forbidden syntax, quality gates, test coverage.")

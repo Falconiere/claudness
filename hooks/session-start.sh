@@ -105,6 +105,22 @@ if [ -n "$PROJECT_NAME" ]; then
   parts+=("Project: $PROJECT_NAME")
 fi
 
+# Warn when optional tools referenced by docs/skills are missing — keeps the
+# session start honest about which capabilities are actually available.
+HAS_ENGRAM="$(detect_engram)"
+HAS_ASTGREP="$(detect_ast_grep)"
+missing_tools=()
+[ "$HAS_ENGRAM" != "engram" ] && missing_tools+=("engram (persistent memory recall/save)")
+[ "$HAS_ASTGREP" != "ast-grep" ] && missing_tools+=("ast-grep (structural code search)")
+if [ "${#missing_tools[@]}" -gt 0 ]; then
+  warn="WARN: optional tools missing — features that depend on them are disabled:"
+  for t in "${missing_tools[@]}"; do
+    warn+="
+  • $t"
+  done
+  parts+=("$warn")
+fi
+
 # Append git context and gate status
 [[ -n "$git_ctx" ]] && parts+=("$git_ctx")
 [[ -n "$gate_hint" ]] && parts+=("$gate_hint")

@@ -43,6 +43,18 @@ detect_ts() {
     | grep -q . && echo ts
 }
 
+# Echo "engram" if the engram CLI is on PATH.
+detect_engram() {
+  command -v engram >/dev/null 2>&1 && echo engram
+}
+
+# Echo "ast-grep" if either `sg` or `ast-grep` is on PATH.
+detect_ast_grep() {
+  if command -v sg >/dev/null 2>&1 || command -v ast-grep >/dev/null 2>&1; then
+    echo ast-grep
+  fi
+}
+
 # Return the base branch from origin/HEAD, or "main" if remote is missing.
 detect_base_branch() {
   local root ref

@@ -16,6 +16,8 @@
 # shellcheck source=../../lib/detect.sh
 . "${BASH_SOURCE%/*}/../../lib/detect.sh"
 
+HAS_ASTGREP="$(detect_ast_grep)"
+
 # ── Structural pattern keywords (shared) ────────────────────────────────────
 STRUCT_RE='(^|\s)(fn |impl |async fn|async |class |function |struct |trait |interface |type |pub (fn|struct|enum|trait|mod|type|async)|export (function|class|interface|type|const|default)|enum |mod |const fn|#\[derive|#\[cfg|#\[test|@Component|@Injectable|@Module|=>|-> Result|-> impl|dyn |Box<|Arc<|Vec<|Option<|where |for .*in )'
 
@@ -44,14 +46,23 @@ if [[ "$tool_name" == "Grep" ]]; then
     exit 0
   fi
 
-  # ── STOP: Structural code pattern → ast-grep
+  # ── STOP: Structural code pattern → ast-grep (only when installed)
   if echo "$pattern" | grep -qE "$STRUCT_RE"; then
-    jq -n '{
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "additionalContext": "STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \"your pattern\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing."
-      }
-    }'
+    if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+      jq -n '{
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "additionalContext": "STOP: Structural code pattern detected. Use ast-grep: `ast-grep run --pattern \"your pattern\" --lang rust/typescript .` AST-aware matching is far more accurate. Grep is for exact literals on non-code files, or after ast-grep returned nothing."
+        }
+      }'
+    else
+      jq -n '{
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "additionalContext": "WARN: structural code pattern detected but ast-grep is not installed. Falling back to Grep — expect false positives. Install ast-grep (`cargo install ast-grep` or `brew install ast-grep`) for AST-aware matching."
+        }
+      }'
+    fi
     exit 0
   fi
 
@@ -67,24 +78,42 @@ if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
 
   # Catch grep/rg invocations
   if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)(grep|rg|ripgrep)\s'; then
-    # Structural patterns → ast-grep
+    # Structural patterns → ast-grep (only when installed)
     if echo "$cmd_only" | grep -qE "$STRUCT_RE"; then
-      jq -n '{
-        "hookSpecificOutput": {
-          "hookEventName": "PreToolUse",
-          "additionalContext": "STOP: grep/rg for structural code search. Use ast-grep: `ast-grep run --pattern \"your pattern\" --lang rust/typescript .` grep/rg is for piping command output or non-code files."
-        }
-      }'
+      if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+        jq -n '{
+          "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": "STOP: grep/rg for structural code search. Use ast-grep: `ast-grep run --pattern \"your pattern\" --lang rust/typescript .` grep/rg is for piping command output or non-code files."
+          }
+        }'
+      else
+        jq -n '{
+          "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": "WARN: structural grep/rg detected but ast-grep is not installed. Proceeding with grep/rg — expect false positives. Install ast-grep (`cargo install ast-grep` or `brew install ast-grep`) for AST-aware matching."
+          }
+        }'
+      fi
       exit 0
     fi
 
-    # All other grep/rg → nudge to proper tools
-    jq -n '{
-      "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "additionalContext": "grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output."
-      }
-    }'
+    # All other grep/rg → nudge to proper tools (gated on ast-grep availability)
+    if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+      jq -n '{
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "additionalContext": "grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output."
+        }
+      }'
+    else
+      jq -n '{
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "additionalContext": "grep/rg in Bash detected. Use Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output. (ast-grep not installed — structural matching unavailable.)"
+        }
+      }'
+    fi
     exit 0
   fi
 

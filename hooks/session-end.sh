@@ -1,13 +1,23 @@
 #!/bin/bash
 # Stop hook — prompt to save session learnings before exiting.
 
+HOOK_DIR="$(dirname "$0")"
+
+# shellcheck source=lib/detect.sh
+. "$HOOK_DIR/lib/detect.sh"
+
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true
 
-save_doc="$(dirname "$0")/docs/vector-helper-save.md"
-save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via .claude/skills/code-intel/scripts/mod.sh engram save.")
+if [ "$(detect_engram)" = "engram" ]; then
+  save_doc="$HOOK_DIR/docs/vector-helper-save.md"
+  save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via .claude/skills/code-intel/scripts/mod.sh engram save.")
+  ctx="Session ending. $save_hint"
+else
+  ctx="Session ending. WARN: engram CLI not installed — session save skipped. Install engram to persist learnings across sessions."
+fi
 
-jq -n --arg ctx "Session ending. $save_hint" '{
+jq -n --arg ctx "$ctx" '{
   "stopReason": $ctx
 }'
 
