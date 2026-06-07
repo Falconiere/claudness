@@ -62,25 +62,22 @@ fi
 # ── Build context parts ──────────────────────────────────────────────────────
 
 # 1. Memory recall — only when engram CLI is installed. Warn (once per prompt) otherwise.
-HAS_ENGRAM="$(detect_engram)"
 HAS_ASTGREP="$(detect_ast_grep)"
-
-if ! claudness_enabled skills engram; then
-  HAS_ENGRAM=""
-  ENGRAM_DISABLED=1
-fi
 if ! claudness_enabled skills ast-grep; then
   HAS_ASTGREP=""
-  ASTGREP_DISABLED=1
 fi
 
-if [ "$HAS_ENGRAM" = "engram" ]; then
-  recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
-elif [ "${ENGRAM_DISABLED:-0}" = "1" ]; then
-  recall=""
-else
-  recall="WARN: engram CLI not installed — persistent memory recall disabled. Install to enable: https://github.com/orgs/Falconiere/repositories?q=engram"
-fi
+case "$(claudness_engram_state)" in
+  available)
+    recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
+    ;;
+  missing)
+    recall="WARN: engram CLI not installed — persistent memory recall disabled. Install to enable: https://github.com/orgs/Falconiere/repositories?q=engram"
+    ;;
+  disabled|*)
+    recall=""
+    ;;
+esac
 
 # 2. Git branch + dirty state (with file count)
 git_ctx=""
