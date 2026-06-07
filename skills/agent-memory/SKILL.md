@@ -45,7 +45,7 @@ engram stats
 ```
 ## 1. Memory Before Files — Layered Recall
 
-Before exploring the codebase to *understand* something, search **engram first**, then **grepai**, then read files. Never jump straight to Read/Grep/Glob for understanding.
+Before exploring the codebase to *understand* something, search **engram first**, then fall back to **ast-grep** for structural patterns and **Grep** for exact literals. Never jump straight to Read/Grep/Glob for *understanding* (as opposed to known-file reads).
 
 ```
 Need to understand something?
@@ -53,24 +53,23 @@ Need to understand something?
 ├─ Architecture/structure question
 │   ├─ engram search "architecture <module>" → past decisions
 │   ├─ Hit  → use it
-│   └─ Miss → grepai search "<intent in english>" --json --compact
-│              Then save findings to engram (--topic architecture/<module>)
+│   └─ Miss → ast-grep on relevant declarations, then Grep on keywords.
+│              Save findings back to engram (--topic architecture/<module>).
 │
 ├─ Where is the code for X?
 │   ├─ engram search "file-map <area>" → cached path
 │   ├─ Hit  → go directly to likely files, verify
-│   └─ Miss → grepai search "<feature behavior>" --json --compact
-│              Then save mapping to engram (--topic file-map/<area>)
+│   └─ Miss → ast-grep for the call/def shape, or Grep for a literal name.
+│              Save mapping to engram (--topic file-map/<area>).
 │
 ├─ How does pattern X work?
 │   ├─ engram search "pattern <name>"
 │   ├─ Hit  → use/validate
-│   └─ Miss → grepai search "<pattern intent>" --json --compact
-│              Then save (--topic pattern/<name>)
+│   └─ Miss → ast-grep for the pattern shape, Read the hits, then save
+│              (--topic pattern/<name>).
 │
 ├─ What calls / what does Y call?
-│   └─ grepai trace callers/callees/graph "<symbol>" --json
-│       (memory rarely covers this — go straight to grepai)
+│   └─ ast-grep for the call shape (e.g. `$_.Y($$$)`) or Grep for the symbol.
 │
 └─ What was decided about X?
     ├─ engram search "decision <topic>"
@@ -78,16 +77,16 @@ Need to understand something?
     └─ Miss → check docs/git, then save
 ```
 
-**Skip memory + grepai** (go straight to files) when:
+**Skip memory + structural search** (go straight to files) when:
 - User explicitly says "read this file" or asks to edit a specific file
 - Running tests, builds, or git commands (execution, not knowledge)
 - Checking current state (git status/diff, file contents you need to modify)
 - Exact text/import search → use Grep
 - Path/filename pattern → use Glob
 
-**Self-check**: *"Am I about to read files just to understand something I might already know from a previous session, or that grepai could surface semantically?"*
+**Self-check**: *"Am I about to read files just to understand something I might already know from a previous session, or that ast-grep / Grep could surface in one shot?"*
 
-See also: `.claude/skills/grepai/SKILL.md` for grepai usage patterns.
+See also: `skills/ast-grep/SKILL.md` for structural search and rewrite.
 ## 2. Save What You Learn
 After any exploration that yields **reusable knowledge**, save:
 ```bash
