@@ -68,3 +68,25 @@ detect_settings_dir() {
     echo "$self/../settings"
   fi
 }
+
+# Echo a repo-relative path for the given (potentially absolute) file_path.
+# Falls back to the input unchanged if it cannot determine the project root
+# or if the path is not under that root.
+#
+# Claude's Edit/Write tools send absolute paths; settings globs are written
+# repo-relative. Without this helper, [[ /abs/path == hooks/lib/** ]] is
+# always false, silently no-op'ing trusted-script protection.
+to_relative_path() {
+  local p="${1:-}"
+  [ -z "$p" ] && { echo ""; return 0; }
+  local root
+  root=$(detect_project_root)
+  if [ -n "$root" ]; then
+    case "$p" in
+      "$root"/*) echo "${p#"$root"/}" ;;
+      *)         echo "$p" ;;
+    esac
+  else
+    echo "$p"
+  fi
+}

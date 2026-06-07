@@ -91,3 +91,32 @@ source_lib() {
   run detect_project_root
   [ -z "$output" ]
 }
+
+@test "to_relative_path strips git toplevel prefix from absolute path" {
+  source_lib
+  root=$(detect_project_root)
+  run to_relative_path "$root/hooks/lib/detect.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" = "hooks/lib/detect.sh" ]
+}
+
+@test "to_relative_path passes through a relative path unchanged" {
+  source_lib
+  run to_relative_path "hooks/lib/detect.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" = "hooks/lib/detect.sh" ]
+}
+
+@test "to_relative_path passes through an abs path outside the repo unchanged" {
+  source_lib
+  run to_relative_path "/etc/passwd"
+  [ "$status" -eq 0 ]
+  [ "$output" = "/etc/passwd" ]
+}
+
+@test "to_relative_path on empty input returns empty" {
+  source_lib
+  run to_relative_path ""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

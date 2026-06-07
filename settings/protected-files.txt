@@ -1,6 +1,11 @@
 # Protected file globs (one per line; '#' starts a comment).
 # bash extended-glob patterns matched against the edited file path.
 #
+# Paths are normalized to repo-relative before matching (the Edit/Write tool
+# sends absolute paths). Patterns are tried two ways: as written, and with an
+# implicit "**/" prefix so e.g. `hooks/lib/**` also matches `subtree/hooks/lib/x.sh`.
+# Bare-basename patterns (no `/`) additionally match against the file basename.
+#
 # Lint/format configs from the original hook.
 *.oxfmtrc.json
 *.oxlintrc.json

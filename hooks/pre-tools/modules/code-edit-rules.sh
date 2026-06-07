@@ -23,10 +23,15 @@ RULES_FILE="$SETTINGS_DIR/code-edit-rules.json"
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // ""')
 [ -z "$file_path" ] && exit 0
 
+# Normalize abs → repo-relative so patterns in code-edit-rules.json match
+# the same way the user wrote them.
+file_path=$(to_relative_path "$file_path")
+
 # glob_match <pattern> <path> — bash-native glob check
 glob_match() {
   local pattern="$1"
   local path="$2"
+  shopt -s extglob globstar 2>/dev/null || true
   # shellcheck disable=SC2053  # intentional glob match on RHS
   [[ "$path" == $pattern ]]
 }

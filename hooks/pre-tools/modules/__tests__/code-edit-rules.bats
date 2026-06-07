@@ -43,3 +43,23 @@ JSON
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("rust.md")'
 }
+
+# Regression: absolute path under a git repo must be normalized to repo-relative
+# so repo-relative match globs like "src/**/*.rs" fire.
+@test "code-edit-rules: ABSOLUTE path under repo normalizes to repo-relative for glob match" {
+  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+{ "rules": [ { "match": "src/**/*.rs", "docs": ["rust.md"] } ] }
+JSON
+  # Resolve symlinks so the path we feed matches what `git rev-parse --show-toplevel`
+  # returns inside the repo (macOS /var → /private/var symlink would otherwise
+  # foil the prefix strip).
+  REPO=$(cd "$(mktemp -d)" && pwd -P)
+  ( cd "$REPO" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init )
+  mkdir -p "$REPO/src/foo"
+  touch "$REPO/src/foo/bar.rs"
+  cd "$REPO"
+  run_hook "$REPO/src/foo/bar.rs"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("rust.md")'
+  rm -rf "$REPO"
+}
