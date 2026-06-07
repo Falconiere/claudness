@@ -23,13 +23,25 @@ case "$tool_name" in
   *) exit 0 ;;
 esac
 
+# Fast-path: matcher widened from mcp__engram to mcp__ now routes every MCP
+# tool call through here. Skip config-load work entirely when there is no
+# blocklist file AND no user/project config to consult — the common case for
+# anyone who has not opted into the gate.
+USER_CFG="$HOME/.claude/claudness.config.json"
+PROJECT_ROOT_FAST="${CLAUDE_PROJECT_DIR:-}"
+[ -z "$PROJECT_ROOT_FAST" ] && PROJECT_ROOT_FAST=$(git rev-parse --show-toplevel 2>/dev/null || true)
+PROJECT_CFG=""
+[ -n "$PROJECT_ROOT_FAST" ] && PROJECT_CFG="$PROJECT_ROOT_FAST/.claude/claudness.config.json"
+if [ ! -f "$LIST_FILE" ] && [ ! -f "$USER_CFG" ] && { [ -z "$PROJECT_CFG" ] || [ ! -f "$PROJECT_CFG" ]; }; then
+  exit 0
+fi
+
 # Extract the server segment: mcp__<server>__rest
 rest="${tool_name#mcp__}"
 server="${rest%%__*}"
 
 # read_list is sourced from lib/detect.sh.
 
-disabled_from_cfg=""
 claudness_load_config
 disabled_from_cfg=$(jq -r '.mcp // {} | to_entries[] | select(.value == false) | .key' \
   "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
@@ -59,20 +71,22 @@ elif match_entry "$disabled_from_cfg"; then
 fi
 
 if [ -n "$blocked_source" ]; then
-  case "$blocked_source" in
-    file)
-      reason_tail="see settings/mcp-blocklist.txt"
-      ;;
-    config)
-      reason_tail="disabled via claudness config (mcp.$server=false in claudness.config.json)"
-      ;;
-  esac
-  jq -n --arg s "$server" --arg tail "$reason_tail" '{
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "deny",
-      permissionDecisionReason: ("MCP server \"" + $s + "\" is blocked (" + $tail + ").")
-    }
-  }'
+  jq -n \
+    --arg s "$server" \
+    --arg src "$blocked_source" \
+    '{
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: (
+          "MCP server \"" + $s + "\" is blocked (" +
+          (if $src == "file"
+            then "see settings/mcp-blocklist.txt"
+            else "disabled via claudness config (mcp." + $s + "=false in claudness.config.json)"
+           end) +
+          ")."
+        )
+      }
+    }'
 fi
 exit 0
