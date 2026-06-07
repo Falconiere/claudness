@@ -31,28 +31,48 @@ server="${rest%%__*}"
 
 disabled_from_cfg=""
 claudness_load_config
-if command -v jq >/dev/null 2>&1; then
-  disabled_from_cfg=$(jq -r '.mcp // {} | to_entries[] | select(.value == false) | .key' \
-    "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+disabled_from_cfg=$(jq -r '.mcp // {} | to_entries[] | select(.value == false) | .key' \
+  "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+
+file_list="$(read_list "$LIST_FILE")"
+
+# Track WHERE the matching entry came from so the deny reason can point the
+# user at the right file to edit.
+blocked_source=""
+match_entry() {
+  local list_input="$1" name
+  while IFS= read -r name; do
+    [ -z "$name" ] && continue
+    # Prefix match: an entry of `claude_ai_` blocks `claude_ai_Canva`. An
+    # exact server name is the special case of a prefix with no suffix.
+    case "$server" in
+      "$name"*) return 0 ;;
+    esac
+  done <<< "$list_input"
+  return 1
+}
+
+if match_entry "$file_list"; then
+  blocked_source="file"
+elif match_entry "$disabled_from_cfg"; then
+  blocked_source="config"
 fi
 
-combined="$(read_list "$LIST_FILE")
-$disabled_from_cfg"
-
-blocked=0
-while IFS= read -r name; do
-  [ -z "$name" ] && continue
-  # Prefix match: an entry of `claude_ai_` blocks `claude_ai_Canva`. An exact
-  # server name is the special case of a prefix with no extra characters.
-  case "$server" in
-    "$name"*) blocked=1; break ;;
+if [ -n "$blocked_source" ]; then
+  case "$blocked_source" in
+    file)
+      reason_tail="see settings/mcp-blocklist.txt"
+      ;;
+    config)
+      reason_tail="disabled via claudness config (mcp.$server=false in claudness.config.json)"
+      ;;
   esac
-done <<< "$combined"
-
-if [ "$blocked" = 1 ]; then
-  jq -n --arg s "$server" '{
-    "decision": "block",
-    "reason": ("MCP server \"" + $s + "\" is blocked. Use the corresponding CLI wrapper instead (see settings/mcp-blocklist.txt).")
+  jq -n --arg s "$server" --arg tail "$reason_tail" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: ("MCP server \"" + $s + "\" is blocked (" + $tail + ").")
+    }
   }'
 fi
 exit 0

@@ -18,7 +18,7 @@ teardown() {
 @test "mcp-blocker: blocks a listed server" {
   tool_name=mcp__engram__search run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.decision == "block"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
 @test "mcp-blocker: allows an unlisted server" {
@@ -34,7 +34,7 @@ teardown() {
   printf '%s\n' "claude_ai_" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__claude_ai_Canva__search run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.decision == "block"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
 @test "mcp-blocker: prefix entry 'claude_ai_' does NOT block 'friend_ai_Canva'" {
@@ -48,7 +48,7 @@ teardown() {
   printf '%s\n' "engram" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
   tool_name=mcp__engram__save run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.decision == "block"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
 @test "config.mcp disables a server without touching the blocklist file" {
@@ -66,7 +66,16 @@ JSON
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"someserver"* ]]
-  [[ "$output" == *"block"* ]]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("claudness config")'
 
   rm -rf "$TMPHOME"
+}
+
+@test "block-from-file deny reason directs user to mcp-blocklist.txt, not config" {
+  # File-source block must NOT mention claudness.config.json
+  tool_name=mcp__engram__search run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("mcp-blocklist.txt")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("claudness config") | not'
 }
