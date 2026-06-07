@@ -185,7 +185,7 @@ EOF
 @test "push-review: dispatcher picks up the module by glob" {
   # The dispatcher reads `*.sh` from modules/. Verify our file matches.
   shopt -s nullglob
-  modules=("$REPO_ROOT"/.claude/hooks/pre-tools/modules/*.sh)
+  modules=("$REPO_ROOT"/hooks/pre-tools/modules/*.sh)
   found=0
   for m in "${modules[@]}"; do
     [[ "$m" == *push-review.sh ]] && found=1

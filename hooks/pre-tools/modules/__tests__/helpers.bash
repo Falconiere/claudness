@@ -7,8 +7,8 @@
 # dispatcher env vars (`tool_name`, `input`) exported, and JSON payload on
 # stdin.
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../.." && pwd)"
-HOOK_SCRIPT="$REPO_ROOT/.claude/hooks/pre-tools/modules/push-review.sh"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+HOOK_SCRIPT="$REPO_ROOT/hooks/pre-tools/modules/push-review.sh"
 
 setup_sandbox() {
   export SANDBOX="$(mktemp -d)"
@@ -44,11 +44,13 @@ build_input() {
 }
 
 # Run the hook against a payload. Output goes to $output; status to $status.
+# Tests use the `development` base branch fixture, so PUSH_REVIEW_BASE forces
+# the project-agnostic detect_base_branch fallback to honor that.
 # Usage: run_hook "Bash" "$(build_input 'git push')"
 run_hook() {
   local tool_name="$1"
   local payload="$2"
-  tool_name="$tool_name" input="$payload" \
+  tool_name="$tool_name" input="$payload" PUSH_REVIEW_BASE=development \
     run bash "$HOOK_SCRIPT" <<<"$payload"
 }
 

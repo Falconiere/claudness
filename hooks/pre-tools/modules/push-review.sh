@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Pre-tool check: block `git push` until branch has been reviewed.
+# Project-agnostic: base branch is detected via detect_base_branch
+# (or env-overridden with $PUSH_REVIEW_BASE for tests).
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -11,10 +13,13 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
 [[ "$tool_name" != "Bash" ]] && exit 0
 
-# jq missing → exit 0 (allow). Already a dep of other modules; env issue.
-command -v jq >/dev/null 2>&1 || exit 0
+command -v jq  >/dev/null 2>&1 || exit 0
+command -v git >/dev/null 2>&1 || exit 0
 
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
 cmd_only=$(echo "$command" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
@@ -36,7 +41,8 @@ slug=$(_branch_slug "$current_branch")
 state_dir=${STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/push-review}
 state_file="$state_dir/${slug}.json"
 
-base_branch="development"
+# Base branch: env override > detect_base_branch.
+base_branch="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
 
 # Verify base branch exists locally.
 if ! git rev-parse --verify --quiet "$base_branch" >/dev/null; then
