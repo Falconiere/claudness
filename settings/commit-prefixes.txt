@@ -1,0 +1,12 @@
+# Conventional Commits prefixes (one per line; '#' starts a comment).
+feat
+fix
+chore
+docs
+refactor
+test
+perf
+build
+ci
+style
+revert
