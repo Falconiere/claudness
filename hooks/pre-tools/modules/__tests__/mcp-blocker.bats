@@ -8,11 +8,20 @@ setup() {
   export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
   mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
   printf '%s\n' "engram" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  # TMPHOME is created lazily by tests that need a per-test $HOME sandbox;
+  # registering it here lets teardown clean it up even if the test aborts
+  # mid-assertion.
+  TMPHOME=""
 }
 
 teardown() {
   unset MY_CLAUDE_SETTINGS_DIR
-  [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+  if [ -n "${TMP:-}" ] && [ -d "$TMP" ]; then
+    rm -rf "$TMP"
+  fi
+  if [ -n "${TMPHOME:-}" ] && [ -d "$TMPHOME" ]; then
+    rm -rf "$TMPHOME"
+  fi
 }
 
 @test "mcp-blocker: blocks a listed server" {
@@ -53,23 +62,22 @@ teardown() {
 
 @test "config.mcp disables a server without touching the blocklist file" {
   TMPHOME=$(mktemp -d)
-  HOME="$TMPHOME"
-  mkdir -p "$HOME/.claude"
-  cat > "$HOME/.claude/claudness.config.json" <<JSON
+  mkdir -p "$TMPHOME/.claude"
+  cat > "$TMPHOME/.claude/claudness.config.json" <<JSON
 {"version":1,"mcp":{"someserver":false}}
 JSON
 
   payload=$(jq -n '{tool_name:"mcp__someserver__do",tool_input:{}}')
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
-  tool_name=mcp__someserver__do input="$payload" HOME="$HOME" \
+  tool_name=mcp__someserver__do input="$payload" HOME="$TMPHOME" \
     run bash "$REPO_ROOT/hooks/pre-tools/modules/mcp-blocker.sh" <<<"$payload"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"someserver"* ]]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("claudness config")'
-
-  rm -rf "$TMPHOME"
+  # TMPHOME cleanup happens in teardown so an assertion failure above does
+  # not leak the temp dir.
 }
 
 @test "block-from-file deny reason directs user to mcp-blocklist.txt, not config" {

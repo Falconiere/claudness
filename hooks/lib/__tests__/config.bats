@@ -60,7 +60,11 @@ teardown() {
 }
 
 @test "engram_state returns 'missing' when enabled but CLI absent" {
-  PATH=/usr/bin:/bin run claudness_engram_state
+  # Use a subshell with env -i so the PATH override stays scoped to the
+  # child process; the bats `run` function would otherwise mutate the
+  # outer shell's PATH for the remainder of this test.
+  run env -i HOME="$HOME" PATH=/usr/bin:/bin bash -c \
+    ". \"$REPO_ROOT/hooks/lib/config.sh\"; claudness_engram_state"
   [ "$status" -eq 0 ]
   [ "$output" = "missing" ]
 }
