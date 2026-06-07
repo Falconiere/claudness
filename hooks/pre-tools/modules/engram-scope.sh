@@ -37,7 +37,49 @@ if echo "$cmd_only" | grep -qE '(^|[[:space:]/])mod\.sh[[:space:]]+engram\b'; th
   exit 0
 fi
 
-# Split on shell statement separators so each segment is independent.
+# Split on shell statement separators (;, &&, ||) — but ONLY when they are
+# unquoted. A naive `tr ';&|' '\n'` would split `engram save "title; body"`
+# inside the quoted argument, falsely denying a legitimate call. Use python3
+# to walk the command character-by-character respecting single/double quotes
+# and backslash escapes; fall back to the naive split if python3 is missing.
+split_statements() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$1" <<'PY' 2>/dev/null
+import sys
+s = sys.argv[1]
+segments, buf = [], []
+i, n = 0, len(s)
+quote = None  # current quote char or None
+while i < n:
+    c = s[i]
+    if quote:
+        buf.append(c)
+        if c == '\\' and i + 1 < n:
+            buf.append(s[i + 1]); i += 2; continue
+        if c == quote: quote = None
+        i += 1; continue
+    if c in ("'", '"'):
+        quote = c; buf.append(c); i += 1; continue
+    if c == '\\' and i + 1 < n:
+        buf.append(c); buf.append(s[i + 1]); i += 2; continue
+    # Unquoted separator?
+    if c == ';':
+        segments.append(''.join(buf)); buf = []; i += 1; continue
+    if c in ('&', '|') and i + 1 < n and s[i + 1] == c:
+        segments.append(''.join(buf)); buf = []; i += 2; continue
+    buf.append(c); i += 1
+if buf: segments.append(''.join(buf))
+for seg in segments:
+    seg = seg.strip()
+    if seg: print(seg)
+PY
+    return
+  fi
+  # Fallback: naive split. Accepts the quoted-string false-positive risk only
+  # when python3 is unavailable.
+  printf '%s\n' "$1" | tr ';&|' '\n' | sed '/^$/d'
+}
+
 # Then inspect each segment for a raw `engram <subcmd>` invocation.
 violation=""
 while IFS= read -r segment; do
@@ -85,7 +127,7 @@ while IFS= read -r segment; do
 
   violation="$segment"
   break
-done < <(printf '%s\n' "$cmd_only" | tr ';&|' '\n' | sed '/^$/d')
+done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
   jq -n --arg cmd "$violation" '{
