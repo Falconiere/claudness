@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.claude/skills/code-intel/scripts/mod.sh:*)",
+      "Bash(ast-grep:*)",
+      "Bash(bun install:*)",
+      "Bash(bun run:*)",
+      "Bash(bun test:*)",
+      "Bash(bun x:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git push:*)",
+      "Bash(git status)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(node ./*:*)",
+      "Bash(pwd)",
+      "Bash(sg:*)",
+      "Bash(which:*)"
+    ],
+    "deny": [
+      "Bash(bun --eval:*)",
+      "Bash(bun -e:*)",
+      "Bash(chmod 777:*)",
+      "Bash(dd if=/dev/zero:*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push*main*)",
+      "Bash(git push*master*)",
+      "Bash(mkfs:*)",
+      "Bash(node --eval:*)",
+      "Bash(node --print:*)",
+      "Bash(node -e:*)",
+      "Bash(node -p:*)",
+      "Bash(rm -rf /)",
+      "Bash(sudo rm:*)"
+    ]
+  }
+}
