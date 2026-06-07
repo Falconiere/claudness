@@ -46,18 +46,25 @@ Add or drop directories as needed — nothing here is load-bearing on the layout
 ## Install
 
 ### Per-user (global)
-Symlink or copy into `~/.claude/`:
 
 ```bash
 ln -s "$PWD/skills"   ~/.claude/skills
 ln -s "$PWD/agents"   ~/.claude/agents
 ln -s "$PWD/commands" ~/.claude/commands
+ln -s "$PWD/hooks"    ~/.claude/hooks
 ```
 
-Merge `settings/*.json` fragments into `~/.claude/settings.json` by hand or with `jq`.
+Merge settings fragments — see `settings/README.md`.
 
 ### Per-project
-Symlink into a project's `.claude/` directory the same way, or point Claude Code at this repo via a plugin marketplace entry.
+
+```bash
+ln -s /Volumes/Projects/my-claude/skills   .claude/skills
+ln -s /Volumes/Projects/my-claude/agents   .claude/agents
+ln -s /Volumes/Projects/my-claude/commands .claude/commands
+ln -s /Volumes/Projects/my-claude/hooks    .claude/hooks
+ln -s /Volumes/Projects/my-claude/tooling  .tooling
+```
 
 ### Plugins via marketplace
 If a plugin lives under `plugins/<name>/`, install it from a local marketplace:
