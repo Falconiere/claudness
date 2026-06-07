@@ -26,7 +26,7 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
   "diff_sha": "<git-hash-object output>",
   "base_branch": "development",
   "reviewed_at": "<iso8601>",
-  "reviewers": ["code-simplifier", "caveman:cavecrew-reviewer", "code-review:xhigh"],
+  "reviewers": ["code-simplifier:code-simplifier", "caveman:cavecrew-reviewer", "code-review:xhigh"],
   "findings_count": 0,
   "findings": []
 }

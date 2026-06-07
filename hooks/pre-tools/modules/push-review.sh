@@ -134,7 +134,7 @@ if [[ ! -f "$state_file" ]]; then
         "  6. Re-run all three reviewers on the new diff. Loop until every reviewer returns zero findings.\n" +
         "  7. atomically write state file at " + $file + " (write to '\''<file>.tmp'\'' then mv) with schema:\n" +
         "     { version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings }\n" +
-        "     `reviewers` MUST be [\"code-simplifier\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\"] and `findings_count` MUST be 0.\n" +
+        "     `reviewers` MUST be [\"code-simplifier:code-simplifier\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\"] and `findings_count` MUST be 0.\n" +
         "  8. Retry git push."
       )
     }
