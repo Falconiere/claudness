@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Shared bats helpers for push-review.sh tests.
+#
+# Each test gets a sandbox: a temp git repo with a `development` base branch,
+# a feature branch with one commit, and a writable `.claude/tmp/push-review/`
+# dir. The hook module is invoked as a subprocess, with the standard
+# dispatcher env vars (`tool_name`, `input`) exported, and JSON payload on
+# stdin.
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../.." && pwd)"
+HOOK_SCRIPT="$REPO_ROOT/.claude/hooks/pre-tools/modules/push-review.sh"
+
+setup_sandbox() {
+  export SANDBOX="$(mktemp -d)"
+  export STATE_DIR="$SANDBOX/.claude/tmp/push-review"
+  mkdir -p "$STATE_DIR"
+
+  cd "$SANDBOX"
+  git init -q -b development .
+  git config user.email "test@example.com"
+  git config user.name "Test"
+  echo "base" > base.txt
+  git add base.txt
+  git commit -q -m "base commit"
+
+  git checkout -q -b feat/example
+  echo "feature" > feature.txt
+  git add feature.txt
+  git commit -q -m "feature commit"
+}
+
+teardown_sandbox() {
+  [[ -n "${SANDBOX:-}" && -d "$SANDBOX" ]] && rm -rf "$SANDBOX"
+}
+
+# Build a PreToolUse JSON payload for a given command.
+# Usage: build_input "git push origin feat/example"
+build_input() {
+  local cmd="$1"
+  jq -n --arg cmd "$cmd" '{
+    tool_name: "Bash",
+    tool_input: { command: $cmd }
+  }'
+}
+
+# Run the hook against a payload. Output goes to $output; status to $status.
+# Usage: run_hook "Bash" "$(build_input 'git push')"
+run_hook() {
+  local tool_name="$1"
+  local payload="$2"
+  tool_name="$tool_name" input="$payload" \
+    run bash "$HOOK_SCRIPT" <<<"$payload"
+}
+
+# Compute the current branch diff SHA the same way the hook does.
+current_diff_sha() {
+  git diff --no-color "development...HEAD" | git hash-object --stdin
+}
+
+# Write a state file with given SHA and findings count.
+# Usage: write_state <sha> <findings_count>
+write_state() {
+  local sha="$1"
+  local count="$2"
+  local branch
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  local slug
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  [[ -z "$slug" ]] && slug="_default"
+  jq -n \
+    --arg branch "$branch" \
+    --arg sha "$sha" \
+    --argjson count "$count" \
+    '{
+      version: 1,
+      branch: $branch,
+      diff_sha: $sha,
+      base_branch: "development",
+      reviewed_at: "2026-06-07T00:00:00Z",
+      reviewers: ["caveman:cavecrew-reviewer", "code-simplifier"],
+      findings_count: $count,
+      findings: []
+    }' > "$STATE_DIR/${slug}.json"
+}
