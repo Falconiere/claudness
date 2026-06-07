@@ -143,7 +143,7 @@ if [[ ! -f "$state_file" ]]; then
   exit 0
 fi
 
-# Validate state file: version, diff_sha, findings_count.
+# Validate state file: version, diff_sha, findings_count, reviewers.
 state_version=$(jq -r '.version // ""' "$state_file" 2>/dev/null || echo "")
 state_sha=$(jq -r '.diff_sha // ""' "$state_file" 2>/dev/null || echo "")
 state_findings=$(jq -r '.findings_count // ""' "$state_file" 2>/dev/null || echo "")
@@ -154,6 +154,26 @@ if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; the
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": ("state file corrupted at " + $file + "; delete and re-review")
+    }
+  }'
+  exit 0
+fi
+
+# Reviewers must include the required set. Strict check prevents an agent
+# from writing a partial list (e.g. ["simplify"]) and bypassing the gate.
+required_reviewers='["simplify","caveman:cavecrew-reviewer","code-review:xhigh","security-review"]'
+if ! jq -e --argjson req "$required_reviewers" \
+     '(.reviewers // []) as $r | ($req | all(. as $x | $r | index($x) != null))' \
+     "$state_file" >/dev/null 2>&1; then
+  jq -n --arg file "$state_file" --arg req "$required_reviewers" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": (
+        "state file missing required reviewers at " + $file + "\n" +
+        "All of the following must appear in `reviewers`: " + $req + "\n" +
+        "Run every reviewer (the missing ones too), merge findings, then rewrite the state file."
+      )
     }
   }'
   exit 0

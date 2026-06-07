@@ -258,35 +258,55 @@ All CI fixes go through Step 3's worktree flow + Step 4's push validation.
 
 ## Step 6 — Stop conditions
 
+The babysit has exactly TWO ways to stop:
+
+1. **Success stop** — both green-light conditions met (defined below).
+2. **Escalation stop** — the babysit physically cannot proceed without human input (defined below).
+
+There is no time-based, idle-based, or tick-count-based stop. The babysit keeps running as long as the PR is open, has unresolved comments, or has non-green CI — even if those states persist for hours. Backoff slows the polling interval; it never terminates the loop.
+
 Check after each tick:
 
 ```bash
 gh pr view "$NUMBER" --json statusCheckRollup,reviewThreads
 ```
 
-**Auto-stop** (`CronDelete address-pr-comments:${SLOT}` + remove `/tmp/address-pr-comments-${SLOT}.json`) the moment both are true on a tick:
+### Success stop (the only happy-path exit)
+
+`CronDelete address-pr-comments:${SLOT}` + remove `/tmp/address-pr-comments-${SLOT}.json` **only** when BOTH conditions are true on the same tick:
 
 - ✅ Every check in `statusCheckRollup` has `conclusion: SUCCESS` (or `NEUTRAL` / `SKIPPED`)
 - ✅ Unresolved actionable comment count is **0** (re-run Step 1 filter)
 
-Do not wait for an idle streak or backoff — terminate the cron in the same tick the conditions match. On stop:
+If either condition is false — even by one check or one comment — DO NOT stop. Continue to the next tick (possibly at a longer backoff interval; see "Adaptive backoff" below).
+
+On success stop:
 
 > "PR #N: all green and no unresolved comments. Babysit done. Ready to merge."
 
 Don't auto-merge. The user merges.
 
-**Stop with escalation** (cron deleted, user flagged) when:
+### Escalation stop (the babysit is blocked, not done)
+
+Stop with a clear flag when the babysit physically cannot make forward progress without the human:
 
 - PR was closed or merged externally
 - A PR is marked **stuck** (5 fix attempts, or 2 consecutive same-blocker)
 - A merge conflict appears (`mergeable == CONFLICTING`)
-- A CI failure needs human judgment
+- A CI failure needs human judgment (architectural decision, ambiguous spec)
 
-**Keep going (next tick)** when:
+These are NOT "done" states — they are "I'm blocked, please look" states. Use a different terminal message so the user knows the work is not actually finished:
+
+> "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with `/address-pr-comments` once unblocked."
+
+### Keep going (next tick)
+
+Anything else — including indefinite waits:
 
 - Checks still pending/running
 - A fix was just pushed (CI re-running)
 - Unresolved actionable comments remain and weren't all addressed this tick
+- Nothing has changed since the last tick (silent no-op; bump `idleStreak`; widen backoff via the table below; never terminate)
 
 ---
 
@@ -322,20 +342,21 @@ Per tick: fetch current state, diff against saved. All reads/writes go to the sl
 
 ### Adaptive backoff
 
-| Idle streak    | Action                                                                                                                                      |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0              | Reset interval to base 3 min (or 1 min if CI is failing)                                                                                    |
-| 3 consecutive  | `CronDelete address-pr-comments:${SLOT}` + `CronCreate` `*/6 * * * *` (6 min), same cron name                                               |
-| 6 consecutive  | `CronDelete address-pr-comments:${SLOT}` + `CronCreate` `*/12 * * * *` (12 min), same cron name                                             |
-| 10 consecutive | **Auto-pause** — `CronDelete address-pr-comments:${SLOT}`, notify "PR #N stable ~30 min. Pausing. Re-run `/address-pr-comments` to resume." |
+Backoff only widens the polling interval. It never terminates the babysit — the only terminal states are Success stop and Escalation stop (Step 6).
+
+| Idle streak    | Action                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| 0              | Reset interval to base 3 min (or 1 min if CI is failing)                                        |
+| 3 consecutive  | `CronDelete address-pr-comments:${SLOT}` + `CronCreate` `*/6 * * * *` (6 min), same cron name   |
+| 6 consecutive  | `CronDelete address-pr-comments:${SLOT}` + `CronCreate` `*/12 * * * *` (12 min), same cron name |
+| 10+ consecutive | Stay at `*/15 * * * *` (15 min) indefinitely — do NOT pause                                     |
 
 Reset to base immediately when a change is detected. When recreating the cron, always reuse the same `address-pr-comments:${SLOT}` name so parallel slots stay isolated.
 
 ### Hard caps
 
-- **50 ticks per session.** After 50, auto-pause:
-  > "Babysit reached 50 ticks. Auto-pausing. Re-run `/address-pr-comments` to resume."
-- See Step 5 for per-PR fix caps.
+- No tick cap. The babysit runs until Success stop or Escalation stop fires (Step 6).
+- See Step 5 for per-PR fix attempt caps — those gate further code edits, not the polling loop.
 
 ---
 

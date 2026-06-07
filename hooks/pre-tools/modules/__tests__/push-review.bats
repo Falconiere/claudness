@@ -236,6 +236,36 @@ EOF
   [ -z "$output" ]
 }
 
+@test "push-review: state file missing required reviewers is denied" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 1,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["simplify"],
+    findings_count: 0,
+    findings: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("required reviewers")'
+}
+
+@test "push-review: state file with all four reviewers is allowed" {
+  sha=$(current_diff_sha)
+  write_state "$sha" 0
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "push-review: full loop — first push denied, fix loop, final push allowed" {
   # 1. First push: no state file → DENY.
   payload=$(build_input "git push")

@@ -79,7 +79,7 @@ write_state() {
       diff_sha: $sha,
       base_branch: "development",
       reviewed_at: "2026-06-07T00:00:00Z",
-      reviewers: ["caveman:cavecrew-reviewer", "code-simplifier"],
+      reviewers: ["simplify", "caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
       findings_count: $count,
       findings: []
     }' > "$STATE_DIR/${slug}.json"

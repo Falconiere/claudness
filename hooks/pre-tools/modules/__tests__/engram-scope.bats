@@ -140,6 +140,22 @@ _decision() {
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("mod.sh engram")'
 }
 
+@test "engram-scope: semicolon inside quoted save arg does not falsely deny" {
+  command -v python3 >/dev/null 2>&1 || skip "python3 not installed"
+  payload=$(_mk 'engram save "title; with semicolon" body --project foo')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
+@test "engram-scope: double-quoted &&  inside arg does not split" {
+  command -v python3 >/dev/null 2>&1 || skip "python3 not installed"
+  payload=$(_mk 'engram save "a && b" body --project foo')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
 @test "engram-scope: dispatcher picks up the module by glob" {
   shopt -s nullglob
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"

@@ -151,6 +151,34 @@ EOF
   ! echo "$output" | grep -q "QUALITY VIOLATION"
 }
 
+@test "ts-quality: throw literal inside // inline comment is NOT flagged" {
+  _ts_project
+  cat > src/good.ts <<'EOF'
+export function good() {
+  const x = 1; // we used to throw 5 here
+  return x;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/good.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "non-Error literal"
+}
+
+@test "ts-quality: throw literal inside /* */ block comment is NOT flagged" {
+  _ts_project
+  cat > src/good.ts <<'EOF'
+export function good() {
+  /* avoid: throw 42 — use Error */
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/good.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "non-Error literal"
+}
+
 @test "ts-quality: gate-status file is written on violation" {
   _ts_project
   cat > src/bad.ts <<'EOF'
