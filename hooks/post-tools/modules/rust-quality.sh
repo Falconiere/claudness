@@ -23,10 +23,7 @@ command -v jq    >/dev/null 2>&1 || exit 0
 SETTINGS_DIR=$(detect_settings_dir)
 EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
 
-read_list() {
-  [ -f "$1" ] || return 0
-  grep -vE '^\s*(#|$)' "$1"
-}
+# read_list is sourced from lib/detect.sh.
 
 fp_from_input=""
 if [[ "$tool_name" == "Write" ]]; then

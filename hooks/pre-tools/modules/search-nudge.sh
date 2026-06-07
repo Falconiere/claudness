@@ -13,6 +13,9 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
 # ── Structural pattern keywords (shared) ────────────────────────────────────
 STRUCT_RE='(^|\s)(fn |impl |async fn|async |class |function |struct |trait |interface |type |pub (fn|struct|enum|trait|mod|type|async)|export (function|class|interface|type|const|default)|enum |mod |const fn|#\[derive|#\[cfg|#\[test|@Component|@Injectable|@Module|=>|-> Result|-> impl|dyn |Box<|Arc<|Vec<|Option<|where |for .*in )'
 
@@ -60,7 +63,7 @@ if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command=$(echo "$input" | jq -r '.tool_input.command // ""')
 
   # Strip heredoc bodies
-  cmd_only=$(echo "$command" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
+  cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
   # Catch grep/rg invocations
   if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)(grep|rg|ripgrep)\s'; then

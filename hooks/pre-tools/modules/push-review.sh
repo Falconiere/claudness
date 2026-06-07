@@ -22,7 +22,7 @@ command -v jq  >/dev/null 2>&1 || exit 0
 command -v git >/dev/null 2>&1 || exit 0
 
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
-cmd_only=$(echo "$command" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
+cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
 echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|$)' || exit 0
 

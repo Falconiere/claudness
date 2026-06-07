@@ -79,7 +79,7 @@ allow_pattern="${allow_pattern:+$allow_pattern|}$extra_pattern"
 
 if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command=$(echo "$input" | jq -r '.tool_input.command // ""')
-  cmd_only=$(echo "$command" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
+  cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
   if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "$allow_pattern"; then
     exit 0
