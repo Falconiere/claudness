@@ -1630,10 +1630,12 @@ git add settings/hooks.fragment.json
 git commit -m "feat(settings): add hooks.fragment.json"
 ```
 
-### Task 52: Build `settings/permissions.fragment.json` (union of allowlists)
+### Task 52: Build `settings/permissions.fragment.json` (union, sanitized)
 
 **Files:**
 - Create: `settings/permissions.fragment.json`
+
+A background security review flagged 7 issues in the source allowlists. They MUST be sanitized during fragment build so they do not propagate into the installable fragment.
 
 - [ ] **Step 1: Extract allowlists**
 
@@ -1644,35 +1646,113 @@ jq '.permissions.deny  // []' settings/_raw/routo-settings.json   > /tmp/r-deny.
 jq '.permissions.deny  // []' settings/_raw/yamless-settings.json > /tmp/y-deny.json
 ```
 
-- [ ] **Step 2: Union and dedup**
+- [ ] **Step 2: Union, dedup, and drop unsafe broad allows**
+
+The following allow patterns are dropped outright (overbroad, allow eval/sensitive reads):
+
+- `Bash(node:*)` — allows `node -e/-p/--eval`. Replace with `Bash(node ./*:*)` to require an explicit script path.
+- `Bash(bun:*)` — allows `bun -e/--eval`. Replace with `Bash(bun run:*)`, `Bash(bun test:*)`, `Bash(bun install:*)`, `Bash(bun x:*)`.
+- `Bash(cat:*)` — over-broad sensitive-file read. Drop; `Read` tool covers files; CLI cat must go through an interactive prompt.
+- `Bash(git checkout:*)` — together with the mod.sh allow this enables silent script swap. Replace with `Bash(git checkout -b:*)` and `Bash(git checkout --:*)` (branch ops, not arbitrary file restore).
+- `Bash(.claude/skills/code-intel/scripts/mod.sh:*)` — KEEP, since the script is now in this repo and is reviewed; protected-files.txt blocks edits. Document in the README that any `mod.sh` change MUST go through review.
 
 ```bash
 jq -n \
   --slurpfile ra /tmp/r-allow.json --slurpfile ya /tmp/y-allow.json \
   --slurpfile rd /tmp/r-deny.json  --slurpfile yd /tmp/y-deny.json \
-  '{
+  '
+  def unsafe_allow:
+    {"Bash(node:*)":1, "Bash(bun:*)":1, "Bash(cat:*)":1, "Bash(git checkout:*)":1};
+  def safe_replacements:
+    [
+      "Bash(node ./*:*)",
+      "Bash(bun run:*)",
+      "Bash(bun test:*)",
+      "Bash(bun install:*)",
+      "Bash(bun x:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git checkout --:*)"
+    ];
+  {
     permissions: {
-      allow: ($ra[0] + $ya[0] | unique),
+      allow: (($ra[0] + $ya[0]) | map(select(unsafe_allow[.] | not)) | (. + safe_replacements) | unique),
       deny:  ($rd[0] + $yd[0] | unique)
     }
-  }' > settings/permissions.fragment.json
+  }
+  ' > settings/permissions.fragment.json
 ```
 
-- [ ] **Step 3: Validate**
+- [ ] **Step 3: Add hard denies for the eval flags**
+
+Settings.json matchers are substring-based and unreliable for refined argv shapes. Add explicit denies for the patterns the security review called out, with the caveat documented in `settings/README.md` that argv-level enforcement happens in `hooks/pre-tools/modules/bash-commands.sh` (data file `bash-denylist.txt`).
+
+```bash
+jq '.permissions.deny += [
+  "Bash(node -e:*)", "Bash(node -p:*)", "Bash(node --eval:*)", "Bash(node --print:*)",
+  "Bash(bun -e:*)",  "Bash(bun --eval:*)",
+  "Bash(git push --force*)", "Bash(git push -f *)",
+  "Bash(git push*main*)", "Bash(git push*master*)"
+] | .permissions.deny |= unique' \
+  settings/permissions.fragment.json > settings/permissions.fragment.json.tmp \
+  && mv settings/permissions.fragment.json.tmp settings/permissions.fragment.json
+```
+
+- [ ] **Step 4: Add data-file complements for argv enforcement**
+
+Append to `settings/bash-denylist.txt` (created in Task 39) the patterns the regex-based matcher cannot reliably reject. The hook does proper argv parsing:
+
+```bash
+cat >> settings/bash-denylist.txt <<'EOF'
+# Hard-blocked at the hook level (argv-aware). The settings.json matcher
+# is substring-based and unreliable for these.
+node -e
+node -p
+node --eval
+node --print
+bun -e
+bun --eval
+git push --force
+git push --force-with-lease
+git push --force-if-includes
+git push -f
+# Reject push to protected base branches outright.
+git push origin main
+git push origin master
+EOF
+```
+
+Mark in `settings/README.md` (Task 55) that `bash-commands.sh` must parse argv and reject any of these tokens, not just substring-match.
+
+- [ ] **Step 5: Validate JSON**
 
 Run: `jq . settings/permissions.fragment.json >/dev/null && echo ok`
 Expected: `ok`.
 
-- [ ] **Step 4: Eyeball for stragglers**
+- [ ] **Step 6: Eyeball for stragglers**
 
-Run: `jq '.permissions.allow[], .permissions.deny[]' settings/permissions.fragment.json | grep -iE 'routo|yamless|/Volumes/Projects' || echo "clean"`
-Expected: `clean`. If anything matches, remove with `jq` filter and re-validate.
-
-- [ ] **Step 5: Commit**
+Run:
 
 ```bash
-git add settings/permissions.fragment.json
-git commit -m "feat(settings): add permissions.fragment.json (union of source repos)"
+jq -r '.permissions.allow[], .permissions.deny[]' settings/permissions.fragment.json \
+  | grep -iE 'routo|yamless|/Volumes/Projects' || echo "clean"
+```
+
+Expected: `clean`.
+
+- [ ] **Step 7: Verify the sanitization landed**
+
+```bash
+jq -r '.permissions.allow[]' settings/permissions.fragment.json \
+  | grep -E '^Bash\((node|bun|cat|git checkout):\*\)$' || echo "sanitized"
+```
+
+Expected: `sanitized`. If any of those four exact strings is still in `.allow`, redo Step 2.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add settings/permissions.fragment.json settings/bash-denylist.txt
+git commit -m "feat(settings): permissions.fragment.json (union, sanitized for eval/push/cat)"
 ```
 
 ### Task 53: Remove `settings/_raw/` stash
