@@ -8,7 +8,6 @@
 # Public API:
 #   claudness_load_config          - load + cache the merged config
 #   claudness_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
-#   claudness_disabled_skills      - print disabled skill names, one per line
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
@@ -75,9 +74,3 @@ claudness_enabled() {
   return 0
 }
 
-claudness_disabled_skills() {
-  claudness_load_config
-  command -v jq >/dev/null 2>&1 || return 0
-  jq -r '.skills // {} | to_entries[] | select(.value == false) | .key' \
-    "$CLAUDNESS_CFG_CACHE" 2>/dev/null
-}

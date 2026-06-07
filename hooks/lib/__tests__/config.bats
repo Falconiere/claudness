@@ -47,12 +47,3 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "disabled_skills lists every false skill" {
-  echo '{"version":1,"skills":{"engram":false,"ast-grep":true,"context7":false}}' \
-    > "$HOME/.claude/claudness.config.json"
-  run claudness_disabled_skills
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"engram"* ]]
-  [[ "$output" == *"context7"* ]]
-  [[ "$output" != *"ast-grep"* ]]
-}
