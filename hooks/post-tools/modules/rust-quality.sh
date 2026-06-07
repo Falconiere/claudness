@@ -1,7 +1,8 @@
-#!/bin/bash
-# Post-tool check: Rust quality rules
-# Lightweight file-level checks (fast, no external tool invocations).
-# Heavy checks (cargo clippy, nextest) run via explicit quality gate commands.
+#!/usr/bin/env bash
+# Post-tool check: Rust quality rules.
+# Project-agnostic: no-op outside Rust projects or when cargo is missing.
+# Unsafe-block exemptions for FFI crates come from
+# $SETTINGS_DIR/rust-unsafe-exemptions.txt.
 #
 # Inputs (from parent dispatcher post-tools/mod.sh, via `export`):
 #   $tool_name     - name of the tool being invoked
@@ -11,6 +12,21 @@
 : "${tool_name:=}"
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
+
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+
+[ "$(detect_rust)" = "rust" ] || exit 0
+command -v cargo >/dev/null 2>&1 || exit 0
+command -v jq    >/dev/null 2>&1 || exit 0
+
+SETTINGS_DIR=$(detect_settings_dir)
+EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
+
+read_list() {
+  [ -f "$1" ] || return 0
+  grep -vE '^\s*(#|$)' "$1"
+}
 
 fp_from_input=""
 if [[ "$tool_name" == "Write" ]]; then
@@ -37,13 +53,24 @@ fi
 
 # Forbidden #[allow(...)] / #![allow(...)] / #[expect(...)] / #![expect(...)]
 if grep -qE '#!?\[(allow|expect)\(' "$FILE_PATH" 2>/dev/null; then
-  add_error "Forbidden #[allow(...)] / #[expect(...)] in $FILE_PATH — remove it and fix the underlying warning. For unsafe_code, override in Cargo.toml [lints.rust]. See docs/rules/forbidden-syntax-rust.md"
+  add_error "Forbidden #[allow(...)] / #[expect(...)] in $FILE_PATH — remove it and fix the underlying warning. For unsafe_code, override in Cargo.toml [lints.rust]."
 fi
 
-# Forbidden unsafe blocks/functions (FFI crates excluded at workspace lint level)
-if [[ "$FILE_PATH" != *yamless-secrets-runtime* && "$FILE_PATH" != *yamless-sandbox* ]]; then
+# Forbidden unsafe blocks/functions — except for crates listed in the
+# exemptions file (FFI crates, sandboxes, etc).
+exempt=0
+if [ -f "$EXEMPTIONS_FILE" ]; then
+  while IFS= read -r crate; do
+    [ -z "$crate" ] && continue
+    if [[ "$FILE_PATH" == *"$crate"* ]]; then
+      exempt=1
+      break
+    fi
+  done <<< "$(read_list "$EXEMPTIONS_FILE")"
+fi
+if [ "$exempt" -eq 0 ]; then
   if grep -qE '\bunsafe\b\s*(\{|fn )' "$FILE_PATH" 2>/dev/null; then
-    add_error "Forbidden unsafe code in $FILE_PATH — refactor to safe alternative. See docs/rules/forbidden-syntax-rust.md"
+    add_error "Forbidden unsafe code in $FILE_PATH — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing)."
   fi
 fi
 
@@ -56,7 +83,7 @@ LONG_RS_FUNCS=$(awk '
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_RS_FUNCS" ]]; then
-  add_error "Function too long in $FILE_PATH (>50 lines) — extract helpers. See docs/rules/simplicity.md"
+  add_error "Function too long in $FILE_PATH (>50 lines) — extract helpers."
 fi
 
 LONG_IMPL=$(awk '
@@ -68,7 +95,7 @@ LONG_IMPL=$(awk '
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_IMPL" ]]; then
-  add_error "Impl block too large in $FILE_PATH (>200 lines) — split into trait impls or modules. See docs/rules/simplicity.md"
+  add_error "Impl block too large in $FILE_PATH (>200 lines) — split into trait impls or modules."
 fi
 
 if [[ -n "$MESSAGES" ]]; then
