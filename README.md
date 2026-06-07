@@ -1,6 +1,8 @@
-# my-claude
+# claudness
 
 Personal collection of [Claude Code](https://claude.com/claude-code) extensions — plugins, skills, hooks, subagents, slash commands, and configuration.
+
+Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
 
 ## Layout
 
@@ -45,35 +47,23 @@ Add or drop directories as needed — nothing here is load-bearing on the layout
 
 ## Install
 
-### Per-user (global)
+Install via the Claude Code plugin marketplace.
 
-```bash
-ln -s "$PWD/skills"   ~/.claude/skills
-ln -s "$PWD/agents"   ~/.claude/agents
-ln -s "$PWD/commands" ~/.claude/commands
-ln -s "$PWD/hooks"    ~/.claude/hooks
+From GitHub (public):
+
 ```
-
-Merge settings fragments — see `settings/README.md`.
-
-### Per-project
-
-```bash
-ln -s /Volumes/Projects/my-claude/skills   .claude/skills
-ln -s /Volumes/Projects/my-claude/agents   .claude/agents
-ln -s /Volumes/Projects/my-claude/commands .claude/commands
-ln -s /Volumes/Projects/my-claude/hooks    .claude/hooks
-ln -s /Volumes/Projects/my-claude/tooling  .tooling
-```
-
-### Plugins via marketplace
-If a plugin lives under `plugins/<name>/`, install it from a local marketplace:
-
-```bash
-# inside Claude Code
-/plugin marketplace add /Volumes/Projects/my-claude
+/plugin marketplace add Falconiere/claudness
 /plugin install claudness@falconiere
 ```
+
+From a local clone:
+
+```
+/plugin marketplace add /Volumes/Projects/claudness
+/plugin install claudness@falconiere
+```
+
+For settings fragments (permissions, denylists, etc.), see `settings/README.md`.
 
 ## Adding something new
 
