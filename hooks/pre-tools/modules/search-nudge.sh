@@ -15,6 +15,14 @@
 
 # shellcheck source=../../lib/detect.sh
 . "${BASH_SOURCE%/*}/../../lib/detect.sh"
+# shellcheck source=../../lib/config.sh
+. "${BASH_SOURCE%/*}/../../lib/config.sh"
+
+# Respect skills.ast-grep=false: skip every nudge silently so the user's
+# explicit opt-out is honored across all PreToolUse advisories.
+if ! claudness_enabled skills ast-grep; then
+  exit 0
+fi
 
 HAS_ASTGREP="$(detect_ast_grep)"
 
