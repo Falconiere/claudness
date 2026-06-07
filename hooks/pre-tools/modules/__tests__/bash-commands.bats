@@ -69,3 +69,58 @@ run_hook() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# Regression: deny must beat allow. `node` on allowlist must NOT bypass
+# `node -e` deny.
+@test "bash-commands: deny before allow — node allow does not bypass 'node -e' deny" {
+  write_lists "node" "node -e"
+  run_hook 'node -e "console.log(1)"'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+# Regression: `node script.js` IS allowed (no deny match; allow passes through).
+@test "bash-commands: 'node script.js' is allowed when node is on allowlist and 'node -e' on denylist" {
+  write_lists "node" "node -e"
+  run_hook "node script.js"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# Regression: heredoc-stripped commit message containing 'cargo test' as
+# prose must NOT trip the deny rule. The script's heredoc stripper drops
+# the heredoc body before checking.
+@test "bash-commands: 'git commit -m \"fix cargo test failure\"' is NOT denied (no argv match)" {
+  write_lists "" "cargo test"
+  run_hook 'git commit -m "fix cargo test failure"'
+  [ "$status" -eq 0 ]
+  # `cargo test` is a single-token rule (one word in the rule list after the
+  # split), so substring on the command is the fallback. To prevent false
+  # positive for single-token rules with internal whitespace, the rule string
+  # "cargo test" gets split: first token = "cargo", second = "test", treated
+  # as multi-token argv check. tokens[0] = "git", not "cargo" -> no match.
+  [ -z "$output" ]
+}
+
+# Regression: multi-token deny still fires when argv tokens contain the rule.
+@test "bash-commands: 'cargo --verbose test' IS denied via argv rule" {
+  write_lists "" "cargo test"
+  run_hook "cargo --verbose test"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "bash-commands: 'git push --force origin feat/x' is denied via argv rule" {
+  write_lists "" "git push --force"
+  run_hook "git push --force origin feat/x"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+# Regression: tokens[0] != "cargo", so `mycargo test` is ALLOWED.
+@test "bash-commands: 'mycargo test' is allowed (tokens[0] != cargo)" {
+  write_lists "" "cargo test"
+  run_hook "mycargo test"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

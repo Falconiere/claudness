@@ -1,4 +1,12 @@
 # bash-commands.sh allowlist (one pattern per line; '#' starts a comment).
-# Patterns are matched as substrings against the parsed command.
-# These are commands that should pass through even if a deny rule matches a sibling token.
+#
+# IMPORTANT: deny is checked FIRST, allow second. Allow is intended for
+# per-project override of deny rules, not for substring evasion of
+# security-hardened blocks like `node -e`.
+#
+# Multi-token rules (e.g. `bun run check`) are argv-aware: the first
+# token must equal tokens[0] AND every other rule-token must appear as
+# a distinct later argv token. Single-token rules substring-match the
+# full command.
+#
 # Currently empty — add per-project exemptions here.

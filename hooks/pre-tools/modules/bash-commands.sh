@@ -41,49 +41,54 @@ except ValueError:
 PY
 }
 
+# tokens_contain_rule <rule> <token...>
+# Returns 0 if `tokens[0]` matches the first rule token AND every subsequent
+# rule token appears as a distinct later argv token. Substring matching is
+# never used here — that was the source of false-positives on commit messages
+# like `git commit -m "fix cargo test failure"`.
+tokens_contain_rule() {
+  local rule="$1"; shift
+  local -a tokens=("$@")
+  local -a rule_tokens
+  # shellcheck disable=SC2206  # intentional word-split on whitespace
+  rule_tokens=($rule)
+  [ ${#rule_tokens[@]} -eq 0 ] && return 1
+  [ "${tokens[0]:-}" = "${rule_tokens[0]}" ] || return 1
+  local i j want found
+  for ((i=1; i<${#rule_tokens[@]}; i++)); do
+    want="${rule_tokens[$i]}"
+    found=0
+    for ((j=1; j<${#tokens[@]}; j++)); do
+      if [ "${tokens[$j]}" = "$want" ]; then
+        found=1
+        break
+      fi
+    done
+    [ "$found" -eq 0 ] && return 1
+  done
+  return 0
+}
+
 # matches_deny <command> <denylist>
 # Returns 0 (match) if any deny rule fires against the command, else 1.
+# Multi-token rules use argv-aware matching only (no substring fallback);
+# single-token rules require exact argv equality with `tokens[0]` OR substring
+# anywhere on the command (kept for back-compat with bare-name rules).
 matches_deny() {
   local cmd="$1"
   local denylist="$2"
-  local rule first rest tokens
-  # Pre-tokenize once for argv-aware rules.
+  local rule tokens
   mapfile -t tokens < <(bash_tokenize "$cmd")
   while IFS= read -r rule; do
     [ -z "$rule" ] && continue
     if [[ "$rule" == *" "* ]]; then
-      # Multi-token rule: first token must be the first argv token AND each
-      # subsequent rule-token must appear later in the argv list.
-      first="${rule%% *}"
-      rest="${rule#* }"
-      if [ "${tokens[0]:-}" = "$first" ]; then
-        local ok=1 want
-        for want in $rest; do
-          local found=0 i
-          for ((i=1; i<${#tokens[@]}; i++)); do
-            if [ "${tokens[$i]}" = "$want" ]; then
-              found=1
-              break
-            fi
-          done
-          if [ "$found" -eq 0 ]; then
-            ok=0
-            break
-          fi
-        done
-        if [ "$ok" = 1 ]; then
-          echo "$rule"
-          return 0
-        fi
-      fi
-      # Also do a substring fallback for compound tokens like "cargo test"
-      # so e.g. `xargs -I_ cargo test` is still caught.
-      if [[ "$cmd" == *"$rule"* ]]; then
+      if tokens_contain_rule "$rule" "${tokens[@]}"; then
         echo "$rule"
         return 0
       fi
     else
-      # Single-token rule: substring match against the command.
+      # Single-token rule: substring match against the command. Most bare-name
+      # rules (`biome`, `cargo test` style) are matched here.
       if [[ "$cmd" == *"$rule"* ]]; then
         echo "$rule"
         return 0
@@ -94,21 +99,34 @@ matches_deny() {
 }
 
 # matches_allow <command> <allowlist>
-# Returns 0 if any allow rule matches as a substring, else 1.
+# Returns 0 if any allow rule matches. Multi-token rules are argv-aware
+# (same shape as deny); single-token rules substring-match.
 matches_allow() {
   local cmd="$1"
   local allowlist="$2"
-  local rule
+  local rule tokens
+  mapfile -t tokens < <(bash_tokenize "$cmd")
   while IFS= read -r rule; do
     [ -z "$rule" ] && continue
-    if [[ "$cmd" == *"$rule"* ]]; then
-      return 0
+    if [[ "$rule" == *" "* ]]; then
+      if tokens_contain_rule "$rule" "${tokens[@]}"; then
+        return 0
+      fi
+    else
+      if [[ "$cmd" == *"$rule"* ]]; then
+        return 0
+      fi
     fi
   done <<< "$allowlist"
   return 1
 }
 
 # Public entry — invokable when the script is sourced (used by tests).
+#
+# Order matters: deny is consulted FIRST. The old order (allow then deny)
+# meant an allowlist entry of `node` would bypass the `node -e` security
+# deny — substring evasion. Allowlist is now an explicit override on top of
+# deny, intended for project-specific exemptions.
 bash_commands_decide() {
   local cmd="$1"
   local allowlist denylist hit
@@ -118,13 +136,13 @@ bash_commands_decide() {
   # Strip heredoc bodies so we only check actual commands, not prose in commit messages.
   cmd=$(echo "$cmd" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
 
-  if matches_allow "$cmd" "$allowlist"; then
-    echo "allow"
+  if hit=$(matches_deny "$cmd" "$denylist"); then
+    echo "deny:$hit"
     return 0
   fi
 
-  if hit=$(matches_deny "$cmd" "$denylist"); then
-    echo "deny:$hit"
+  if matches_allow "$cmd" "$allowlist"; then
+    echo "allow"
     return 0
   fi
 
