@@ -1,0 +1,5 @@
+# MCP server name prefixes to block (one per line; '#' starts a comment).
+# Match is against the leading mcp__<server>__ segment of the tool name.
+#
+# Original hook blocked mcp__engram__* to force the CLI wrapper path.
+engram
