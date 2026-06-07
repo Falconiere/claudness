@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "branch": "feat/claudness-config",
+  "diff_sha": "3de445f935e4b269e4801634b26e859fbe34f487",
+  "base_branch": "main",
+  "reviewed_at": "2026-06-07T19:20:08Z",
+  "reviewers": [
+    "caveman:cavecrew-reviewer",
+    "code-simplifier"
+  ],
+  "findings_count": 0,
+  "findings": []
+}
