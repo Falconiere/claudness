@@ -1,6 +1,8 @@
-#!/bin/bash
-# Pre-tool check: Quality gate enforcement
-# DENIES all non-fix actions when quality gate is failing.
+#!/usr/bin/env bash
+# Pre-tool check: Quality gate enforcement.
+# DENIES non-fix actions when the quality-gate state file says "failing".
+# Project-agnostic: tooling is auto-detected; missing tooling → silent skip.
+# Honors MY_CLAUDE_QUALITY=off to disable the gate entirely.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -9,9 +11,20 @@
 : "${tool_name:=}"
 : "${input:=}"
 
-project_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# shellcheck source=../../lib/detect.sh
+. "${BASH_SOURCE%/*}/../../lib/detect.sh"
 
-# Skip enforcement in git linked worktrees (e.g. .worktrees/<branch>) — quality state is for the main checkout.
+# Owner kill-switch.
+[ "${MY_CLAUDE_QUALITY:-}" = "off" ] && exit 0
+
+# Guard tooling.
+command -v jq  >/dev/null 2>&1 || exit 0
+command -v git >/dev/null 2>&1 || exit 0
+
+project_root="$(detect_project_root)"
+[ -z "$project_root" ] && project_root="$(pwd)"
+
+# Skip enforcement in git linked worktrees — quality state lives on the main checkout.
 git_dir="$(git -C "$project_root" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"
 common_dir="$(git -C "$project_root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
 git_dir="${git_dir%/}"
@@ -25,38 +38,73 @@ gate_file="$project_root/.claude/tmp/quality-gate-status.json"
 [[ ! -f "$gate_file" ]] && exit 0
 [[ "$(jq -r '.status // ""' "$gate_file" 2>/dev/null)" != "failing" ]] && exit 0
 
-# Gate is failing — determine if this action is allowed
+# Allowed quality-fix command patterns are auto-generated per package manager.
+pm="$(detect_node_pm)"
+has_rust="$(detect_rust)"
+allow_pattern=""
 
-# Allow quality-fix commands (Bash/Shell)
+case "$pm" in
+  bun)
+    if command -v bun >/dev/null 2>&1; then
+      allow_pattern='(bun run (check|check:fix|check:duplication|lint|lint:fix|format|format:fix|build|test|typecheck)|bun test|vitest|tsc|oxlint|oxfmt)'
+    fi
+    ;;
+  pnpm)
+    if command -v pnpm >/dev/null 2>&1; then
+      allow_pattern='(pnpm run (check|lint|lint:fix|format|format:fix|build|test|typecheck)|pnpm test|vitest|tsc)'
+    fi
+    ;;
+  yarn)
+    if command -v yarn >/dev/null 2>&1; then
+      allow_pattern='(yarn (check|lint|lint:fix|format|format:fix|build|test|typecheck)|vitest|tsc)'
+    fi
+    ;;
+  npm)
+    if command -v npm >/dev/null 2>&1; then
+      allow_pattern='(npm run (check|lint|lint:fix|format|format:fix|build|test|typecheck)|npm test|vitest|tsc)'
+    fi
+    ;;
+esac
+
+if [ "$has_rust" = "rust" ] && command -v cargo >/dev/null 2>&1; then
+  rust_pattern='(cargo (check|clippy|fmt|build|nextest))'
+  allow_pattern="${allow_pattern:+$allow_pattern|}$rust_pattern"
+fi
+
+# Always allow generic test-runners + linters if present on PATH.
+extra_pattern='(vitest|tsc|oxlint|oxfmt|ruff|mypy)'
+allow_pattern="${allow_pattern:+$allow_pattern|}$extra_pattern"
+
+# Gate is failing — determine if this action is allowed.
+
 if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command=$(echo "$input" | jq -r '.tool_input.command // ""')
   cmd_only=$(echo "$command" | sed '/<<['"'"'"]*EOF['"'"'"]*$/,/^EOF$/d')
 
-  # Allow quality check/fix commands (scripts + bun run variants)
-  if echo "$cmd_only" | grep -qE '(bun run (check|check:fix|check:duplication|lint:fix|format|build|test)|bun test|vitest|tsc|oxlint|oxfmt|\.\/scripts\/ts-check\.sh)'; then
+  if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "$allow_pattern"; then
     exit 0
   fi
 
-  # Allow git commands
+  # Always allow non-destructive git inspection + staging commands.
   if echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+(status|diff|log|add|commit|branch|stash)'; then
     exit 0
   fi
 fi
 
-# Allow Edit/Write on code/config files (to fix violations)
+# Allow Edit/Write on code/config files (to fix violations).
 if [[ "$tool_name" == "Edit" || "$tool_name" == "Write" || "$tool_name" == "MultiEdit" ]]; then
   file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.path // ""')
-  if [[ "$file_path" =~ \.(ts|tsx|js|mjs|sh|json)$ ]]; then
+  if [[ "$file_path" =~ \.(ts|tsx|js|mjs|sh|json|rs|py|toml|yaml|yml)$ ]]; then
     exit 0
   fi
 fi
 
-# Allow Read, Grep, Glob (non-destructive)
+# Allow Read, Grep, Glob (non-destructive).
 if [[ "$tool_name" == "Read" || "$tool_name" == "Grep" || "$tool_name" == "Glob" ]]; then
   exit 0
 fi
 
-# Deny everything else
+# Strict-deny stance: anything else gets blocked with the gate's reason.
 reason=$(jq -r '.reason // "Quality gate failing"' "$gate_file" 2>/dev/null || echo "Quality gate failing")
 violations=$(jq -r '.violations // ""' "$gate_file" 2>/dev/null || echo "")
 
