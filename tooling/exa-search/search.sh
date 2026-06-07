@@ -1,16 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Exa API CLI — search, crawl, and find similar content
 # Usage: ./search.sh <command> [options]
+#
+# Reads EXA_API_KEY from the environment (never from .env).
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOOLING_ENV="$SCRIPT_DIR/../.env"
-EXA_API_KEY="$(grep '^EXA_API_KEY=' "$TOOLING_ENV" 2>/dev/null | cut -d= -f2 || true)"
+command -v jq   >/dev/null 2>&1 || { echo "exa-search: jq required" >&2;   exit 1; }
+command -v curl >/dev/null 2>&1 || { echo "exa-search: curl required" >&2; exit 1; }
+
+EXA_API_KEY="${EXA_API_KEY:-}"
 EXA_URL="https://api.exa.ai"
 
 if [[ -z "$EXA_API_KEY" ]]; then
-  echo "Error: EXA_API_KEY not found in $TOOLING_ENV" >&2
+  echo "exa-search: EXA_API_KEY unset" >&2
   exit 1
 fi
 
@@ -195,6 +198,9 @@ usage() {
   echo "Exa Search CLI" >&2
   echo "" >&2
   echo "Usage: search.sh <command> [options]" >&2
+  echo "" >&2
+  echo "Environment:" >&2
+  echo "  EXA_API_KEY  Required. Exa API key." >&2
   echo "" >&2
   echo "Commands:" >&2
   echo "  search   Search the web (default if no command given)" >&2
