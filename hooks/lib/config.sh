@@ -69,7 +69,8 @@ claudness_enabled() {
   command -v jq >/dev/null 2>&1 || return 0
   local val
   val=$(jq -r --arg c "$category" --arg n "$name" \
-    '.[$c][$n] // empty' "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+    'if (.[$c]? // {}) | has($n) then .[$c][$n] | tostring else "missing" end' \
+    "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
   [ "$val" = "false" ] && return 1
   return 0
 }
