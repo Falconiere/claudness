@@ -7,6 +7,13 @@ HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # shellcheck source=lib/detect.sh
 . "$HOOK_DIR/lib/detect.sh"
+# shellcheck source=lib/config.sh
+. "$HOOK_DIR/lib/config.sh"
+
+if ! claudness_enabled hooks session-start; then
+  cat > /dev/null 2>&1 || true
+  exit 0
+fi
 
 PROJECT_ROOT="$(detect_project_root)"
 [ -z "$PROJECT_ROOT" ] && PROJECT_ROOT="$(pwd)"
