@@ -102,9 +102,6 @@ fi
 if [[ "$prompt_lower" =~ (fix|debug|error|bug|issue) ]]; then
   hints+=("Fix in code directly, never suppress with disable comments.")
 fi
-if [[ "$prompt_lower" =~ (commit|push|[[:space:]]pr[[:space:]]|pull.?request) ]]; then
-  hints+=("Never run git push. PR prep only. Verify diff covers only expected scope before committing.")
-fi
 if [[ "$prompt_lower" =~ (explore|find|understand|where|how\ does|trace|architecture|what\ does|who\ calls|caller|flow|search|look\ for|locate|what\ is|change|modify|update|move|rename|refactor|fix|debug|implement|add|create|build|write|delete|remove) ]]; then
   if [ "$HAS_ASTGREP" = "ast-grep" ]; then
     hints+=("Search hierarchy: ast-grep FIRST for structural patterns on code files. Grep for exact literals on non-code files. Glob for file finding only.")
