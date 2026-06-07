@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "engram": false,
+    "ast-grep": true,
+    "context7": true,
+    "exa-search": true,
+    "caveman": true,
+    "agent-memory": true,
+    "code-intel": true
+  },
+  "hooks": {
+    "session-start": true,
+    "user-prompt-submit": true,
+    "pre-tools": true,
+    "post-tools": true,
+    "pre-compact": true,
+    "session-end": true
+  },
+  "agents": { "deep-explore": true },
+  "commands": { "commit": true, "review-and-commit": true },
+  "mcp": { "engram": false }
+}
