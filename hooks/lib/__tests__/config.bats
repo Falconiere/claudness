@@ -47,3 +47,16 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "engram_state returns 'disabled' when skills.engram=false" {
+  echo '{"version":1,"skills":{"engram":false}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_engram_state
+  [ "$status" -eq 0 ]
+  [ "$output" = "disabled" ]
+}
+
+@test "engram_state returns 'missing' when enabled but CLI absent" {
+  PATH=/usr/bin:/bin run claudness_engram_state
+  [ "$status" -eq 0 ]
+  [ "$output" = "missing" ]
+}
+

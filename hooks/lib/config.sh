@@ -8,12 +8,14 @@
 # Public API:
 #   claudness_load_config          - load + cache the merged config
 #   claudness_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
+#   claudness_engram_state         - print 'available' | 'missing' | 'disabled'
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
 # with a single stderr warning.
 
 CLAUDNESS_CFG_CACHE="${TMPDIR:-/tmp}/claudness-cfg-$$.json"
 CLAUDNESS_CFG_LOADED=0
+_CLAUDNESS_HAS_JQ=""
 
 _claudness_warn() {
   printf 'claudness-config: %s\n' "$1" >&2
@@ -34,7 +36,10 @@ claudness_load_config() {
   [ "$CLAUDNESS_CFG_LOADED" = "1" ] && return 0
   CLAUDNESS_CFG_LOADED=1
 
-  if ! command -v jq >/dev/null 2>&1; then
+  if command -v jq >/dev/null 2>&1; then
+    _CLAUDNESS_HAS_JQ=1
+  else
+    _CLAUDNESS_HAS_JQ=0
     _claudness_warn "jq missing; all components enabled"
     printf '{}' > "$CLAUDNESS_CFG_CACHE"
     return 0
@@ -65,12 +70,31 @@ claudness_load_config() {
 claudness_enabled() {
   local category="$1" name="$2"
   claudness_load_config
-  command -v jq >/dev/null 2>&1 || return 0
+  [ "$_CLAUDNESS_HAS_JQ" = "1" ] || return 0
   local val
   val=$(jq -r --arg c "$category" --arg n "$name" \
     'if (.[$c]? // {}) | has($n) then .[$c][$n] | tostring else "missing" end' \
     "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
   [ "$val" = "false" ] && return 1
   return 0
+}
+
+# Print engram availability for hook reminder text:
+#   'available' — CLI installed AND skills.engram != false
+#   'missing'   — CLI absent AND skills.engram != false (emit install hint)
+#   'disabled'  — skills.engram == false (silent; user opted out)
+#
+# Centralizes the tri-state so pre-compact / session-end / user-prompt-submit
+# do not each hand-roll the branching.
+claudness_engram_state() {
+  if ! claudness_enabled skills engram; then
+    printf 'disabled'
+    return 0
+  fi
+  if command -v engram >/dev/null 2>&1; then
+    printf 'available'
+  else
+    printf 'missing'
+  fi
 }
 
