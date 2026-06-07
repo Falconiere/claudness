@@ -195,6 +195,47 @@ if [[ "$FILE_PATH" == */components/* || "$FILE_PATH" == */routes/* ]]; then
   fi
 fi
 
+# --- Error-handling rules (zero tolerance) ---
+
+if command -v ast-grep >/dev/null 2>&1; then
+  # Empty catch — swallowed error
+  EMPTY_CATCH=$(ast-grep --lang ts -p 'try { $$$ } catch ($_) { }' "$FILE_PATH" 2>/dev/null | head -3)
+  EMPTY_CATCH_NOARG=$(ast-grep --lang ts -p 'try { $$$ } catch { }' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$EMPTY_CATCH" || -n "$EMPTY_CATCH_NOARG" ]]; then
+    add_error "Empty catch block in $FILE_PATH — handle the error or rethrow; do not swallow\n${EMPTY_CATCH}${EMPTY_CATCH_NOARG}"
+  fi
+
+  # Silent promise rejection — .catch(() => {}) / .catch(() => null)
+  EMPTY_CATCH_HANDLER=$(ast-grep --lang ts -p '$_.catch(() => { })' "$FILE_PATH" 2>/dev/null | head -3)
+  NULL_CATCH_HANDLER=$(ast-grep --lang ts -p '$_.catch(() => null)' "$FILE_PATH" 2>/dev/null | head -3)
+  UNDEF_CATCH_HANDLER=$(ast-grep --lang ts -p '$_.catch(() => undefined)' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$EMPTY_CATCH_HANDLER" || -n "$NULL_CATCH_HANDLER" || -n "$UNDEF_CATCH_HANDLER" ]]; then
+    add_error "Silent promise rejection in $FILE_PATH — log or rethrow the error\n${EMPTY_CATCH_HANDLER}${NULL_CATCH_HANDLER}${UNDEF_CATCH_HANDLER}"
+  fi
+
+  # throw new Error() with no message
+  THROW_EMPTY_ERROR=$(ast-grep --lang ts -p 'throw new Error()' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$THROW_EMPTY_ERROR" ]]; then
+    add_error "throw new Error() with no message in $FILE_PATH — include a descriptive message\n${THROW_EMPTY_ERROR}"
+  fi
+
+  # throw of string literal — breaks instanceof Error
+  THROW_STRING=$(ast-grep --lang ts -p 'throw "$S"' "$FILE_PATH" 2>/dev/null | head -3)
+  THROW_TSTR=$(ast-grep --lang ts -p 'throw `$S`' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$THROW_STRING" || -n "$THROW_TSTR" ]]; then
+    add_error "throw of string literal in $FILE_PATH — throw an Error (or subclass) instead\n${THROW_STRING}${THROW_TSTR}"
+  fi
+fi
+
+# throw of numeric/boolean/null/undefined literal — match anywhere on line,
+# skip comments to avoid flagging documentation.
+THROW_LITERAL=$(grep -nE '(^|[^a-zA-Z_$])throw[[:space:]]+(-?[0-9]+(\.[0-9]+)?|null|undefined|true|false)([[:space:]]|;|})' "$FILE_PATH" 2>/dev/null \
+  | grep -vE '^[0-9]+:[[:space:]]*(//|\*)' \
+  | head -3)
+if [[ -n "$THROW_LITERAL" ]]; then
+  add_error "throw of non-Error literal in $FILE_PATH — throw an Error (or subclass) instead\n${THROW_LITERAL}"
+fi
+
 # Check: code duplication (jscpd, scoped to package directory)
 # Advisory only — warns but does NOT block (pre-existing duplication is not the editor's fault).
 DUPLICATION_WARNING=""

@@ -8,12 +8,13 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
 2. Hook computes `git diff development...HEAD | git hash-object --stdin`.
 3. Hook reads `.claude/tmp/push-review/<branch-slug>.json`.
 4. If the state file is missing, has a stale `diff_sha`, or has `findings_count > 0` → DENY with instructions.
-5. Agent runs three reviewers against the diff:
+5. Agent runs four reviewers against the diff:
    - `caveman:cavecrew-reviewer` (subagent, spawned via the Agent tool)
    - `simplify` skill (auto-applies simplification fixes to the working tree)
    - `code-review` skill invoked with `xhigh --fix` (auto-applies findings to the working tree)
-6. Agent merges findings from all three; commits the auto-applied fixes plus any cavecrew finding the two skills didn't fix.
-7. Agent re-runs all three reviewers on the new diff and loops until every reviewer returns zero findings.
+   - `security-review` skill (reports security findings on pending changes; no auto-fix)
+6. Agent merges findings from all four; commits the auto-applied fixes plus any cavecrew/security finding the two auto-fix skills didn't cover.
+7. Agent re-runs all four reviewers on the new diff and loops until every reviewer returns zero findings.
 8. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
 9. Agent retries `git push` → hook allows.
 
@@ -26,7 +27,7 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
   "diff_sha": "<git-hash-object output>",
   "base_branch": "development",
   "reviewed_at": "<iso8601>",
-  "reviewers": ["simplify", "caveman:cavecrew-reviewer", "code-review:xhigh"],
+  "reviewers": ["simplify", "caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
   "findings_count": 0,
   "findings": []
 }
