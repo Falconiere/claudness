@@ -18,3 +18,4 @@ hooks/session-end.sh	Y	yamless default per owner decision
 hooks/session-start.sh	Y	yamless default per owner decision
 hooks/user-prompt-submit.sh	Y	yamless default per owner decision
 settings.json	M	stashed raw for fragment extraction (Phase 5)
+skills/code-intel/scripts/mod.sh	Y	yamless default per owner decision

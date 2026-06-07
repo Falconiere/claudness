@@ -1,0 +1,35 @@
+#!/bin/bash
+# Code-intel script dispatcher
+# Usage: mod.sh <tool> <subcommand> [args...]
+# Dispatches to modules/<tool>.sh <subcommand> [args...]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MODULES_DIR="$SCRIPT_DIR/modules"
+
+tool="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -z "$tool" ]]; then
+  cat <<'USAGE'
+Usage: mod.sh <tool> <subcommand> [args...]
+
+Tools:
+  engram      Persistent memory (search, save, context)
+  ast-grep    Structural/AST pattern matching
+
+Examples:
+  mod.sh engram save "Fixed bug" "Root cause was X" --type bugfix
+  mod.sh ast-grep search 'fn $NAME($$$ARGS)' --lang rust
+USAGE
+  exit 1
+fi
+
+module="$MODULES_DIR/$tool.sh"
+
+if [[ ! -f "$module" ]]; then
+  echo "Error: Unknown tool '$tool'. Available: engram, ast-grep" >&2
+  exit 1
+fi
+
+exec bash "$module" "$@"
