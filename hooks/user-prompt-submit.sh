@@ -153,17 +153,21 @@ if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
 fi
 
 # ── Combine and output ───────────────────────────────────────────────────────
-parts=("$recall")
+parts=()
+[[ -n "$recall" ]] && parts+=("$recall")
 [[ -n "$git_ctx" ]] && parts+=("$git_ctx")
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
 [[ -n "$quality_gate_hint" ]] && parts+=("$quality_gate_hint")
 
 # Join parts with " | "
-context="${parts[0]}"
-for part in "${parts[@]:1}"; do
-  context="$context | $part"
-done
+context=""
+if [[ ${#parts[@]} -gt 0 ]]; then
+  context="${parts[0]}"
+  for part in "${parts[@]:1}"; do
+    context="$context | $part"
+  done
+fi
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg ctx "$context" '{
