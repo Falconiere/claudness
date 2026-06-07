@@ -1,0 +1,4 @@
+# bash-commands.sh allowlist (one pattern per line; '#' starts a comment).
+# Patterns are matched as substrings against the parsed command.
+# These are commands that should pass through even if a deny rule matches a sibling token.
+# Currently empty — add per-project exemptions here.
