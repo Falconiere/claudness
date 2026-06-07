@@ -65,6 +65,17 @@ From a local clone:
 
 For settings fragments (permissions, denylists, etc.), see `settings/README.md`.
 
+## Runtime config
+
+Drop a `~/.claude/claudness.config.json` (or per-project
+`$CLAUDE_PROJECT_DIR/.claude/claudness.config.json`) to disable individual
+skills, hooks, or MCP servers without uninstalling anything. Defaults are
+opt-out — no file is required. Schema and examples: `docs/config.md`.
+
+```json
+{ "version": 1, "skills": { "engram": false }, "mcp": { "engram": false } }
+```
+
 ## Adding something new
 
 1. Pick the right directory (skill vs. agent vs. command vs. hook).

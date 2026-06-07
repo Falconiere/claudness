@@ -39,7 +39,8 @@ the security model to hold:
 | `bash-denylist.txt`           | `hooks/pre-tools/modules/bash-commands.sh`        | Tokens the bash guard rejects via argv-aware parsing.              |
 | `code-edit-rules.json`        | `hooks/pre-tools/modules/code-edit-rules.sh`      | Pattern rules for Write/Edit gating on source files.               |
 | `commit-prefixes.txt`         | `hooks/pre-tools/modules/commit-gate.sh`          | Allowed Conventional Commits prefixes for `git commit` messages.   |
-| `mcp-blocklist.txt`           | `hooks/pre-tools/modules/mcp-blocker.sh`          | MCP tool names that should never be invoked.                       |
+| `mcp-blocklist.txt`           | `hooks/pre-tools/modules/mcp-blocker.sh`          | MCP server prefixes blocked unconditionally (plain text).          |
+| `claudness.config.example.json` | (reference — copy to `~/.claude/claudness.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
 | `protected-files.txt`         | `hooks/pre-tools/modules/protected-files.sh`      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
 | `rust-unsafe-exemptions.txt`  | `hooks/post-tools/modules/rust-quality.sh`        | Files/paths exempt from the `unsafe` Rust check.                   |
 
@@ -57,3 +58,11 @@ Per-project overrides: drop a file of the same name into the project's
 | `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
 | `MY_CLAUDE_ENGRAM_PROJECT`| Override the project name for engram     |
+
+## Runtime config
+
+For per-skill, per-hook, or per-MCP opt-out without touching the data
+files above, see `docs/config.md`. The config file lives at
+`~/.claude/claudness.config.json` (or the project-local override) and is
+deep-merged at runtime. The `mcp-blocklist.txt` blocklist still works in
+parallel; either source can block a server.
