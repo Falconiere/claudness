@@ -125,16 +125,16 @@ if [[ ! -f "$state_file" ]]; then
         "Diff SHA: " + $sha + "\n" +
         "Base branch: " + $base + "\n" +
         "State file: " + $file + " (missing)\n\n" +
-        "Run all three reviewers in parallel (single message, three Agent tool calls) against `git diff " + $base + "...HEAD`:\n" +
-        "  1. Spawn `code-simplifier:code-simplifier` on the diff.\n" +
-        "  2. Spawn `caveman:cavecrew-reviewer` on the diff.\n" +
+        "Run all three reviewers against `git diff " + $base + "...HEAD`:\n" +
+        "  1. Spawn `caveman:cavecrew-reviewer` on the diff (Agent tool, parallel with step 3).\n" +
+        "  2. Invoke the `simplify` skill on the diff (auto-applies simplification findings to the working tree).\n" +
         "  3. Invoke the `code-review` skill with args `xhigh --fix` (auto-applies findings to the working tree).\n" +
-        "  4. Merge all findings from the three reviewers. Apply any not auto-fixed by `code-review --fix`.\n" +
+        "  4. Merge findings from all three. Apply any cavecrew finding not auto-fixed by the two skills.\n" +
         "  5. Stage and commit the fixes (diff SHA will change after each round).\n" +
         "  6. Re-run all three reviewers on the new diff. Loop until every reviewer returns zero findings.\n" +
         "  7. atomically write state file at " + $file + " (write to '\''<file>.tmp'\'' then mv) with schema:\n" +
         "     { version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings }\n" +
-        "     `reviewers` MUST be [\"code-simplifier:code-simplifier\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\"] and `findings_count` MUST be 0.\n" +
+        "     `reviewers` MUST be [\"simplify\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\"] and `findings_count` MUST be 0.\n" +
         "  8. Retry git push."
       )
     }
