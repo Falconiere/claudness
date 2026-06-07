@@ -95,13 +95,71 @@ if [[ -n "$LONG_IMPL" ]]; then
   add_error "Impl block too large in $FILE_PATH (>200 lines) — split into trait impls or modules."
 fi
 
+# --- Error-handling rules (zero tolerance) ---
+# src/ is production code (tests must live in tests/, enforced above), so
+# any panic-on-error pattern here is a prod panic.
+if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
+  UNWRAP_HITS=$(ast-grep --lang rust -p '$E.unwrap()' "$FILE_PATH" 2>/dev/null | head -5)
+  if [[ -n "$UNWRAP_HITS" ]]; then
+    add_error ".unwrap() in $FILE_PATH — use ? or match on Result/Option\n${UNWRAP_HITS}"
+  fi
+  EXPECT_HITS=$(ast-grep --lang rust -p '$E.expect($M)' "$FILE_PATH" 2>/dev/null | head -5)
+  if [[ -n "$EXPECT_HITS" ]]; then
+    add_error ".expect() in $FILE_PATH — use ? or match on Result/Option\n${EXPECT_HITS}"
+  fi
+
+  PANIC_HITS=$(ast-grep --lang rust -p 'panic!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
+  TODO_HITS=$(ast-grep --lang rust -p 'todo!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
+  UNIMPL_HITS=$(ast-grep --lang rust -p 'unimplemented!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$PANIC_HITS" || -n "$TODO_HITS" || -n "$UNIMPL_HITS" ]]; then
+    add_error "panic!/todo!/unimplemented! in $FILE_PATH — return a Result instead\n${PANIC_HITS}${TODO_HITS}${UNIMPL_HITS}"
+  fi
+fi
+
+# --- Output ---
+
 if [[ -n "$MESSAGES" ]]; then
+  # Write violation to gate status file for pre-tool blocking (zero tolerance).
+  GATE_DIR="$PROJECT_ROOT/.claude/tmp"
+  GATE_FILE="$GATE_DIR/quality-gate-status.json"
+  mkdir -p "$GATE_DIR"
+
+  jq -n \
+    --arg status "failing" \
+    --arg reason "Post-edit Rust quality violation(s) detected" \
+    --arg file "$FILE_PATH" \
+    --arg violations "$MESSAGES" \
+    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{
+      status: $status,
+      reason: $reason,
+      source: "rust-quality-hook",
+      file: $file,
+      violations: $violations,
+      updatedAt: $updatedAt
+    }' > "$GATE_FILE"
+
   jq -n --arg ctx "$MESSAGES" '{
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": ("Quality issue detected:\n" + $ctx)
+      "additionalContext": ("QUALITY VIOLATION — fix before proceeding:\n" + $ctx)
     }
   }'
+else
+  # Clear gate if this file now passes (only if this hook set it).
+  GATE_DIR="$PROJECT_ROOT/.claude/tmp"
+  GATE_FILE="$GATE_DIR/quality-gate-status.json"
+  if [[ -f "$GATE_FILE" ]]; then
+    GATE_SOURCE=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
+    GATE_FILE_PATH=$(jq -r '.file // ""' "$GATE_FILE" 2>/dev/null || echo "")
+    if [[ "$GATE_SOURCE" == "rust-quality-hook" && "$GATE_FILE_PATH" == "$FILE_PATH" ]]; then
+      jq -n \
+        --arg status "passing" \
+        --arg source "rust-quality-hook" \
+        --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        '{status: $status, source: $source, updatedAt: $updatedAt}' > "$GATE_FILE"
+    fi
+  fi
 fi
 
 exit 0
