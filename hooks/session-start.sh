@@ -99,8 +99,10 @@ esac
 
 # Per-toolchain snippets — opt-in via $CLAUDNESS_VERBOSE to save tokens.
 # Default off: the session-start.md core already covers project rules.
-# Set CLAUDNESS_VERBOSE=1 to re-enable per-toolchain blocks.
-if [ -n "${CLAUDNESS_VERBOSE:-}" ]; then
+# Set CLAUDNESS_VERBOSE=1 to re-enable per-toolchain blocks. Any value other
+# than "0" / unset / empty enables (so `=true`, `=on`, `=1` all work, but a
+# user who sets `=0` to disable is not surprised).
+if [ "${CLAUDNESS_VERBOSE:-0}" != "0" ] && [ -n "${CLAUDNESS_VERBOSE:-}" ]; then
   if [ "$HAS_TS" = "ts" ]; then
     ts_doc=$(render_doc "$HOOK_DIR/docs/session-start-ts.md")
     [ -n "$ts_doc" ] && parts+=("$ts_doc")

@@ -69,9 +69,19 @@ if ! claudness_enabled skills ast-grep; then
   HAS_ASTGREP=""
 fi
 
+# Word-boundary helpers — bash extended regex has no `\b`. WB/WE wrap each
+# alternation so e.g. `impl` does NOT match `implement` and `move` does NOT
+# match `remove`. Also dropped overly short tokens that no boundary trick
+# can rescue: `impl` (vs implement), `ast` (vs fast/past/last), `drop`
+# (vs dropdown). Inflected forms (tested, fixing) won't match — users
+# typically write the base verb in a directive prompt, and silence is
+# safer than the wrong hint.
+WB='(^|[^a-z])'
+WE='([^a-z]|$)'
+
 # 1. Memory recall hint — only when prompt explicitly invites recall.
 recall=""
-if [[ "$prompt_lower" =~ (remember|recall|what\ did|previously|earlier|past|engram|architecture|how\ does|where\ is|file-map|prior\ decision) ]]; then
+if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|engram|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
   case "$(claudness_engram_state)" in
     available)
       recall="Recall first: \`mod.sh engram search\` before reading files."
@@ -84,21 +94,21 @@ fi
 
 # 2. Intent hint — at most ONE. Most-specific pattern wins.
 intent=""
-if [[ "$prompt_lower" =~ (pattern|struct|impl|trait|interface|all\ functions|all\ methods|every\ function|every\ method|ast|syntax|code\ structure|signature|return\ type|where\ clause|lifetime|closure|macro|decorator|annotation) ]]; then
+if [[ "$prompt_lower" =~ ${WB}(pattern|struct|trait|interface|all\ functions|all\ methods|every\ function|every\ method|syntax|code\ structure|signature|return\ type|where\ clause|lifetime|closure|macro|decorator|annotation)${WE} ]]; then
   if [ "$HAS_ASTGREP" = "ast-grep" ]; then
     intent="Structural pattern: use \`ast-grep run --pattern\` (not Grep)."
   else
     intent="WARN: ast-grep not installed — install via brew/cargo for structural matching."
   fi
-elif [[ "$prompt_lower" =~ (rename|move|extract|split) ]]; then
+elif [[ "$prompt_lower" =~ ${WB}(rename|move|extract|split)${WE} ]]; then
   intent="Rename: find all refs (ast-grep + Grep on configs) before rewriting."
-elif [[ "$prompt_lower" =~ (test|spec|coverage) ]]; then
+elif [[ "$prompt_lower" =~ ${WB}(test|spec|coverage)${WE} ]]; then
   intent="Tests: real-world data only, NO mocks."
-elif [[ "$prompt_lower" =~ (fix|debug|error|bug|issue) ]]; then
+elif [[ "$prompt_lower" =~ ${WB}(fix|debug|error|bug|issue)${WE} ]]; then
   intent="Fix in code. Never suppress with disable comments."
-elif [[ "$prompt_lower" =~ (delete|remove|drop|clean\ up) ]]; then
+elif [[ "$prompt_lower" =~ ${WB}(delete|remove|clean\ up)${WE} ]]; then
   intent="Verify no deps before removing."
-elif [[ "$prompt_lower" =~ (review|audit) ]]; then
+elif [[ "$prompt_lower" =~ ${WB}(review|audit)${WE} ]]; then
   intent="Review: forbidden syntax, quality gates, test coverage."
 fi
 

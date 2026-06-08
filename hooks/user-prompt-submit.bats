@@ -60,6 +60,14 @@ CTX
   ! echo "$output" | grep -q 'engram search'
 }
 
+@test "user-prompt-submit: recall hint NOT emitted for 'paste' (substring of past)" {
+  payload=$(build_input "paste this snippet at the top of the file")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'Recall first'
+  ! echo "$output" | grep -q 'engram search'
+}
+
 @test "user-prompt-submit: recall hint emitted when prompt mentions architecture" {
   payload=$(build_input "explain the architecture of the auth module")
   run bash "$HOOK" <<<"$payload"
@@ -84,6 +92,59 @@ CTX
   echo "$ctx" | grep -q 'Structural pattern' && count=$((count+1))
   echo "$ctx" | grep -q 'Rename:'           && count=$((count+1))
   [ "$count" -le 1 ]
+}
+
+@test "user-prompt-submit: 'implement' does NOT trigger structural pattern hint" {
+  # Regression: `impl` was an alternation token and matched as substring of
+  # `implement`. Dropped from the structural alternation and word-boundary
+  # wrapped so this prompt now produces NO intent hint at all.
+  payload=$(build_input "implement a new feature")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'Structural pattern'
+  ! echo "$ctx" | grep -q 'ast-grep'
+}
+
+@test "user-prompt-submit: 'remove' does NOT trigger rename hint" {
+  # Regression: `move` matched as substring of `remove`. Word boundary now
+  # gates this; `remove` falls through to the delete branch.
+  payload=$(build_input "remove the old helper")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'Rename:'
+  echo "$ctx" | grep -q 'Verify no deps'
+}
+
+@test "user-prompt-submit: 'fast' does NOT trigger structural pattern hint" {
+  # Regression: `ast` matched as substring of `fast`/`past`/`last`. Dropped
+  # entirely from the structural alternation.
+  payload=$(build_input "make this loop faster")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'Structural pattern'
+}
+
+@test "user-prompt-submit: 'dropdown' does NOT trigger delete hint" {
+  # Regression: `drop` matched as substring of `dropdown`. Dropped from the
+  # delete alternation.
+  payload=$(build_input "create a dropdown menu component")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'Verify no deps'
+}
+
+@test "user-prompt-submit: 'preview' does NOT trigger review hint" {
+  # Regression: `review` matched as substring of `preview`. Word boundary
+  # now gates this.
+  payload=$(build_input "preview the changes")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'Review: forbidden'
 }
 
 @test "user-prompt-submit: omits branch/git context (moved to SessionStart)" {
