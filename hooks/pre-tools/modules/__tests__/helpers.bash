@@ -59,11 +59,12 @@ current_diff_sha() {
   git diff --no-color "development...HEAD" | git hash-object --stdin
 }
 
-# Write a state file with given SHA and findings count.
-# Usage: write_state <sha> <findings_count>
+# Write a state file with given SHA, findings count, and (optional) round.
+# Usage: write_state <sha> <findings_count> [<review_round>]
 write_state() {
   local sha="$1"
   local count="$2"
+  local round="${3:-1}"
   local branch
   branch=$(git rev-parse --abbrev-ref HEAD)
   local slug
@@ -73,14 +74,16 @@ write_state() {
     --arg branch "$branch" \
     --arg sha "$sha" \
     --argjson count "$count" \
+    --argjson round "$round" \
     '{
       version: 1,
       branch: $branch,
       diff_sha: $sha,
       base_branch: "development",
       reviewed_at: "2026-06-07T00:00:00Z",
-      reviewers: ["simplify", "caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
+      reviewers: ["caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
       findings_count: $count,
+      review_round: $round,
       findings: []
     }' > "$STATE_DIR/${slug}.json"
 }
