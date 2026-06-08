@@ -97,14 +97,18 @@ case "$event" in
     ;;
 esac
 
-# Per-toolchain snippets — only emitted when detected.
-if [ "$HAS_TS" = "ts" ]; then
-  ts_doc=$(render_doc "$HOOK_DIR/docs/session-start-ts.md")
-  [ -n "$ts_doc" ] && parts+=("$ts_doc")
-fi
-if [ "$HAS_RUST" = "rust" ]; then
-  rust_doc=$(render_doc "$HOOK_DIR/docs/session-start-rust.md")
-  [ -n "$rust_doc" ] && parts+=("$rust_doc")
+# Per-toolchain snippets — opt-in via $CLAUDNESS_VERBOSE to save tokens.
+# Default off: the session-start.md core already covers project rules.
+# Set CLAUDNESS_VERBOSE=1 to re-enable per-toolchain blocks.
+if [ -n "${CLAUDNESS_VERBOSE:-}" ]; then
+  if [ "$HAS_TS" = "ts" ]; then
+    ts_doc=$(render_doc "$HOOK_DIR/docs/session-start-ts.md")
+    [ -n "$ts_doc" ] && parts+=("$ts_doc")
+  fi
+  if [ "$HAS_RUST" = "rust" ]; then
+    rust_doc=$(render_doc "$HOOK_DIR/docs/session-start-rust.md")
+    [ -n "$rust_doc" ] && parts+=("$rust_doc")
+  fi
 fi
 
 # Append project line only when name was detected.

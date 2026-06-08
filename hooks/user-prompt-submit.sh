@@ -60,86 +60,49 @@ if [[ -f "$GATE_FILE" ]] && command -v jq >/dev/null 2>&1; then
 fi
 
 # ── Build context parts ──────────────────────────────────────────────────────
+# Token-budget rule: every part below must be opt-in via prompt content.
+# We do NOT re-inject SessionStart material (branch, gates, recall protocol)
+# on every prompt — that duplicates context already in the session.
 
-# 1. Memory recall — only when engram CLI is installed. Warn (once per prompt) otherwise.
 HAS_ASTGREP="$(detect_ast_grep)"
 if ! claudness_enabled skills ast-grep; then
   HAS_ASTGREP=""
 fi
 
-case "$(claudness_engram_state)" in
-  available)
-    recall="MANDATORY: $(cat "$HOOK_DIR/docs/vector-helper-recall.md" 2>/dev/null || echo "Recall prior context (engram/memory) before exploring.")"
-    ;;
-  missing)
-    recall="WARN: engram CLI not installed — persistent memory recall disabled. Install to enable: https://github.com/orgs/Falconiere/repositories?q=engram"
-    ;;
-  disabled|*)
-    recall=""
-    ;;
-esac
-
-# 2. Git branch + dirty state (with file count)
-git_ctx=""
-if command -v git >/dev/null 2>&1; then
-  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  if [[ -n "$branch" ]]; then
-    dirty_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "$dirty_count" -gt 0 ]]; then
-      git_ctx="Branch: $branch ($dirty_count uncommitted files)"
-    else
-      git_ctx="Branch: $branch (clean)"
-    fi
-  fi
+# 1. Memory recall hint — only when prompt explicitly invites recall.
+recall=""
+if [[ "$prompt_lower" =~ (remember|recall|what\ did|previously|earlier|past|engram|architecture|how\ does|where\ is|file-map|prior\ decision) ]]; then
+  case "$(claudness_engram_state)" in
+    available)
+      recall="Recall first: \`mod.sh engram search\` before reading files."
+      ;;
+    missing)
+      recall="WARN: engram CLI not installed — persistent memory recall disabled."
+      ;;
+  esac
 fi
 
-# 3. Intent-specific hints (accumulate — multiple can match) — generic only
-hints=()
-
-if [[ "$prompt_lower" =~ (test|spec|coverage) ]]; then
-  hints+=("Tests: real-world data only, NO mocks.")
-fi
-if [[ "$prompt_lower" =~ (fix|debug|error|bug|issue) ]]; then
-  hints+=("Fix in code directly, never suppress with disable comments.")
-fi
-if [[ "$prompt_lower" =~ (explore|find|understand|where|how\ does|trace|architecture|what\ does|who\ calls|caller|flow|search|look\ for|locate|what\ is|change|modify|update|move|rename|refactor|fix|debug|implement|add|create|build|write|delete|remove) ]]; then
-  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
-    hints+=("Search hierarchy: ast-grep FIRST for structural patterns on code files. Grep for exact literals on non-code files. Glob for file finding only.")
-  else
-    hints+=("Search hierarchy: Grep for exact literals on code/non-code files. Glob for file finding only. (ast-grep not installed — structural matching disabled.)")
-  fi
-fi
-if [[ "$prompt_lower" =~ (rename|move|extract|split) ]]; then
-  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
-    hints+=("Rename safely: find all references first (ast-grep + Grep on non-code configs), then rewrite.")
-  else
-    hints+=("Rename safely: find all references first (Grep across codebase + configs), then rewrite.")
-  fi
-fi
-if [[ "$prompt_lower" =~ (pattern|struct|impl|trait|interface|all\ functions|all\ methods|all\ types|every\ function|every\ method|ast|syntax|code\ structure|derive|enum|generic|signature|return\ type|parameter|argument|where\ clause|lifetime|closure|macro|decorator|annotation|component|hook|provider|module|inject) ]]; then
-  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
-    hints+=("ast-grep MANDATORY: use for structural AST pattern matching. \`ast-grep run --pattern 'pattern' --lang <lang> .\` NEVER use Grep/rg for structural code patterns.")
-  else
-    hints+=("WARN: ast-grep not installed — structural pattern matching unavailable. Install via \`cargo install ast-grep\` or \`brew install ast-grep\`. Fallback: use Grep with strict regex, expect false positives.")
-  fi
-fi
-if [[ "$prompt_lower" =~ (review|check\ (this|my|the)|look\ at) ]]; then
-  hints+=("Review against project rules. Check forbidden syntax, quality gates, test coverage.")
-fi
-if [[ "$prompt_lower" =~ (explain|walk\ me|how\ does|why\ does|what\ is) ]]; then
-  hints+=("Tailor depth to user expertise level.")
-fi
-if [[ "$prompt_lower" =~ (delete|remove|drop|clean\ up) ]]; then
-  hints+=("Verify nothing depends on target before removing.")
-fi
-
-# Join hints
+# 2. Intent hint — at most ONE. Most-specific pattern wins.
 intent=""
-if [[ ${#hints[@]} -gt 0 ]]; then
-  intent=$(printf '%s ' "${hints[@]}")
+if [[ "$prompt_lower" =~ (pattern|struct|impl|trait|interface|all\ functions|all\ methods|every\ function|every\ method|ast|syntax|code\ structure|signature|return\ type|where\ clause|lifetime|closure|macro|decorator|annotation) ]]; then
+  if [ "$HAS_ASTGREP" = "ast-grep" ]; then
+    intent="Structural pattern: use \`ast-grep run --pattern\` (not Grep)."
+  else
+    intent="WARN: ast-grep not installed — install via brew/cargo for structural matching."
+  fi
+elif [[ "$prompt_lower" =~ (rename|move|extract|split) ]]; then
+  intent="Rename: find all refs (ast-grep + Grep on configs) before rewriting."
+elif [[ "$prompt_lower" =~ (test|spec|coverage) ]]; then
+  intent="Tests: real-world data only, NO mocks."
+elif [[ "$prompt_lower" =~ (fix|debug|error|bug|issue) ]]; then
+  intent="Fix in code. Never suppress with disable comments."
+elif [[ "$prompt_lower" =~ (delete|remove|drop|clean\ up) ]]; then
+  intent="Verify no deps before removing."
+elif [[ "$prompt_lower" =~ (review|audit) ]]; then
+  intent="Review: forbidden syntax, quality gates, test coverage."
 fi
 
-# 4. Per-project context hook — opt-in. Project may emit any string.
+# 3. Per-project context hook — opt-in. Project may emit any string.
 project_ctx=""
 if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
   # shellcheck disable=SC1091  # path is project-specific; sourced only if present
@@ -149,7 +112,6 @@ fi
 # ── Combine and output ───────────────────────────────────────────────────────
 parts=()
 [[ -n "$recall" ]] && parts+=("$recall")
-[[ -n "$git_ctx" ]] && parts+=("$git_ctx")
 [[ -n "$intent" ]] && parts+=("$intent")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
 [[ -n "$quality_gate_hint" ]] && parts+=("$quality_gate_hint")

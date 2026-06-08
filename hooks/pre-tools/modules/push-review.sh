@@ -121,22 +121,14 @@ if [[ ! -f "$state_file" ]]; then
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": (
-        "Code review required before push.\n\n" +
-        "Diff SHA: " + $sha + "\n" +
-        "Base branch: " + $base + "\n" +
-        "State file: " + $file + " (missing)\n\n" +
-        "Run all four reviewers against `git diff " + $base + "...HEAD`:\n" +
-        "  1. Spawn `caveman:cavecrew-reviewer` on the diff (Agent tool, parallel with steps 3 and 4).\n" +
-        "  2. Invoke the `simplify` skill on the diff (auto-applies simplification findings to the working tree).\n" +
-        "  3. Invoke the `code-review` skill with args `xhigh --fix` (auto-applies findings to the working tree).\n" +
-        "  4. Invoke the `security-review` skill on the diff (reports security findings; no auto-fix).\n" +
-        "  5. Merge findings from all four. Apply every cavecrew + security finding not auto-fixed by the two skills.\n" +
-        "  6. Stage and commit the fixes (diff SHA will change after each round).\n" +
-        "  7. Re-run all four reviewers on the new diff. Loop until every reviewer returns zero findings.\n" +
-        "  8. atomically write state file at " + $file + " (write to '\''<file>.tmp'\'' then mv) with schema:\n" +
-        "     { version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings }\n" +
-        "     `reviewers` MUST be [\"simplify\", \"caveman:cavecrew-reviewer\", \"code-review:xhigh\", \"security-review\"] and `findings_count` MUST be 0.\n" +
-        "  9. Retry git push."
+        "Code review required before push (diff SHA " + $sha + ", base " + $base + ").\n" +
+        "Run 3 reviewers on `git diff " + $base + "...HEAD` in parallel: " +
+        "`code-review xhigh --fix`, `security-review`, `caveman:cavecrew-reviewer`. " +
+        "Apply all findings, commit, then atomically write " + $file + " (tmp+mv) with schema " +
+        "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
+        "`reviewers` must include [\"code-review:xhigh\",\"security-review\",\"caveman:cavecrew-reviewer\"], " +
+        "`findings_count` must be 0, `review_round` starts at 1 and bumps by 1 each rewrite. " +
+        "Retry push."
       )
     }
   }'
@@ -160,8 +152,10 @@ if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; the
 fi
 
 # Reviewers must include the required set. Strict check prevents an agent
-# from writing a partial list (e.g. ["simplify"]) and bypassing the gate.
-required_reviewers='["simplify","caveman:cavecrew-reviewer","code-review:xhigh","security-review"]'
+# from writing a partial list and bypassing the gate. `simplify` was dropped
+# (it's an alias of `code-review --fix` — collapsing the two eliminates a
+# redundant full-diff read per round).
+required_reviewers='["caveman:cavecrew-reviewer","code-review:xhigh","security-review"]'
 if ! jq -e --argjson req "$required_reviewers" \
      '(.reviewers // []) as $r | ($req | all(. as $x | $r | index($x) != null))' \
      "$state_file" >/dev/null 2>&1; then
@@ -173,6 +167,27 @@ if ! jq -e --argjson req "$required_reviewers" \
         "state file missing required reviewers at " + $file + "\n" +
         "All of the following must appear in `reviewers`: " + $req + "\n" +
         "Run every reviewer (the missing ones too), merge findings, then rewrite the state file."
+      )
+    }
+  }'
+  exit 0
+fi
+
+# Max review rounds — bound the fix→re-review loop. Each rewrite must bump
+# `review_round`. Missing field is treated as round 1 for backward compat.
+# After MAX_ROUNDS, deny with an escalation message so the babysit triggers
+# its Step 6 escalation stop instead of looping indefinitely.
+MAX_ROUNDS=3
+state_round=$(jq -r '.review_round // 1' "$state_file" 2>/dev/null || echo "1")
+if [[ "$state_round" =~ ^[0-9]+$ ]] && (( state_round > MAX_ROUNDS )); then
+  jq -n --arg n "$state_round" --arg max "$MAX_ROUNDS" --arg file "$state_file" '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": (
+        "ESCALATE: review loop hit " + $n + " rounds (max " + $max + ") at " + $file + ". " +
+        "Reviewers keep finding new issues after each fix — stop auto-looping and surface the " +
+        "current findings to the human. Babysit: treat as Escalation stop (Step 6)."
       )
     }
   }'
