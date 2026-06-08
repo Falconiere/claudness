@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bats:
+    name: bats (hooks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y bats jq
+
+      - name: Install ast-grep
+        uses: ast-grep/setup-ast-grep@v1
+
+      - name: Confirm tooling
+        run: |
+          bats --version
+          jq --version
+          ast-grep --version
+          python3 --version
+
+      - name: Run bats suite
+        run: |
+          set -euo pipefail
+          # Print one TAP line per test so failures are easy to spot in the log.
+          find hooks -name "*.bats" -print0 | xargs -0 bats
