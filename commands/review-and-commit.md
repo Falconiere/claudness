@@ -32,7 +32,6 @@ For each package/crate with changes, dispatch a subagent (use `superpowers:dispa
 - Use conventional commit messages: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`.
 - One logical change per commit — split into multiple commits if scope requires it.
 - Never use `--no-verify`. If hooks fail, fix the underlying issue and retry.
-- Never run `git push`.
 
 ## 6. Completion
 - Report: what was reviewed, what was fixed, final gate status, commit hashes produced.
