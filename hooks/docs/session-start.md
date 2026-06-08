@@ -12,6 +12,5 @@
 ## MANDATORY
 - Global gate: do NOT move to another task if any error/warning/test fails (even unrelated files).
 - Test policy: NO mock-data tests. Use real-world data paths only.
-- Never run `git push`.
 
 Keep prompts short, strict, action-first.

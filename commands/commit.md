@@ -9,5 +9,4 @@ Follow this exact sequence with NO unnecessary exploration:
 4. If any gate fails, fix only reported failures, re-stage, and re-run all gates until green.
 5. Commit with concise conventional message (subject <=72 chars; body grouped by package when useful).
 6. If hooks fail, fix only hook-reported issues, re-stage, and retry (max 3 retries).
-7. Never run `git push`.
-8. Do not mark task complete unless all gates pass.
+7. Do not mark task complete unless all gates pass.
