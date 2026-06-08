@@ -59,6 +59,20 @@ teardown() {
   ! echo "$output" | grep -q 'TypeScript notes'
 }
 
+@test "session-start: CLAUDNESS_VERBOSE=0 keeps toolchain block off" {
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  echo '{}' > tsconfig.json
+  git -c user.email=t@t -c user.name=t add tsconfig.json
+  git -c user.email=t@t -c user.name=t commit -q -m ts
+  export CLAUDNESS_VERBOSE=0
+  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  unset CLAUDNESS_VERBOSE
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'TypeScript notes'
+}
+
 @test "session-start: toolchain block emits when CLAUDNESS_VERBOSE=1 and detected" {
   cd "$TMP"
   git init -q
