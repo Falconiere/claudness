@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify plugin.json version matches tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          TAG_VERSION="${TAG#v}"
+          MANIFEST="plugins/claudness/.claude-plugin/plugin.json"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::missing manifest at $MANIFEST"
+            exit 1
+          fi
+          MANIFEST_VERSION="$(jq -r '.version' "$MANIFEST")"
+          if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "::error::tag $TAG (=$TAG_VERSION) does not match $MANIFEST version ($MANIFEST_VERSION). Bump the manifest and re-tag."
+            exit 1
+          fi
+          echo "tag=$TAG  manifest=$MANIFEST_VERSION  OK"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag
