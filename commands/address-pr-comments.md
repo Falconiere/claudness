@@ -37,12 +37,12 @@ Unless this invocation is itself a cron tick (recognized by the `--tick` marker 
 1. Snapshot the target via `gh pr view ... --json number,title,headRefName,statusCheckRollup,mergeable,reviewDecision,url,headRefOid`.
 2. Compute the per-PR slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` (e.g. `falconiere-claudness-42`). State path: `/tmp/address-pr-comments-${SLOT}.json`. Cron name: `address-pr-comments:${SLOT}`. Every agent invocation works in its own slot — see **Isolation invariants** below.
 3. Name-exact collision check: query `CronList` and look for an entry whose `name` equals `address-pr-comments:${SLOT}` exactly. Treat the result as a boolean for that single name. **Do not enumerate, log, or reason about any other cron entries returned** — other slots belong to other agents and are not your concern. If the exact name exists, refuse:
-   > "PR #N already being babysat by another session. Say `/address-pr-comments stop` from inside this repo to cancel that one first."
-4. `CronCreate` with expression `*/3 * * * *` (base 3 min, adaptive — see **Backoff**), name `address-pr-comments:${SLOT}`. Prompt is the minimal tick form: `/address-pr-comments --tick <OWNER>/<REPO>#<NUMBER>`. Nothing else. Slot and branch are derivable from the PR id at tick time — passing them in the prompt is redundant and leaks orchestration internals into the agent text.
+   > "PR #N already being babysat by another session. Say `/claudness:address-pr-comments stop` from inside this repo to cancel that one first."
+4. `CronCreate` with expression `*/3 * * * *` (base 3 min, adaptive — see **Backoff**), name `address-pr-comments:${SLOT}`. Prompt is the minimal tick form: `/claudness:address-pr-comments --tick <OWNER>/<REPO>#<NUMBER>` (plugin-namespaced — bare `/address-pr-comments` will fail with "Unknown command" when the command lives in the `claudness` plugin). Nothing else. Slot and branch are derivable from the PR id at tick time — passing them in the prompt is redundant and leaks orchestration internals into the agent text.
 5. Init `/tmp/address-pr-comments-${SLOT}.json` (see **State**).
 6. Run the first pass immediately (Steps 1–5).
 7. Tell the user:
-   > "Babysitting PR #N on branch `<branch>` every 3 min. Auto-stops when CI is green and all comments are addressed. Say `/address-pr-comments stop` to cancel."
+   > "Babysitting PR #N on branch `<branch>` every 3 min. Auto-stops when CI is green and all comments are addressed. Say `/claudness:address-pr-comments stop` to cancel."
 
 If first arg is **`stop`**: resolve `SLOT` from the current branch's PR, `CronDelete address-pr-comments:${SLOT}` (exact name only — never pattern-delete, never glob), remove `/tmp/address-pr-comments-${SLOT}.json`, confirm. Other slots untouched. Exit.
 
@@ -57,7 +57,7 @@ A babysit agent owns exactly one slot and must behave as if no other slot exists
 - **Single-slot scope.** Read/write only `/tmp/address-pr-comments-${SLOT}.json`. Never glob `/tmp/address-pr-comments-*.json`, never `ls` the tmp dir, never read another slot's state.
 - **Cron isolation.** Operate only on the cron named `address-pr-comments:${SLOT}`. Never grep, list, modify, or delete any cron whose name differs — even by one character. The only `CronList` use is the name-exact existence check in Step 0.3.
 - **No cross-talk.** Do not reference, count, or summarize other babysit sessions in user-facing output, engram saves, or reports. Other agents are not part of your context.
-- **No knowledge leakage in the tick prompt.** The tick prompt is exactly `/address-pr-comments --tick <OWNER>/<REPO>#<NUMBER>`. Do not append `slot=`, `branch=`, state paths, or any other orchestration metadata — the agent recomputes them and exposing them as prose risks confusing them with reviewer instructions.
+- **No knowledge leakage in the tick prompt.** The tick prompt is exactly `/claudness:address-pr-comments --tick <OWNER>/<REPO>#<NUMBER>`. Do not append `slot=`, `branch=`, state paths, or any other orchestration metadata — the agent recomputes them and exposing them as prose risks confusing them with reviewer instructions.
 - **Worktree isolation.** Every code-change tick uses its own `EnterWorktree`. Do not reuse another slot's worktree; do not assume one already exists.
 - **Stop is local.** `stop` deletes only this slot's cron + state file. It does not enumerate or affect any other slot.
 
@@ -297,7 +297,7 @@ Stop with a clear flag when the babysit physically cannot make forward progress 
 
 These are NOT "done" states — they are "I'm blocked, please look" states. Use a different terminal message so the user knows the work is not actually finished:
 
-> "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with `/address-pr-comments` once unblocked."
+> "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with `/claudness:address-pr-comments` once unblocked."
 
 ### Keep going (next tick)
 
