@@ -8,15 +8,12 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
 2. Hook computes `git diff development...HEAD | git hash-object --stdin`.
 3. Hook reads `.claude/tmp/push-review/<branch-slug>.json`.
 4. If the state file is missing, has a stale `diff_sha`, or has `findings_count > 0` → DENY with instructions.
-5. Agent runs four reviewers against the diff:
-   - `caveman:cavecrew-reviewer` (subagent, spawned via the Agent tool)
-   - `simplify` skill (auto-applies simplification fixes to the working tree)
-   - `code-review` skill invoked with `xhigh --fix` (auto-applies findings to the working tree)
-   - `security-review` skill (reports security findings on pending changes; no auto-fix)
-6. Agent merges findings from all four; commits the auto-applied fixes plus any cavecrew/security finding the two auto-fix skills didn't cover.
-7. Agent re-runs all four reviewers on the new diff and loops until every reviewer returns zero findings.
-8. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
-9. Agent retries `git push` → hook allows.
+5. Agent runs two reviewers against the diff **sequentially** (code-simplifier first):
+   1. `code-simplifier` (subagent from the `code-simplifier@claude-plugins-official` plugin — declared in `plugin.json` `requires`). Spawn via the Agent tool, apply its rewrites to the working tree, and commit.
+   2. `caveman:cavecrew-reviewer` (subagent from the `caveman@caveman` plugin — declared in `plugin.json` `requires`). Review the post-simplification diff and apply findings.
+6. Re-run both reviewers on the new diff and loop until both return zero findings.
+7. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
+8. Agent retries `git push` → hook allows.
 
 ## State schema
 
@@ -27,7 +24,7 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
   "diff_sha": "<git-hash-object output>",
   "base_branch": "development",
   "reviewed_at": "<iso8601>",
-  "reviewers": ["simplify", "caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
+  "reviewers": ["code-simplifier", "caveman:cavecrew-reviewer"],
   "findings_count": 0,
   "findings": []
 }

@@ -1,6 +1,6 @@
 {
   "name": "claudness",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
   "author": {
     "name": "Falconiere Barbosa",
@@ -15,5 +15,19 @@
     "agents",
     "hooks",
     "caveman"
+  ],
+  "requires": [
+    {
+      "plugin": "code-simplifier@claude-plugins-official",
+      "marketplace": "claude-plugins-official",
+      "source": { "source": "github", "repo": "anthropics/claude-plugins-official" },
+      "reason": "review-and-commit / push-review / address-pr-comments delegate simplification to the code-simplifier subagent"
+    },
+    {
+      "plugin": "caveman@caveman",
+      "marketplace": "caveman",
+      "source": { "source": "github", "repo": "JuliusBrussee/caveman" },
+      "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer (and deep-explore to caveman:cavecrew-investigator)"
+    }
   ]
 }

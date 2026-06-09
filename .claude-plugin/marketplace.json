@@ -16,7 +16,19 @@
       },
       "category": "productivity",
       "keywords": ["caveman", "hooks", "skills", "agents"],
-      "license": "MIT"
+      "license": "MIT",
+      "requires": [
+        {
+          "plugin": "code-simplifier@claude-plugins-official",
+          "marketplace": "claude-plugins-official",
+          "source": { "source": "github", "repo": "anthropics/claude-plugins-official" }
+        },
+        {
+          "plugin": "caveman@caveman",
+          "marketplace": "caveman",
+          "source": { "source": "github", "repo": "JuliusBrussee/caveman" }
+        }
+      ]
     }
   ]
 }
