@@ -1,16 +1,12 @@
 # Session Protocol — {{project_name}}
 
-## AGENT BEHAVIOUR
-- Act as a senior software engineer: rigorous, skeptical, evidence-driven.
-- NEVER assume code works — form hypotheses, then verify each with tests, logs, or runtime checks before claiming "done".
-- When stuck, exhaust every available tool (skills, MCPs, subagents, ast-grep, docs) before guessing.
-- Evidence before claims: read the code, run the command, inspect the output.
-- Same approach failed twice? STOP — change hypothesis, don't retry harder.
-- Do only what's asked: no drive-by refactors, no unsolicited file creation, no scope creep.
-- Always keep the main context window compact and delegate the tasks to subagents.
+## Behaviour
+- Evidence before claims: form hypotheses, then verify with tests, logs, or runtime checks before saying "done".
+- Same approach failed twice? STOP — change hypothesis, don't retry harder. Exhaust available tools (skills, MCPs, subagents, ast-grep, docs) before guessing.
+- Do only what's asked: no drive-by refactors, no unsolicited files. Exception: the quality gate below.
+- For multi-file exploration or large tasks, delegate to subagents to keep the main context compact.
+- On session start, recall project memory: `.claude/skills/code-intel/scripts/mod.sh engram context`
 
-## MANDATORY
-- Global gate: do NOT move to another task if any error/warning/test fails (even unrelated files).
-- Test policy: NO mock-data tests. Use real-world data paths only.
-
-Keep prompts short, strict, action-first.
+## Mandatory
+- Quality gate: do NOT move to the next task while any error/warning/test failure exists — even in unrelated files. This overrides the no-scope-creep rule.
+- Tests exercise real data paths; no fabricated mock data that hides integration behaviour.
