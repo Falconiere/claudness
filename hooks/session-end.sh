@@ -30,8 +30,12 @@ case "$(claudness_engram_state)" in
     ;;
 esac
 
+# Stop hooks have no recognized `stopReason` output field; use
+# `systemMessage` (valid for every hook event, shown to the user).
+# Do NOT use decision:"block" — that would force an extra model turn
+# on every Stop.
 jq -n --arg ctx "$ctx" '{
-  "stopReason": $ctx
+  "systemMessage": $ctx
 }'
 
 exit 0
