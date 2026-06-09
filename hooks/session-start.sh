@@ -141,6 +141,13 @@ fi
 # Verify required plugin dependencies declared in plugin.json `requires`.
 # Claude Code has no auto-install hook for plugin deps; we surface the exact
 # `/plugin install …` command so the user can fix in one paste.
+#
+# Scope: the check only fires when we can locate the claudness plugin manifest
+# (via CLAUDE_PLUGIN_ROOT, set by Claude Code when this hook runs from the
+# installed plugin, or via the in-repo path when working inside the claudness
+# checkout itself). Outside both — e.g., a hook run by another project that
+# inherits these helpers — the block silently no-ops. Intentional: repo-A
+# should not WARN about plugin deps declared in repo-B's manifest.
 plugin_manifest=""
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json" ]; then
   plugin_manifest="$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json"
@@ -149,8 +156,18 @@ elif [ -f "$PROJECT_ROOT/plugins/claudness/.claude-plugin/plugin.json" ]; then
 fi
 if [ -n "$plugin_manifest" ] && command -v jq >/dev/null 2>&1; then
   missing_plugins=()
+  indeterminate=0
   while IFS=$'\t' read -r req_spec req_repo; do
     [ -z "$req_spec" ] && continue
+    detect_plugin_installed "$req_spec" >/dev/null
+    rc=$?
+    if [ "$rc" -eq 2 ]; then
+      # Registry/jq unavailable on this box — suppress all WARNs in this
+      # block so we don't spam every required plugin as "missing" on a
+      # machine where the registry was moved or jq was uninstalled.
+      indeterminate=1
+      break
+    fi
     if [ -z "$(detect_plugin_installed "$req_spec")" ]; then
       if [ -n "$req_repo" ] && [ "$req_repo" != "null" ]; then
         missing_plugins+=("/plugin install ${req_spec}   # github:${req_repo}")
@@ -159,7 +176,7 @@ if [ -n "$plugin_manifest" ] && command -v jq >/dev/null 2>&1; then
       fi
     fi
   done < <(jq -r '(.requires // [])[] | [.plugin, (.source.repo // "")] | @tsv' "$plugin_manifest" 2>/dev/null)
-  if [ "${#missing_plugins[@]}" -gt 0 ]; then
+  if [ "$indeterminate" -eq 0 ] && [ "${#missing_plugins[@]}" -gt 0 ]; then
     pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
     for cmd in "${missing_plugins[@]}"; do
       pwarn+="

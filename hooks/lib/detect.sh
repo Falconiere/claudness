@@ -50,17 +50,37 @@ detect_engram() {
 
 # Echo the plugin spec ("name@marketplace") if installed at any scope.
 # Reads ~/.claude/plugins/installed_plugins.json (Claude Code's authoritative
-# install registry). Returns empty when missing, malformed, or not installed.
+# install registry).
+#
+# Exit codes:
+#   0 + spec on stdout — installed.
+#   0 + empty stdout   — registry parsed; spec not present.
+#   2 + empty stdout   — INDETERMINATE: registry missing, jq missing, or
+#                        malformed JSON. Callers should suppress install
+#                        warnings rather than spam users on a box where the
+#                        registry was moved or jq was uninstalled.
 #
 # Usage:  detect_plugin_installed "code-simplifier@claude-plugins-official"
 detect_plugin_installed() {
   local spec="$1"
   [ -z "$spec" ] && return 0
   local registry="${CLAUDE_PLUGINS_REGISTRY:-${HOME}/.claude/plugins/installed_plugins.json}"
-  [ -f "$registry" ] || return 0
-  command -v jq >/dev/null 2>&1 || return 0
-  jq -e --arg s "$spec" '.plugins[$s] | length > 0' "$registry" >/dev/null 2>&1 \
-    && echo "$spec"
+  [ -f "$registry" ] || return 2
+  command -v jq >/dev/null 2>&1 || return 2
+  # Guard against malformed registry (top-level `plugins` missing or wrong
+  # type) — treat as indeterminate, not "not installed".
+  if ! jq -e '.plugins | type == "object"' "$registry" >/dev/null 2>&1; then
+    return 2
+  fi
+  # `has($s)` is tolerant of value type — array, object, number, or null at
+  # the spec key all parse cleanly. The prior `.plugins[$s] | length > 0`
+  # filter errored on non-array values and silently false-positived a WARN
+  # if Claude Code ever wrote a non-array there.
+  if jq -e --arg s "$spec" '.plugins | has($s)' "$registry" >/dev/null 2>&1; then
+    echo "$spec"
+    return 0
+  fi
+  return 0
 }
 
 # Echo "ast-grep" if either `sg` or `ast-grep` is on PATH.

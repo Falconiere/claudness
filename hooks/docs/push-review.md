@@ -30,6 +30,10 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
 }
 ```
 
+## Security posture
+
+`security-review` is **no longer enforced** by this gate (dropped in v1.2.0 per project decision). For diffs that touch authentication, secret handling, request parsing, or other security-sensitive code, run `/security-review` manually before push. The gate's two required reviewers (`code-simplifier`, `caveman:cavecrew-reviewer`) catch correctness and clarity bugs but make no security guarantees.
+
 ## Failure modes the hook denies
 
 - State file missing.
