@@ -8,16 +8,20 @@ Run AFTER all tasks are completed. Reviews changes on the current branch, fixes 
 - If no changes exist (committed or working-tree), STOP and report "nothing to review".
 - Group changed files by package/crate.
 
-## 2. Launch parallel review subagents
-For each package/crate with changes, dispatch a subagent (use `superpowers:dispatching-parallel-agents` skill) that:
-- Reads every changed file in its scope — both committed diff and working-tree state.
-- Searches for gaps: missing error handling at boundaries, untested paths, dead code, over-engineering, unclear naming.
-- Searches for simplification: unnecessary abstractions, duplicated logic, verbose code.
-- Verifies tests exist for new/changed behavior and use real data (NO mocks).
-- Reports concrete issues with file paths and line numbers — no vague feedback accepted.
+## 2. Launch review subagents (sequential — code-simplifier first)
+Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plugin.json` `requires`; SessionStart warns when missing):
+- `code-simplifier@claude-plugins-official` → `code-simplifier`
+- `caveman@caveman` → `caveman:cavecrew-reviewer`
+
+For each package/crate with changes, dispatch the following subagents **sequentially** (code-simplifier must run FIRST so the reviewer sees the post-simplification diff, not the pre-simplification noise):
+
+1. **`code-simplifier`** — point it at the recently modified files. It rewrites for clarity/consistency without changing behavior (duplicated logic collapsed, verbose constructs simplified, unnecessary abstractions removed). Apply its rewrites directly to the working tree, run the relevant tests, then commit before invoking the reviewer.
+2. **`caveman:cavecrew-reviewer`** — point it at the (now simplified) changed files in the package's scope. It returns one-line, severity-tagged findings (caveman-compressed) covering gaps, missing error handling at boundaries, untested paths, dead code, over-engineering, unclear naming, and tests that mock instead of using real data.
+
+Every finding must include file path and line number — no vague feedback accepted. If a package has no changed files, skip its review.
 
 ## 3. Fix all reported issues
-- Fix every gap, simplification, and missing test reported by the subagents.
+- Apply every cavecrew finding. Re-run the relevant tests after each batch.
 - Fix any pre-existing errors or warnings in touched files (zero tolerance).
 - Same approach failed twice? STOP — change hypothesis, don't retry harder.
 

@@ -122,11 +122,12 @@ if [[ ! -f "$state_file" ]]; then
       "permissionDecision": "deny",
       "permissionDecisionReason": (
         "Code review required before push (diff SHA " + $sha + ", base " + $base + ").\n" +
-        "Run 3 reviewers on `git diff " + $base + "...HEAD` in parallel: " +
-        "`code-review xhigh --fix`, `security-review`, `caveman:cavecrew-reviewer`. " +
-        "Apply all findings, commit, then atomically write " + $file + " (tmp+mv) with schema " +
+        "Run 2 reviewers on `git diff " + $base + "...HEAD` SEQUENTIALLY (code-simplifier first): " +
+        "(1) `code-simplifier` — apply its rewrites to the working tree and commit; " +
+        "(2) `caveman:cavecrew-reviewer` — review the post-simplification diff and apply findings. " +
+        "Then atomically write " + $file + " (tmp+mv) with schema " +
         "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
-        "`reviewers` must include [\"code-review:xhigh\",\"security-review\",\"caveman:cavecrew-reviewer\"], " +
+        "`reviewers` must include [\"code-simplifier\",\"caveman:cavecrew-reviewer\"] (in that order), " +
         "`findings_count` must be 0, `review_round` starts at 1 and bumps by 1 each rewrite. " +
         "Retry push."
       )
@@ -152,10 +153,13 @@ if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; the
 fi
 
 # Reviewers must include the required set. Strict check prevents an agent
-# from writing a partial list and bypassing the gate. `simplify` was dropped
-# (it's an alias of `code-review --fix` — collapsing the two eliminates a
-# redundant full-diff read per round).
-required_reviewers='["caveman:cavecrew-reviewer","code-review:xhigh","security-review"]'
+# from writing a partial list and bypassing the gate. `security-review` and
+# `code-review:xhigh` were dropped: `code-simplifier` (from
+# claude-plugins-official) runs first to rewrite for clarity, then
+# `caveman:cavecrew-reviewer` (from the caveman plugin) reviews the
+# post-simplification diff. Both are declared as plugin `requires`. Order is
+# enforced only in the deny-message — the membership check below is set-based.
+required_reviewers='["code-simplifier","caveman:cavecrew-reviewer"]'
 if ! jq -e --argjson req "$required_reviewers" \
      '(.reviewers // []) as $r | ($req | all(. as $x | $r | index($x) != null))' \
      "$state_file" >/dev/null 2>&1; then

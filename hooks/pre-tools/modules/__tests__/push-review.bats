@@ -257,7 +257,7 @@ EOF
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("required reviewers")'
 }
 
-@test "push-review: state file with all four reviewers is allowed" {
+@test "push-review: state file with both required reviewers is allowed" {
   sha=$(current_diff_sha)
   write_state "$sha" 0
   payload=$(build_input "git push")
@@ -266,7 +266,7 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: simplify is no longer required (3-reviewer set passes)" {
+@test "push-review: security-review is no longer required (code-simplifier+caveman set passes)" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
@@ -276,7 +276,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
+    reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
     findings_count: 0,
     review_round: 1,
     findings: []
@@ -317,7 +317,7 @@ EOF
     diff_sha: $sha,
     base_branch: "development",
     reviewed_at: "2026-06-07T00:00:00Z",
-    reviewers: ["caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
+    reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
     findings_count: 0,
     findings: []
   }' > "$STATE_DIR/${slug}.json"

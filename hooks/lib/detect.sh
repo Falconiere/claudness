@@ -48,6 +48,21 @@ detect_engram() {
   command -v engram >/dev/null 2>&1 && echo engram
 }
 
+# Echo the plugin spec ("name@marketplace") if installed at any scope.
+# Reads ~/.claude/plugins/installed_plugins.json (Claude Code's authoritative
+# install registry). Returns empty when missing, malformed, or not installed.
+#
+# Usage:  detect_plugin_installed "code-simplifier@claude-plugins-official"
+detect_plugin_installed() {
+  local spec="$1"
+  [ -z "$spec" ] && return 0
+  local registry="${CLAUDE_PLUGINS_REGISTRY:-${HOME}/.claude/plugins/installed_plugins.json}"
+  [ -f "$registry" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -e --arg s "$spec" '.plugins[$s] | length > 0' "$registry" >/dev/null 2>&1 \
+    && echo "$spec"
+}
+
 # Echo "ast-grep" if either `sg` or `ast-grep` is on PATH.
 detect_ast_grep() {
   if command -v sg >/dev/null 2>&1 || command -v ast-grep >/dev/null 2>&1; then

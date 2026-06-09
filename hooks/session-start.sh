@@ -138,6 +138,37 @@ if [ "${#missing_tools[@]}" -gt 0 ]; then
   parts+=("$warn")
 fi
 
+# Verify required plugin dependencies declared in plugin.json `requires`.
+# Claude Code has no auto-install hook for plugin deps; we surface the exact
+# `/plugin install …` command so the user can fix in one paste.
+plugin_manifest=""
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json" ]; then
+  plugin_manifest="$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json"
+elif [ -f "$PROJECT_ROOT/plugins/claudness/.claude-plugin/plugin.json" ]; then
+  plugin_manifest="$PROJECT_ROOT/plugins/claudness/.claude-plugin/plugin.json"
+fi
+if [ -n "$plugin_manifest" ] && command -v jq >/dev/null 2>&1; then
+  missing_plugins=()
+  while IFS=$'\t' read -r req_spec req_repo; do
+    [ -z "$req_spec" ] && continue
+    if [ -z "$(detect_plugin_installed "$req_spec")" ]; then
+      if [ -n "$req_repo" ] && [ "$req_repo" != "null" ]; then
+        missing_plugins+=("/plugin install ${req_spec}   # github:${req_repo}")
+      else
+        missing_plugins+=("/plugin install ${req_spec}")
+      fi
+    fi
+  done < <(jq -r '(.requires // [])[] | [.plugin, (.source.repo // "")] | @tsv' "$plugin_manifest" 2>/dev/null)
+  if [ "${#missing_plugins[@]}" -gt 0 ]; then
+    pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
+    for cmd in "${missing_plugins[@]}"; do
+      pwarn+="
+  • $cmd"
+    done
+    parts+=("$pwarn")
+  fi
+fi
+
 # Append git context and gate status
 [[ -n "$git_ctx" ]] && parts+=("$git_ctx")
 [[ -n "$gate_hint" ]] && parts+=("$gate_hint")

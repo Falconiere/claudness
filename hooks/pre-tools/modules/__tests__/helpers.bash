@@ -81,7 +81,7 @@ write_state() {
       diff_sha: $sha,
       base_branch: "development",
       reviewed_at: "2026-06-07T00:00:00Z",
-      reviewers: ["caveman:cavecrew-reviewer", "code-review:xhigh", "security-review"],
+      reviewers: ["code-simplifier", "caveman:cavecrew-reviewer"],
       findings_count: $count,
       review_round: $round,
       findings: []

@@ -216,7 +216,12 @@ No performative agreement. No "Great point!". No "Thanks for catching that!". St
 
 ### Push
 
-Run `/code-review xhigh --fix` in the worktree before push (the `push-review` PreToolUse hook checks for a clean review state file at `.claude/tmp/push-review/<branch>.json` and will deny the push otherwise). Then commit:
+Before push, run the two reviewers required by the `push-review` PreToolUse hook (writes `.claude/tmp/push-review/<branch>.json`; the push is denied otherwise). Run **sequentially — code-simplifier first**:
+
+1. `code-simplifier` subagent — from the `code-simplifier@claude-plugins-official` plugin (declared in `plugin.json` `requires`). Apply its rewrites directly to the worktree and commit.
+2. `caveman:cavecrew-reviewer` subagent — from the `caveman@caveman` plugin (declared in `plugin.json` `requires`). Review the post-simplification diff and apply findings.
+
+Loop until both reviewers are clean, then commit:
 
 - Extract ticket from branch if present (e.g., `feature/CORE-1234-desc` → `CORE-1234`).
 - Format: conventional commits — `fix(<scope>): address PR review feedback` (add ticket prefix in the subject when present).
