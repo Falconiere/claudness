@@ -5,6 +5,10 @@
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Disable bash 5.2+ patsub_replacement so `&` in ${var//pat/repl} values is
+# literal. No-op (option unknown) on older bash, including macOS /bin/bash 3.2.
+shopt -u patsub_replacement 2>/dev/null || true
+
 # shellcheck source=lib/detect.sh
 . "$HOOK_DIR/lib/detect.sh"
 # shellcheck source=lib/config.sh
@@ -42,12 +46,13 @@ render_doc() {
   content=$(cat "$src")
   # Substitute placeholders with bash-native replacement — immune to sed
   # metacharacters (|, &, \) in project names or package manager values.
-  # The replacement is quoted: bash 5.2+ patsub_replacement would otherwise
-  # expand a literal `&` in the value to the matched pattern.
+  # Replacement is deliberately UNQUOTED: quoting inside ${} inserts literal
+  # quote characters on bash 3.2 (stock macOS). Literal-& safety on bash 5.2+
+  # comes from `shopt -u patsub_replacement` at the top of this script.
   local name="${PROJECT_NAME:-this project}"
   local pm="${NODE_PM:-your package manager}"
-  content="${content//\{\{project_name\}\}/"$name"}"
-  content="${content//\{\{node_pm\}\}/"$pm"}"
+  content="${content//\{\{project_name\}\}/$name}"
+  content="${content//\{\{node_pm\}\}/$pm}"
   printf '%s' "$content"
 }
 

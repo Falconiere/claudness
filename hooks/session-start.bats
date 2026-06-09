@@ -99,8 +99,25 @@ teardown() {
   git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
   run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.hookSpecificOutput.additionalContext' >/dev/null
-  ! echo "$output" | grep -q '{{project_name}}'
+  ctx=$(echo "$output" | jq -re '.hookSpecificOutput.additionalContext')
+  # Exact substitution: name appears verbatim in the rendered doc header,
+  # without literal surrounding quotes and without leftover tokens.
+  echo "$ctx" | grep -qF 'Session Protocol — we|ird&name'
+  ! echo "$ctx" | grep -qF '"we|ird&name"'
+  ! echo "$ctx" | grep -qF '{{project_name}}'
+}
+
+@test "session-start: rendering is exact under stock /bin/bash (3.2 on macOS)" {
+  mkdir -p "$TMP/we|ird&name"
+  cd "$TMP/we|ird&name"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  run /bin/bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -re '.hookSpecificOutput.additionalContext')
+  echo "$ctx" | grep -qF 'Session Protocol — we|ird&name'
+  ! echo "$ctx" | grep -qF '"we|ird&name"'
+  ! echo "$ctx" | grep -qF '{{project_name}}'
 }
 
 @test "session-start: toolchain block emits when CLAUDNESS_VERBOSE=1 and detected" {
