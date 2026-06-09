@@ -15,7 +15,7 @@ teardown() {
   cd "$TMP"
   git init -q
   git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
 }
 
@@ -23,14 +23,14 @@ teardown() {
   cd "$TMP"
   git init -q
   git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -qE 'yamless|routo|/Volumes/Projects/(routo|yamless)'
 }
 
 @test "session-start: runs without error outside any git repo" {
   cd /tmp
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
 }
 
@@ -39,7 +39,7 @@ teardown() {
   git init -q
   git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
   # No tsconfig, no Cargo.toml — neither block should appear.
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'TypeScript notes'
   ! echo "$output" | grep -q 'Rust notes'
@@ -54,7 +54,7 @@ teardown() {
   git -c user.email=t@t -c user.name=t add tsconfig.json
   git -c user.email=t@t -c user.name=t commit -q -m ts
   unset CLAUDNESS_VERBOSE
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'TypeScript notes'
 }
@@ -67,10 +67,40 @@ teardown() {
   git -c user.email=t@t -c user.name=t add tsconfig.json
   git -c user.email=t@t -c user.name=t commit -q -m ts
   export CLAUDNESS_VERBOSE=0
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   unset CLAUDNESS_VERBOSE
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'TypeScript notes'
+}
+
+@test "session-start: source=compact triggers compact branch with post-compaction doc" {
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  run bash "$HOOK" <<<'{"source":"compact"}'
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.systemMessage')" = "Context compacted" ]
+  echo "$output" | jq -r '.hookSpecificOutput.additionalContext' | grep -q 'Recover memories'
+}
+
+@test "session-start: source=resume triggers resume branch" {
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  run bash "$HOOK" <<<'{"source":"resume"}'
+  [ "$status" -eq 0 ]
+  [ "$(echo "$output" | jq -r '.systemMessage')" = "Session resumed" ]
+}
+
+@test "session-start: project name with sed metacharacters renders safely" {
+  mkdir -p "$TMP/we|ird&name"
+  cd "$TMP/we|ird&name"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext' >/dev/null
+  ! echo "$output" | grep -q '{{project_name}}'
 }
 
 @test "session-start: toolchain block emits when CLAUDNESS_VERBOSE=1 and detected" {
@@ -81,7 +111,7 @@ teardown() {
   git -c user.email=t@t -c user.name=t add tsconfig.json
   git -c user.email=t@t -c user.name=t commit -q -m ts
   export CLAUDNESS_VERBOSE=1
-  run bash "$HOOK" <<<'{"session_event":"startup"}'
+  run bash "$HOOK" <<<'{"source":"startup"}'
   unset CLAUDNESS_VERBOSE
   [ "$status" -eq 0 ]
   echo "$output" | grep -q 'TypeScript notes'

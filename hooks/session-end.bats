@@ -7,9 +7,14 @@ SCRIPT="${BATS_TEST_DIRNAME}/session-end.sh"
   [ "$status" -eq 0 ]
 }
 
-@test "session-end emits valid JSON with stopReason" {
+@test "session-end emits valid JSON with systemMessage" {
   output=$(bash -c "'$SCRIPT' < /dev/null")
-  echo "$output" | jq -e '.stopReason' >/dev/null
+  echo "$output" | jq -e '.systemMessage' >/dev/null
+}
+
+@test "session-end does not emit unrecognized stopReason field" {
+  output=$(bash -c "'$SCRIPT' < /dev/null")
+  ! echo "$output" | jq -e '.stopReason' >/dev/null
 }
 
 @test "session-end output does not leak source-repo names" {

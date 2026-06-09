@@ -28,7 +28,9 @@ GATE_FILE="$PROJECT_ROOT/.claude/tmp/quality-gate-status.json"
 input=$(cat 2>/dev/null || echo "{}")
 event="startup"
 if command -v jq >/dev/null 2>&1; then
-  event=$(jq -r '.session_event // .event // "startup"' <<< "$input" 2>/dev/null || echo "startup")
+  # Claude Code sends the SessionStart event type in `source`
+  # (startup | resume | clear | compact); keep legacy fields as fallbacks.
+  event=$(jq -r '.source // .session_event // .event // "startup"' <<< "$input" 2>/dev/null || echo "startup")
 fi
 [[ -z "$event" || "$event" == "null" ]] && event="startup"
 
@@ -38,12 +40,15 @@ render_doc() {
   [ -f "$src" ] || { echo ""; return 0; }
   local content
   content=$(cat "$src")
-  # Substitute placeholders. Use sed with a delimiter unlikely to collide.
+  # Substitute placeholders with bash-native replacement — immune to sed
+  # metacharacters (|, &, \) in project names or package manager values.
+  # The replacement is quoted: bash 5.2+ patsub_replacement would otherwise
+  # expand a literal `&` in the value to the matched pattern.
   local name="${PROJECT_NAME:-this project}"
   local pm="${NODE_PM:-your package manager}"
-  printf '%s' "$content" \
-    | sed "s|{{project_name}}|${name}|g" \
-    | sed "s|{{node_pm}}|${pm}|g"
+  content="${content//\{\{project_name\}\}/"$name"}"
+  content="${content//\{\{node_pm\}\}/"$pm"}"
+  printf '%s' "$content"
 }
 
 # ── Git context (branch + dirty count) ──────────────────────────────────────
@@ -154,12 +159,12 @@ if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/.claude-plugin/
 elif [ -f "$PROJECT_ROOT/plugins/claudness/.claude-plugin/plugin.json" ]; then
   plugin_manifest="$PROJECT_ROOT/plugins/claudness/.claude-plugin/plugin.json"
 fi
-if [ -n "$plugin_manifest" ] && command -v jq >/dev/null 2>&1; then
+if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/null 2>&1; then
   missing_plugins=()
   indeterminate=0
   while IFS=$'\t' read -r req_spec req_repo; do
     [ -z "$req_spec" ] && continue
-    detect_plugin_installed "$req_spec" >/dev/null
+    installed=$(detect_plugin_installed "$req_spec")
     rc=$?
     if [ "$rc" -eq 2 ]; then
       # Registry/jq unavailable on this box — suppress all WARNs in this
@@ -168,7 +173,7 @@ if [ -n "$plugin_manifest" ] && command -v jq >/dev/null 2>&1; then
       indeterminate=1
       break
     fi
-    if [ -z "$(detect_plugin_installed "$req_spec")" ]; then
+    if [ -z "$installed" ]; then
       if [ -n "$req_repo" ] && [ "$req_repo" != "null" ]; then
         missing_plugins+=("/plugin install ${req_spec}   # github:${req_repo}")
       else
