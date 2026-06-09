@@ -38,7 +38,9 @@ server="${rest%%__*}"
 # read_list is sourced from lib/detect.sh.
 
 claudness_load_config
-disabled_from_cfg=$(jq -r '.mcp // {} | to_entries[] | select(.value == false) | .key' \
+# `objects` guards against a malformed `.mcp` (string/array) — to_entries
+# would error on a non-object; with the guard it is simply a no-op.
+disabled_from_cfg=$(jq -r '.mcp // {} | objects | to_entries[] | select(.value == false) | .key' \
   "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
 
 file_list="$(read_list "$LIST_FILE")"

@@ -28,11 +28,18 @@ BASE_BRANCH=$(detect_base_branch)
 # read_list is sourced from lib/detect.sh.
 
 # Extract the message from -m "..." if present; else allow (it's editor-driven).
+# Double-quoted form honors backslash escapes (`-m "fix \"bug\""`) so an
+# escaped quote no longer truncates the message; single-quoted form cannot
+# contain escapes by shell rules. If neither form parses, msg stays empty and
+# the gate falls through gracefully (no deny, context message only).
 msg=""
 if [[ "$command" == *" -m "* ]]; then
-  msg=$(printf '%s' "$command" | sed -nE 's/.* -m[[:space:]]+"([^"]*)".*/\1/p')
+  msg=$(printf '%s' "$command" | sed -nE 's/.* -m[[:space:]]+"((\\.|[^"\\])*)".*/\1/p')
   if [ -z "$msg" ]; then
     msg=$(printf '%s' "$command" | sed -nE "s/.* -m[[:space:]]+'([^']*)'.*/\\1/p")
+  else
+    # Unescape so the subject parser sees the literal message (\" -> ").
+    msg=$(printf '%s' "$msg" | sed -E 's/\\(.)/\1/g')
   fi
 fi
 

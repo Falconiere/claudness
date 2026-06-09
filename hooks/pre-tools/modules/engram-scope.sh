@@ -92,7 +92,9 @@ while IFS= read -r segment; do
       segment=""
       break
     fi
-    segment="${BASH_REMATCH[1]}"
+    # :- guard: defensive — if the capture group is somehow unset (regex
+    # engine quirk), drop the segment instead of erroring under `set -u`.
+    segment="${BASH_REMATCH[1]:-}"
   done
   [[ -z "$segment" ]] && continue
 
@@ -100,7 +102,8 @@ while IFS= read -r segment; do
   if [[ ! "$segment" =~ ^engram[[:space:]]+([a-z][a-zA-Z0-9_-]*) ]]; then
     continue
   fi
-  subcmd="${BASH_REMATCH[1]}"
+  subcmd="${BASH_REMATCH[1]:-}"
+  [[ -z "$subcmd" ]] && continue
 
   case "$subcmd" in
     search|save|context|summary)

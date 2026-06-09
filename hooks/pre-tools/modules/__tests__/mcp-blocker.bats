@@ -80,6 +80,24 @@ JSON
   # not leak the temp dir.
 }
 
+# Regression: a non-object `.mcp` (string/array) made `to_entries` error.
+# The `objects` guard must turn it into a no-op instead.
+@test "config.mcp as a non-object does not block or crash" {
+  TMPHOME=$(mktemp -d)
+  mkdir -p "$TMPHOME/.claude"
+  cat > "$TMPHOME/.claude/claudness.config.json" <<JSON
+{"version":1,"mcp":"broken-not-an-object"}
+JSON
+
+  payload=$(jq -n '{tool_name:"mcp__someserver__do",tool_input:{}}')
+  REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
+  tool_name=mcp__someserver__do input="$payload" HOME="$TMPHOME" \
+    run bash "$REPO_ROOT/hooks/pre-tools/modules/mcp-blocker.sh" <<<"$payload"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "block-from-file deny reason directs user to mcp-blocklist.txt, not config" {
   # File-source block must NOT mention claudness.config.json
   tool_name=mcp__engram__search run bash "$HOOK"
