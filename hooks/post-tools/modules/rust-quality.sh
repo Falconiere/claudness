@@ -26,7 +26,7 @@ EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
 # read_list is sourced from lib/detect.sh.
 
 fp_from_input=""
-if [[ "$tool_name" == "Write" ]]; then
+if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" ]]; then
   fp_from_input=$(echo "$input" | jq -r '.tool_input.path // .tool_input.file_path // .tool_input.target_file // empty' 2>/dev/null || echo "")
 fi
 FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"
@@ -99,20 +99,41 @@ fi
 # src/ is production code (tests must live in tests/, enforced above), so
 # any panic-on-error pattern here is a prod panic.
 if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
-  UNWRAP_HITS=$(ast-grep --lang rust -p '$E.unwrap()' "$FILE_PATH" 2>/dev/null | head -5)
+  # Run ast-grep, capturing output to a variable BEFORE truncating: piping
+  # straight into `head` would mask ast-grep's exit code, silently turning
+  # tool failures into "no hits". ast-grep is grep-like: 0 = matches,
+  # 1 = no matches (or runtime error, with stderr output), >1 = crash.
+  ast_err_file="$(mktemp)"
+  ast_scan() {
+    local out rc
+    out=$(ast-grep --lang rust -p "$1" "$FILE_PATH" 2>"$ast_err_file")
+    rc=$?
+    if [[ "$rc" -gt 1 || ( "$rc" -eq 1 && -s "$ast_err_file" ) ]]; then
+      return 1
+    fi
+    printf '%s\n' "$out" | head -n "$2"
+  }
+
+  ast_grep_failed=0
+  UNWRAP_HITS=$(ast_scan '$E.unwrap()' 5) || ast_grep_failed=1
   if [[ -n "$UNWRAP_HITS" ]]; then
     add_error ".unwrap() in $FILE_PATH — use ? or match on Result/Option\n${UNWRAP_HITS}"
   fi
-  EXPECT_HITS=$(ast-grep --lang rust -p '$E.expect($M)' "$FILE_PATH" 2>/dev/null | head -5)
+  EXPECT_HITS=$(ast_scan '$E.expect($M)' 5) || ast_grep_failed=1
   if [[ -n "$EXPECT_HITS" ]]; then
     add_error ".expect() in $FILE_PATH — use ? or match on Result/Option\n${EXPECT_HITS}"
   fi
 
-  PANIC_HITS=$(ast-grep --lang rust -p 'panic!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
-  TODO_HITS=$(ast-grep --lang rust -p 'todo!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
-  UNIMPL_HITS=$(ast-grep --lang rust -p 'unimplemented!($$$)' "$FILE_PATH" 2>/dev/null | head -3)
+  PANIC_HITS=$(ast_scan 'panic!($$$)' 3) || ast_grep_failed=1
+  TODO_HITS=$(ast_scan 'todo!($$$)' 3) || ast_grep_failed=1
+  UNIMPL_HITS=$(ast_scan 'unimplemented!($$$)' 3) || ast_grep_failed=1
   if [[ -n "$PANIC_HITS" || -n "$TODO_HITS" || -n "$UNIMPL_HITS" ]]; then
     add_error "panic!/todo!/unimplemented! in $FILE_PATH — return a Result instead\n${PANIC_HITS}${TODO_HITS}${UNIMPL_HITS}"
+  fi
+
+  rm -f "$ast_err_file"
+  if [[ "$ast_grep_failed" -ne 0 ]]; then
+    add_error "ast-grep failed while scanning $FILE_PATH — error-handling rules could not be verified; fix the tool/file and re-edit"
   fi
 fi
 

@@ -28,10 +28,14 @@ if [[ -z "$exit_code" || "$exit_code" == "null" ]]; then
   fi
 fi
 
-# Don't overwrite ts-quality-hook gate (it manages its own lifecycle via file re-edit)
+# Don't overwrite a failing gate owned by a file-level quality hook
+# (ts-quality-hook, rust-quality-hook, ...): those hooks manage their own
+# lifecycle and only clear the gate when the offending file is re-edited
+# clean. A passing quality command here must not mask their failures.
 if [[ -f "$GATE_FILE" ]]; then
   current_source=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
-  if [[ "$current_source" == "ts-quality-hook" ]]; then
+  current_status=$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null || echo "")
+  if [[ "$current_source" == *-quality-hook && "$current_status" == "failing" ]]; then
     exit 0
   fi
 fi
