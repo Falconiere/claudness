@@ -147,6 +147,29 @@ CTX
   ! echo "$ctx" | grep -q 'Review: forbidden'
 }
 
+write_failing_gate() {
+  mkdir -p .claude/tmp
+  printf '%s\n' '{"status":"failing","reason":"forced"}' > .claude/tmp/quality-gate-status.json
+}
+
+@test "user-prompt-submit: 'prefix' does NOT suppress the failing-gate hint" {
+  # Regression: suppression matched `fix` as a substring, so any prompt
+  # containing `prefix` silently dropped the quality-gate warning.
+  write_failing_gate
+  payload=$(build_input "add a prefix to the logger module")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q 'Quality gate failing'
+}
+
+@test "user-prompt-submit: 'fix the gate' suppresses the failing-gate hint" {
+  write_failing_gate
+  payload=$(build_input "fix the gate so the build passes")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q 'Quality gate failing'
+}
+
 @test "user-prompt-submit: omits branch/git context (moved to SessionStart)" {
   payload=$(build_input "implement a new feature")
   run bash "$HOOK" <<<"$payload"

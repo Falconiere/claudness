@@ -79,6 +79,31 @@ teardown() {
   [ -z "$output" ]
 }
 
+# Regression: allow_pattern components are joined with `|` at top level.
+# Without an outer group, ANCHOR_PREFIX binds only to the FIRST component and
+# ANCHOR_SUFFIX only to the LAST — middle components (e.g. the cargo pattern
+# in a bun+rust repo) matched anywhere in the string, letting a destructive
+# prefix ride along.
+@test "quality-gate: 'rm -rf src && cargo fmt' is DENIED in a bun+rust repo (middle component stays anchored)" {
+  command -v bun >/dev/null 2>&1 || skip "bun not installed"
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  touch bun.lock Cargo.toml
+  payload=$(jq -n '{tool_input:{command:"rm -rf src && cargo fmt"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "quality-gate: 'cargo fmt' (alone) is ALLOWED in a bun+rust repo" {
+  command -v bun >/dev/null 2>&1 || skip "bun not installed"
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  touch bun.lock Cargo.toml
+  payload=$(jq -n '{tool_input:{command:"cargo fmt"}}')
+  tool_name=Bash input="$payload" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 # Compositional allow case: an allowed first statement + trailing composition.
 @test "quality-gate: 'bun run check && bun run build' allowed (first statement matches)" {
   touch bun.lock

@@ -46,13 +46,24 @@ if [[ "$prompt_lower" =~ ^(fix|help|debug|check|look|see|run|do|try)[[:space:]]*
   exit 0
 fi
 
+# Word-boundary helpers — bash extended regex has no `\b`. WB/WE wrap each
+# alternation so e.g. `impl` does NOT match `implement` and `move` does NOT
+# match `remove`. Also dropped overly short tokens that no boundary trick
+# can rescue: `impl` (vs implement), `ast` (vs fast/past/last), `drop`
+# (vs dropdown). Inflected forms (tested, fixing) won't match — users
+# typically write the base verb in a directive prompt, and silence is
+# safer than the wrong hint.
+WB='(^|[^a-z])'
+WE='([^a-z]|$)'
+
 # ── Quality gate warning (not block) ─────────────────────────────────────────
 quality_gate_hint=""
 if [[ -f "$GATE_FILE" ]] && command -v jq >/dev/null 2>&1; then
   gate_json=$(cat "$GATE_FILE" 2>/dev/null)
   gate_status=$(jq -r '.status // ""' <<< "$gate_json" 2>/dev/null)
   if [[ "$gate_status" == "failing" ]]; then
-    if ! [[ "$prompt_lower" =~ (fix|resolve|error|warning|test|lint|check|type) ]]; then
+    # Word-boundary wrapped: `prefix` must not suppress via the `fix` substring.
+    if ! [[ "$prompt_lower" =~ ${WB}(fix|resolve|error|warning|test|lint|check|type)${WE} ]]; then
       reason=$(jq -r '.reason // "Unknown quality failure"' <<< "$gate_json" 2>/dev/null)
       quality_gate_hint="Quality gate failing: $reason. Prefer fixing before unrelated work."
     fi
@@ -69,17 +80,8 @@ if ! claudness_enabled skills ast-grep; then
   HAS_ASTGREP=""
 fi
 
-# Word-boundary helpers — bash extended regex has no `\b`. WB/WE wrap each
-# alternation so e.g. `impl` does NOT match `implement` and `move` does NOT
-# match `remove`. Also dropped overly short tokens that no boundary trick
-# can rescue: `impl` (vs implement), `ast` (vs fast/past/last), `drop`
-# (vs dropdown). Inflected forms (tested, fixing) won't match — users
-# typically write the base verb in a directive prompt, and silence is
-# safer than the wrong hint.
-WB='(^|[^a-z])'
-WE='([^a-z]|$)'
-
 # 1. Memory recall hint — only when prompt explicitly invites recall.
+# (WB/WE word-boundary helpers are defined above the quality-gate block.)
 recall=""
 if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|engram|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
   case "$(claudness_engram_state)" in

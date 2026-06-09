@@ -68,14 +68,19 @@ tokens_contain_rule() {
 
 # matches_deny <command> <denylist>
 # Returns 0 (match) if any deny rule fires against the command, else 1.
-# Multi-token rules use argv-aware matching only (no substring fallback);
-# single-token rules require exact argv equality with `tokens[0]` OR substring
-# anywhere on the command (kept for back-compat with bare-name rules).
+# Rules containing whitespace (e.g. `node -e`, `cargo test`) use argv-aware
+# multi-token matching only (no substring fallback); single-token rules
+# (bare names like `biome`) substring-match anywhere on the command.
 matches_deny() {
   local cmd="$1"
   local denylist="$2"
   local rule tokens
   mapfile -t tokens < <(bash_tokenize "$cmd")
+  # Tokenizer yielded nothing (empty/whitespace-only command): fall back to
+  # the raw command as a single token — same shape bash_tokenize itself emits
+  # on a parse failure. Substring rules below never consult tokens, so this
+  # cannot bypass them.
+  [ ${#tokens[@]} -eq 0 ] && tokens=("$cmd")
   while IFS= read -r rule; do
     [ -z "$rule" ] && continue
     if [[ "$rule" == *" "* ]]; then
@@ -84,8 +89,9 @@ matches_deny() {
         return 0
       fi
     else
-      # Single-token rule: substring match against the command. Most bare-name
-      # rules (`biome`, `cargo test` style) are matched here.
+      # Single-token rule: substring match against the command. Bare-name
+      # rules (`biome`) land here; rules with internal whitespace
+      # (`cargo test`) take the multi-token argv branch above.
       if [[ "$cmd" == *"$rule"* ]]; then
         echo "$rule"
         return 0
@@ -103,6 +109,8 @@ matches_allow() {
   local allowlist="$2"
   local rule tokens
   mapfile -t tokens < <(bash_tokenize "$cmd")
+  # Same empty-tokenization fallback as matches_deny.
+  [ ${#tokens[@]} -eq 0 ] && tokens=("$cmd")
   while IFS= read -r rule; do
     [ -z "$rule" ] && continue
     if [[ "$rule" == *" "* ]]; then
@@ -120,10 +128,10 @@ matches_allow() {
 
 # Public entry — invokable when the script is sourced (used by tests).
 #
-# Order matters: deny is consulted FIRST. The old order (allow then deny)
-# meant an allowlist entry of `node` would bypass the `node -e` security
-# deny — substring evasion. Allowlist is now an explicit override on top of
-# deny, intended for project-specific exemptions.
+# Semantics: deny is evaluated FIRST so a deny result still carries the rule
+# that fired. The allowlist is an explicit override on top of deny, intended
+# for project-specific exemptions: deny + matching allow → allow; deny with
+# no allow match → deny; no deny match → allow (default-open).
 bash_commands_decide() {
   local cmd="$1"
   local allowlist denylist hit
@@ -134,12 +142,11 @@ bash_commands_decide() {
   cmd=$(printf '%s\n' "$cmd" | strip_heredocs)
 
   if hit=$(matches_deny "$cmd" "$denylist"); then
-    echo "deny:$hit"
-    return 0
-  fi
-
-  if matches_allow "$cmd" "$allowlist"; then
-    echo "allow"
+    if matches_allow "$cmd" "$allowlist"; then
+      echo "allow"
+    else
+      echo "deny:$hit"
+    fi
     return 0
   fi
 

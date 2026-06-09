@@ -90,7 +90,11 @@ if [[ "$tool_name" == "Bash" || "$tool_name" == "Shell" ]]; then
   command=$(echo "$input" | jq -r '.tool_input.command // ""')
   cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-  if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "${ANCHOR_PREFIX}${allow_pattern}${ANCHOR_SUFFIX}"; then
+  # allow_pattern joins components with top-level `|`; wrap it in an extra
+  # group so ANCHOR_PREFIX/ANCHOR_SUFFIX bind to EVERY alternative, not just
+  # the first/last. Without the group, middle components (e.g. cargo in a
+  # bun+rust repo) matched unanchored anywhere in the string.
+  if [ -n "$allow_pattern" ] && echo "$cmd_only" | grep -qE "${ANCHOR_PREFIX}(${allow_pattern})${ANCHOR_SUFFIX}"; then
     exit 0
   fi
 

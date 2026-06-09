@@ -70,13 +70,74 @@ run_hook() {
   [ -z "$output" ]
 }
 
-# Regression: deny must beat allow. `node` on allowlist must NOT bypass
-# `node -e` deny.
-@test "bash-commands: deny before allow — node allow does not bypass 'node -e' deny" {
-  write_lists "node" "node -e"
+# Override matrix: deny is evaluated FIRST (so the result carries the deny
+# hit), but a matching allowlist entry is an explicit project-specific
+# exemption that overrides the deny.
+@test "bash-commands: deny-only — denied command with empty allowlist is denied" {
+  write_lists "" "biome"
+  run_hook "biome check ."
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "bash-commands: deny+allow — allowlist entry overrides the deny (explicit exemption)" {
+  write_lists "biome" "biome"
+  run_hook "biome check ."
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash-commands: deny+allow — argv-aware allow override of 'node -e' deny" {
+  write_lists "node -e" "node -e"
+  run_hook 'node -e "console.log(1)"'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash-commands: deny+allow — allow rule that does not match the command does NOT override" {
+  write_lists "biome" "node -e"
   run_hook 'node -e "console.log(1)"'
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+@test "bash-commands: allow-only — allowlisted command passes" {
+  write_lists "ls" ""
+  run_hook "ls -la"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash-commands: neither list matches — default allow" {
+  write_lists "biome" "node -e"
+  run_hook "git status"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# `node` on the allowlist is an explicit project exemption — under
+# allow-overrides-deny semantics it overrides the `node -e` deny.
+@test "bash-commands: deny+allow — broad 'node' allow entry overrides 'node -e' deny" {
+  write_lists "node" "node -e"
+  run_hook 'node -e "console.log(1)"'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# Item 3 regression: empty/whitespace-only command must not crash or
+# misbehave when the tokenizer yields no tokens.
+@test "bash-commands: empty command with deny rules present is allowed (no crash)" {
+  write_lists "" "cargo test"
+  run_hook ""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "bash-commands: whitespace-only command is allowed (empty tokenization falls back safely)" {
+  write_lists "" "node -e"
+  run_hook "   "
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 # Regression: `node script.js` IS allowed (no deny match; allow passes through).
