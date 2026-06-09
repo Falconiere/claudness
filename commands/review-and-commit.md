@@ -8,14 +8,16 @@ Run AFTER all tasks are completed. Reviews changes on the current branch, fixes 
 - If no changes exist (committed or working-tree), STOP and report "nothing to review".
 - Group changed files by package/crate.
 
-## 2. Launch review subagents (sequential — code-simplifier first)
+## 2. Launch review subagents
 Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plugin.json` `requires`; SessionStart warns when missing):
 - `code-simplifier@claude-plugins-official` → `code-simplifier`
 - `caveman@caveman` → `caveman:cavecrew-reviewer`
 
-For each package/crate with changes, dispatch the following subagents **sequentially** (code-simplifier must run FIRST so the reviewer sees the post-simplification diff, not the pre-simplification noise):
+**Across packages: concurrent.** Each package's pair runs in its own subagent stream (use `superpowers:dispatching-parallel-agents` to fan out one pair per package). **Within a package: strictly sequential** — `code-simplifier` first, then `caveman:cavecrew-reviewer` reviews the post-simplification diff. Never invoke the two in parallel within the same package: cavecrew must see the simplified code, not the pre-simplification noise.
 
-1. **`code-simplifier`** — point it at the recently modified files. It rewrites for clarity/consistency without changing behavior (duplicated logic collapsed, verbose constructs simplified, unnecessary abstractions removed). Apply its rewrites directly to the working tree, run the relevant tests, then commit before invoking the reviewer.
+Per package:
+
+1. **`code-simplifier`** — point it at the recently modified files in the package. It rewrites for clarity/consistency without changing behavior (duplicated logic collapsed, verbose constructs simplified, unnecessary abstractions removed). Apply its rewrites directly to the working tree, run the package's relevant tests, then commit before invoking the reviewer.
 2. **`caveman:cavecrew-reviewer`** — point it at the (now simplified) changed files in the package's scope. It returns one-line, severity-tagged findings (caveman-compressed) covering gaps, missing error handling at boundaries, untested paths, dead code, over-engineering, unclear naming, and tests that mock instead of using real data.
 
 Every finding must include file path and line number — no vague feedback accepted. If a package has no changed files, skip its review.

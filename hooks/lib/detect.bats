@@ -175,3 +175,65 @@ source_lib() {
   [ "$status" -eq 0 ]
   [ "$output" = "$(printf '%s\n' 'real-line' 'another')" ]
 }
+
+@test "detect_plugin_installed: echoes spec when registry contains the key" {
+  source_lib
+  reg="$BATS_TEST_TMPDIR/installed.json"
+  printf '%s\n' '{"plugins":{"code-simplifier@claude-plugins-official":[{"scope":"user"}]}}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  [ "$status" -eq 0 ]
+  [ "$output" = "code-simplifier@claude-plugins-official" ]
+}
+
+@test "detect_plugin_installed: empty + exit 0 when key absent" {
+  source_lib
+  reg="$BATS_TEST_TMPDIR/installed.json"
+  printf '%s\n' '{"plugins":{"other@marketplace":[]}}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "detect_plugin_installed: tolerates non-array value (regression for length>0 bug)" {
+  source_lib
+  reg="$BATS_TEST_TMPDIR/installed.json"
+  # Value is a number — prior `.plugins[$s] | length > 0` filter errored;
+  # `has($s)` returns true (key is present, regardless of value shape).
+  printf '%s\n' '{"plugins":{"caveman@caveman":42}}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "caveman@caveman"
+  [ "$status" -eq 0 ]
+  [ "$output" = "caveman@caveman" ]
+}
+
+@test "detect_plugin_installed: indeterminate (exit 2) when registry missing" {
+  source_lib
+  CLAUDE_PLUGINS_REGISTRY="$BATS_TEST_TMPDIR/does-not-exist.json" \
+    run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  [ "$status" -eq 2 ]
+  [ -z "$output" ]
+}
+
+@test "detect_plugin_installed: indeterminate (exit 2) when registry malformed" {
+  source_lib
+  reg="$BATS_TEST_TMPDIR/installed.json"
+  printf '%s\n' 'not json' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  [ "$status" -eq 2 ]
+  [ -z "$output" ]
+}
+
+@test "detect_plugin_installed: indeterminate (exit 2) when plugins key wrong type" {
+  source_lib
+  reg="$BATS_TEST_TMPDIR/installed.json"
+  printf '%s\n' '{"plugins":"not-an-object"}' > "$reg"
+  CLAUDE_PLUGINS_REGISTRY="$reg" run detect_plugin_installed "code-simplifier@claude-plugins-official"
+  [ "$status" -eq 2 ]
+  [ -z "$output" ]
+}
+
+@test "detect_plugin_installed: empty spec returns 0 + empty" {
+  source_lib
+  run detect_plugin_installed ""
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
