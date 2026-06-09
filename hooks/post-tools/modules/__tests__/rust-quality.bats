@@ -94,6 +94,56 @@ EOF
   ! echo "$output" | grep -q "QUALITY VIOLATION"
 }
 
+@test "rust-quality: Edit tool extracts file path and flags violations (regression)" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/bad.rs <<'EOF'
+#[allow(dead_code)]
+fn helper() {}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden #\[allow"
+}
+
+@test "rust-quality: gate is cleared when the failing file is re-edited clean" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/bad.rs <<'EOF'
+#[allow(dead_code)]
+fn helper() {}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$TMP/.claude/tmp/quality-gate-status.json"
+
+  cat > src/bad.rs <<'EOF'
+fn helper() {}
+EOF
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$TMP/.claude/tmp/quality-gate-status.json"
+  jq -e '.source == "rust-quality-hook"' "$TMP/.claude/tmp/quality-gate-status.json"
+}
+
+@test "rust-quality: ast-grep crash is surfaced as a violation, not silent pass" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  # Stub ast-grep that crashes (exit > 1 with stderr noise).
+  mkdir -p "$TMP/bin"
+  printf '#!/bin/sh\necho boom >&2\nexit 2\n' > "$TMP/bin/ast-grep"
+  chmod +x "$TMP/bin/ast-grep"
+  cat > src/good.rs <<'EOF'
+fn helper() {}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/good.rs"}}'
+  PATH="$TMP/bin:$PATH" tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "ast-grep failed"
+}
+
 @test "rust-quality: gate-status file is written on violation" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
