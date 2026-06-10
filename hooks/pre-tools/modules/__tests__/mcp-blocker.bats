@@ -60,6 +60,17 @@ teardown() {
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
 
+# Regression: this module is wired as a STANDALONE PreToolUse hook (matcher
+# mcp__), so the parent never `export`s tool_name. Claude Code delivers it as
+# .tool_name in the JSON on STDIN. With tool_name unset in the env, the gate
+# must still read it from stdin and block a listed server.
+@test "mcp-blocker: reads tool_name from stdin when env is unset (standalone path)" {
+  payload=$(jq -n '{tool_name:"mcp__engram__search",tool_input:{}}')
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
 @test "config.mcp disables a server without touching the blocklist file" {
   TMPHOME=$(mktemp -d)
   mkdir -p "$TMPHOME/.claude"

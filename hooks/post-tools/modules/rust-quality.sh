@@ -26,7 +26,7 @@ EXEMPTIONS_FILE="$SETTINGS_DIR/rust-unsafe-exemptions.txt"
 # read_list is sourced from lib/detect.sh.
 
 fp_from_input=""
-if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" ]]; then
+if [[ "$tool_name" == "Write" || "$tool_name" == "Edit" || "$tool_name" == "MultiEdit" ]]; then
   fp_from_input=$(echo "$input" | jq -r '.tool_input.path // .tool_input.file_path // .tool_input.target_file // empty' 2>/dev/null || echo "")
 fi
 FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"

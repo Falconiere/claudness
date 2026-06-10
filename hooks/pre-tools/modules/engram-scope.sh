@@ -86,7 +86,18 @@ violation=""
 while IFS= read -r segment; do
   # Trim leading whitespace + strip leading env-var assignments.
   segment="${segment#"${segment%%[![:space:]]*}"}"
-  while [[ "$segment" =~ ^[A-Z_][A-Z0-9_]*=[^[:space:]]+[[:space:]]+(.*)$ ]]; do
+  # The value may be a single/double-quoted string (which can contain
+  # whitespace) OR a run of non-space chars. Matching only the latter would
+  # stop at the first space inside a quoted value (MY_VAR="foo bar"), leaving
+  # the tail (bar" engram save) as the segment and letting an unscoped raw
+  # engram call slip past the ^engram check below. The value alternation is
+  # capture group 1, so the trailing REST is group 2.
+  #
+  # The regex is built in a variable (with \047 = single quote) so the literal
+  # single-quote of the quoted-value alternation never sits inside [[ ]] — an
+  # embedded ' there desyncs shellcheck's parser.
+  _env_re=$'^[A-Z_][A-Z0-9_]*=("[^"]*"|\047[^\047]*\047|[^[:space:]]+)[[:space:]]+(.*)$'
+  while [[ "$segment" =~ $_env_re ]]; do
     env_prefix="${segment%%=*}"
     # ENGRAM_PROJECT=... acts as scope.
     if [[ "$env_prefix" == "ENGRAM_PROJECT" ]]; then
@@ -95,7 +106,7 @@ while IFS= read -r segment; do
     fi
     # :- guard: defensive — if the capture group is somehow unset (regex
     # engine quirk), drop the segment instead of erroring under `set -u`.
-    segment="${BASH_REMATCH[1]:-}"
+    segment="${BASH_REMATCH[2]:-}"
   done
   [[ -z "$segment" ]] && continue
 

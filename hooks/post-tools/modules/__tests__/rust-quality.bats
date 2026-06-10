@@ -107,6 +107,22 @@ EOF
   echo "$output" | grep -q "Forbidden #\[allow"
 }
 
+# Regression: the PostToolUse matcher includes MultiEdit, but the file-path
+# extraction only ran for Write/Edit — a MultiEdit on a .rs file (with
+# CLAUDE_FILE_PATHS unset) silently skipped all quality checks.
+@test "rust-quality: MultiEdit extracts file path and flags violations (regression)" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/bad.rs <<'EOF'
+#[allow(dead_code)]
+fn helper() {}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
+  tool_name=MultiEdit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden #\[allow"
+}
+
 @test "rust-quality: gate is cleared when the failing file is re-edited clean" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project

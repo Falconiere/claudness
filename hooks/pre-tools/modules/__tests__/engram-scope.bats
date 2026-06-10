@@ -92,6 +92,18 @@ _decision() {
   [ "$(_decision "$output")" = "allow" ]
 }
 
+# Regression: env-prefix strip regex stopped the value at the first space, so
+# a quoted env value with whitespace (MY_VAR="foo bar") left the tail
+# (bar" engram save) unmatched by the ^engram check — an unscoped raw call
+# slipped through. A quoted value must be consumed whole, leaving `engram save`
+# as the segment, which is then denied for missing scope.
+@test "engram-scope: quoted env value with whitespace before bare engram save is denied" {
+  payload=$(_mk 'MY_VAR="foo bar" engram save title body')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
 @test "engram-scope: chained — bare engram search after && is denied" {
   payload=$(_mk 'ls && engram search foo')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
