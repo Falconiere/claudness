@@ -35,7 +35,7 @@ the security model to hold:
 
 | File                          | Consumer                                          | Purpose                                                            |
 |-------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
-| `bash-allowlist.txt`          | `hooks/pre-tools/modules/bash-commands.sh`        | Commands the bash guard treats as always-allowed.                  |
+| `bash-allowlist.txt`          | `hooks/pre-tools/modules/bash-commands.sh`        | Explicit overrides on top of the denylist (deny + allow → allowed). |
 | `bash-denylist.txt`           | `hooks/pre-tools/modules/bash-commands.sh`        | Tokens the bash guard rejects via argv-aware parsing.              |
 | `code-edit-rules.json`        | `hooks/pre-tools/modules/code-edit-rules.sh`      | Pattern rules for Write/Edit gating on source files.               |
 | `commit-prefixes.txt`         | `hooks/pre-tools/modules/commit-gate.sh`          | Allowed Conventional Commits prefixes for `git commit` messages.   |
@@ -47,9 +47,16 @@ the security model to hold:
 Each plain-text file is one entry per line, `#` for comments. JSON files
 follow whatever schema the consuming script documents.
 
-Per-project overrides: drop a file of the same name into the project's
-`.claude/settings/` directory. The hook prefers `$MY_CLAUDE_SETTINGS_DIR`
-(if set) before falling back to the global location.
+Allow/deny semantics for the bash guard: the denylist is checked first; a
+command that matches a deny rule is still allowed if it also matches an
+allowlist rule (the allowlist is an explicit override, not a default gate).
+Commands that match no deny rule are allowed by default.
+
+Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`):
+`$MY_CLAUDE_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
+this repo's `settings/` directory, resolved relative to the hooks. There is
+no per-project `.claude/settings/` lookup — to override per project, point
+`MY_CLAUDE_SETTINGS_DIR` at a project-local directory.
 
 ## Env vars
 
@@ -57,7 +64,7 @@ Per-project overrides: drop a file of the same name into the project's
 |---------------------------|-----------------------------------------|
 | `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
-| `MY_CLAUDE_ENGRAM_PROJECT`| Override the project name for engram     |
+| `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (`skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
 
 ## Runtime config
 

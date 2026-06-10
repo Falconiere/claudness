@@ -10,9 +10,9 @@ description: >
 
 # Code Intelligence
 
-All code search and memory goes through:
+All code search and memory goes through the wrapper bundled with this skill (`scripts/mod.sh` inside the skill directory):
 ```
-.claude/skills/code-intel/scripts/mod.sh <tool> <subcommand> [args...]
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh <tool> <subcommand> [args...]
 ```
 
 ## Pick the Right Tool

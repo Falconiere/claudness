@@ -65,7 +65,7 @@ _decision() {
 }
 
 @test "engram-scope: wrapper call is allowed" {
-  payload=$(_mk '.claude/skills/code-intel/scripts/mod.sh engram search foo')
+  payload=$(_mk 'skills/code-intel/scripts/mod.sh engram search foo')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]

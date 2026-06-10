@@ -2,12 +2,7 @@
   "version": 1,
   "skills": {
     "engram": false,
-    "ast-grep": true,
-    "context7": true,
-    "exa-search": true,
-    "caveman": true,
-    "agent-memory": true,
-    "code-intel": true
+    "ast-grep": true
   },
   "hooks": {
     "session-start": true,

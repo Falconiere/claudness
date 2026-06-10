@@ -18,7 +18,11 @@ cat > /dev/null 2>&1 || true
 
 case "$(claudness_engram_state)" in
   available)
-    reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run .claude/skills/code-intel/scripts/mod.sh engram summary then mod.sh engram context.")
+    # Resolve the code-intel wrapper relative to this hook — works from the
+    # repo checkout and through the installed plugin's scripts→hooks symlink.
+    mod_sh="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/skills/code-intel/scripts/mod.sh"
+    [ -x "$mod_sh" ] || mod_sh="skills/code-intel/scripts/mod.sh"
+    reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run $mod_sh engram summary then $mod_sh engram context.")
     ;;
   missing)
     reminder="Context compacted. WARN: engram CLI not installed — memory summary/recall disabled. Continue from in-window context only."

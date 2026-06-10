@@ -28,7 +28,7 @@
           "plugin": "caveman@caveman",
           "marketplace": "caveman",
           "source": { "source": "github", "repo": "JuliusBrussee/caveman" },
-          "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer (and deep-explore to caveman:cavecrew-investigator)"
+          "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer"
         }
       ]
     }

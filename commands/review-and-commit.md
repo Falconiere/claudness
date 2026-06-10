@@ -3,7 +3,8 @@ Run AFTER all tasks are completed. Reviews changes on the current branch, fixes 
 
 ## 1. Identify scope
 - Current branch: `git rev-parse --abbrev-ref HEAD`.
-- Committed changes: `git log development..HEAD --oneline` + `git diff development...HEAD --stat`.
+- Base branch `<base>`: the repository default branch (e.g. `main` — resolve via `git symbolic-ref refs/remotes/origin/HEAD`, fall back to `main`).
+- Committed changes: `git log <base>..HEAD --oneline` + `git diff <base>...HEAD --stat`.
 - Uncommitted changes: `git status --short` + `git diff --stat HEAD`.
 - If no changes exist (committed or working-tree), STOP and report "nothing to review".
 - Group changed files by package/crate.
@@ -13,7 +14,7 @@ Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plug
 - `code-simplifier@claude-plugins-official` → `code-simplifier`
 - `caveman@caveman` → `caveman:cavecrew-reviewer`
 
-**Across packages: concurrent.** Each package's pair runs in its own subagent stream (use `superpowers:dispatching-parallel-agents` to fan out one pair per package). **Within a package: strictly sequential** — `code-simplifier` first, then `caveman:cavecrew-reviewer` reviews the post-simplification diff. Never invoke the two in parallel within the same package: cavecrew must see the simplified code, not the pre-simplification noise.
+**Across packages: concurrent.** Each package's pair runs in its own subagent stream (if the `superpowers:dispatching-parallel-agents` skill is available, use it to fan out one pair per package; otherwise launch one subagent per package directly). **Within a package: strictly sequential** — `code-simplifier` first, then `caveman:cavecrew-reviewer` reviews the post-simplification diff. Never invoke the two in parallel within the same package: cavecrew must see the simplified code, not the pre-simplification noise.
 
 Per package:
 
@@ -28,9 +29,9 @@ Every finding must include file path and line number — no vague feedback accep
 - Same approach failed twice? STOP — change hypothesis, don't retry harder.
 
 ## 4. Run full quality gates
-- `./tools/yamless/check.sh ts` — ZERO errors, ZERO warnings.
-- `./tools/yamless/check.sh rust` — ZERO errors, ZERO warnings (fast gates; tests separate).
-- `./tools/yamless/test.sh` — full Rust suite must be green.
+- Run the project's check/lint/typecheck command (whatever the project defines — package script, Makefile target, `cargo clippy`, etc.) — ZERO errors, ZERO warnings.
+- Run the project's full test suite — must be green.
+- If the project defines no such commands, note that in the report and continue.
 - If any gate fails, fix and re-run ALL gates until fully green. No exceptions.
 
 ## 5. Commit

@@ -3,9 +3,10 @@
 #
 # Without --project, `engram search` / `save` / `context` mix results across
 # every project in the local engram DB — wasted tokens at best, wrong-project
-# answers at worst. The `.claude/skills/code-intel/scripts/mod.sh engram
-# <subcmd>` wrapper auto-scopes; this module pushes the agent toward that path
-# by denying unscoped raw calls.
+# answers at worst. The `skills/code-intel/scripts/mod.sh engram <subcmd>`
+# wrapper (resolved relative to this module, so it works both in-repo and
+# through the installed plugin's scripts→hooks symlink) auto-scopes; this
+# module pushes the agent toward that path by denying unscoped raw calls.
 #
 # Subcommands that require scoping: search, save, context, summary, and
 # `conflicts list` / `conflicts stats`. Anything else (stats, tui, serve, mcp,
@@ -133,7 +134,13 @@ while IFS= read -r segment; do
 done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
-  jq -n --arg cmd "$violation" '{
+  # Resolve the auto-scoping wrapper relative to this module's location —
+  # works from the repo checkout and through the plugin's scripts→hooks
+  # symlink. Fall back to the repo-relative path if resolution fails.
+  wrapper_root=$(cd "${BASH_SOURCE%/*}/../../.." 2>/dev/null && pwd)
+  wrapper="${wrapper_root:+$wrapper_root/}skills/code-intel/scripts/mod.sh"
+  [[ -x "$wrapper" ]] || wrapper="skills/code-intel/scripts/mod.sh"
+  jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
@@ -142,7 +149,7 @@ if [[ -n "$violation" ]]; then
         "Engram stores memories across multiple projects. Without --project, search/save/context leak across projects.\n\n" +
         "Fix one of:\n" +
         "  1. Prefer the wrapper (auto-scopes):\n" +
-        "       .claude/skills/code-intel/scripts/mod.sh engram <subcmd> …\n" +
+        "       " + $wrapper + " engram <subcmd> …\n" +
         "  2. Add --project <name> to the raw call:\n" +
         "       engram <subcmd> … --project <project-name>\n" +
         "  3. Set ENGRAM_PROJECT=<name> in the env."
