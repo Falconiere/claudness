@@ -13,8 +13,9 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
 ├── agents/         # Subagent definitions (.md with YAML frontmatter)
 ├── commands/       # Slash commands (.md prompt templates)
 ├── hooks/          # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.)
-├── mcp/            # MCP server configs and wrappers
-└── settings/       # Reusable settings.json fragments
+├── tooling/        # Helper CLIs used by skills (context7, exa-search) + bats tests
+├── docs/           # Repo documentation (runtime config, design notes)
+└── settings/       # Reusable settings.json fragments + hook data files
 ```
 
 Add or drop directories as needed — nothing here is load-bearing on the layout.

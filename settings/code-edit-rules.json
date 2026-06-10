@@ -1,20 +1,20 @@
 {
-  "//": "code-edit-rules.sh data file. Each entry maps a file-glob pattern to a list of rule-doc references. The hook surfaces these reminders before edits. Schema: {rules: [{ match: string (glob), docs: [string], when_path_matches?: [string] (extra docs added when the file path also matches one of these)}]}",
+  "//": "code-edit-rules.sh data file. Each entry maps a file-glob pattern to a list of one-line rule reminders. The hook joins the strings and surfaces them before edits. Schema: {rules: [{ match: string (glob), docs: [string] (one-line rule texts), when_path_matches?: [string] (extra_docs added when the file path also matches one of these), extra_docs?: [string]}]}",
   "rules": [
     {
       "match": "*.rs",
       "docs": [
-        "docs/rules/rust-quality.md",
-        "docs/rules/forbidden-syntax-rust.md",
-        "docs/rules/simplicity.md"
+        "Rust: zero compiler/clippy warnings",
+        "no unwrap()/expect()/panic! outside tests",
+        "keep it simple — no speculative abstractions"
       ]
     },
     {
       "match": "*.ts",
       "docs": [
-        "docs/rules/quality-gates.md",
-        "docs/rules/forbidden-syntax-typescript.md",
-        "docs/rules/simplicity.md"
+        "TS: zero typecheck/lint errors and warnings",
+        "no `any`, @ts-ignore, or non-null assertions",
+        "keep it simple — no speculative abstractions"
       ],
       "when_path_matches": [
         "*/features/*",
@@ -22,15 +22,15 @@
         "*/routes/*"
       ],
       "extra_docs": [
-        "docs/rules/frontend-organization.md"
+        "frontend: colocate by feature (components/hooks/routes per feature dir)"
       ]
     },
     {
       "match": "*.tsx",
       "docs": [
-        "docs/rules/quality-gates.md",
-        "docs/rules/forbidden-syntax-typescript.md",
-        "docs/rules/simplicity.md"
+        "TS: zero typecheck/lint errors and warnings",
+        "no `any`, @ts-ignore, or non-null assertions",
+        "keep it simple — no speculative abstractions"
       ],
       "when_path_matches": [
         "*/features/*",
@@ -38,28 +38,28 @@
         "*/routes/*"
       ],
       "extra_docs": [
-        "docs/rules/frontend-organization.md"
+        "frontend: colocate by feature (components/hooks/routes per feature dir)"
       ]
     },
     {
       "match": "*.js",
       "docs": [
-        "docs/rules/quality-gates.md",
-        "docs/rules/simplicity.md"
+        "JS: keep lint/tests green",
+        "keep it simple — no speculative abstractions"
       ]
     },
     {
       "match": "*.jsx",
       "docs": [
-        "docs/rules/quality-gates.md",
-        "docs/rules/simplicity.md"
+        "JS: keep lint/tests green",
+        "keep it simple — no speculative abstractions"
       ]
     },
     {
       "match": "*.py",
       "docs": [
-        "docs/rules/quality-gates.md",
-        "docs/rules/simplicity.md"
+        "Python: keep lint/tests green",
+        "keep it simple — no speculative abstractions"
       ]
     }
   ]

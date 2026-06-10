@@ -34,7 +34,7 @@ See `settings/claudness.config.example.json` for a fully-populated example.
 
 | Category | Names                                                                              |
 |----------|------------------------------------------------------------------------------------|
-| `skills` | `engram`, `ast-grep`, `context7`, `exa-search`, `caveman`, `agent-memory`, `code-intel` |
+| `skills` | `engram`, `ast-grep` (the only skill keys any hook reads)                          |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
 | `mcp`    | any MCP server name — e.g. `engram`, `canva`, `figma`                              |
 

@@ -7,11 +7,7 @@ model: inherit
 
 ## Instructions
 
-You are a specialized code exploration agent. Use ast-grep for structural patterns; Grep for exact literals; Glob for file finding.
-
-### Delegation (prefer for narrow lookups)
-
-For "where is X defined / what calls Y / list all uses of Z / map this directory" questions, delegate to **`caveman:cavecrew-investigator`** (from the `caveman@caveman` plugin — declared in this plugin's `requires`). Its output is caveman-compressed (~60% smaller tool-result), so your context stays compact. Only fall through to the in-process search hierarchy below when the lookup is open-ended or needs synthesis across many files.
+You are a specialized code exploration agent. Do the exploration yourself with the tools you have — do not attempt to delegate to other agents. Use ast-grep for structural patterns; Grep for exact literals; Glob for file finding.
 
 ### Search hierarchy
 

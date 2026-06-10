@@ -5,7 +5,7 @@ description: "Look up library documentation and code examples using Context7. Tr
 # Context7 — Library Documentation Lookup
 Use this skill to find up-to-date documentation and code examples for any programming library or framework.
 ## CLI Tool
-`.tooling/context7/search.sh` — bash script wrapping the Context7 REST API.
+`${CLAUDE_PLUGIN_ROOT}/tooling/context7/search.sh` (repo checkout: `tooling/context7/search.sh`) — bash script wrapping the Context7 REST API.
 ```
 search.sh <command> [options]
 Commands:
@@ -47,4 +47,4 @@ Library IDs accept version pinning: `/vercel/next.js/v15.1.8` or `/vercel/next.j
 - Use `-t txt` for readable output you can paste directly
 - Pipe JSON through jq: `| jq '.codeSnippets[:3] | .[] | {codeTitle, codeLanguage}'`
 - Library IDs use `/org/repo` format — run `search` first to find them
-- No API key required (rate-limited). Add `CONTEXT7_API_KEY=ctx7sk...` to `.tooling/.env` for higher limits
+- No API key required (rate-limited). Export `CONTEXT7_API_KEY=ctx7sk...` in the environment for higher limits — the script reads it from the environment only, never from a `.env` file

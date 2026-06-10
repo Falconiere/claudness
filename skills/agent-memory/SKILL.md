@@ -3,7 +3,7 @@ name: agent-memory
 description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to engram proactively. Do NOT wait for the user to ask."
 ---
 # Agent Memory-First Protocol
-You have Engram persistent memory (SQLite + FTS5) accessed through the **scoped wrapper** at `.claude/skills/code-intel/scripts/mod.sh engram …`.
+You have Engram persistent memory (SQLite + FTS5) accessed through the **scoped wrapper** at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram …`.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints (Always)
@@ -27,11 +27,11 @@ Announce the scope in user-facing text before performing the operation. Example:
 
 ## CLI Reference — Use the Wrapper
 
-The wrapper at `.claude/skills/code-intel/scripts/mod.sh engram <subcmd>` auto-injects `--project <current-project>` and strict cross-project filtering. **Never use MCP tools for engram.** Raw `engram` invocations are denied by the `engram-scope` hook unless they include `--project`.
+The wrapper at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram <subcmd>` auto-injects `--project <current-project>` and strict cross-project filtering. **Never use MCP tools for engram.** Raw `engram` invocations are denied by the `engram-scope` hook unless they include `--project`.
 
 ### Save a memory
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic TOPIC_KEY --scope SCOPE
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic TOPIC_KEY --scope SCOPE
 ```
 - `<title>`: Short, searchable title (required)
 - `<content>`: Structured content (required)
@@ -42,19 +42,19 @@ The wrapper at `.claude/skills/code-intel/scripts/mod.sh engram <subcmd>` auto-i
 
 ### Search memories
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram search "<query>" --type TYPE --limit N --scope SCOPE
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram search "<query>" --type TYPE --limit N --scope SCOPE
 ```
 Returns compact results with observation IDs. Default limit: 10, max: 20. Results are strict-filtered to the current project.
 
 ### Timeline (context around an observation)
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram timeline <observation_id> --before N --after N
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram timeline <observation_id> --before N --after N
 ```
 Observation IDs already belong to a single project — no extra scope flag needed.
 
 ### Recent context
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram context
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context
 ```
 Loads recent sessions and observations for the current project. Use at session start.
 
@@ -114,7 +114,7 @@ See also: `skills/ast-grep/SKILL.md` for structural search and rewrite.
 ## 2. Save What You Learn
 After any exploration that yields **reusable knowledge**, save (announce the scope first):
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic "category/key"
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic "category/key"
 ```
 ### When to save (mandatory)
 - Architecture or design decision made
@@ -152,7 +152,7 @@ Same `--topic` key = upsert (updates existing). New topic = new observation.
 ### Example save (with explicit scope announcement)
 > Scoping engram to **claudness** for save: decision/auth-middleware.
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --type decision --topic "decision/auth-middleware"
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --type decision --topic "decision/auth-middleware"
 ```
 
 ## 3. Search Protocol (Progressive Disclosure)
@@ -172,14 +172,14 @@ Start at layer 1. Only go deeper if the compact result isn't enough.
 ### Session start (recommended)
 At the start of a session, announce the project scope, then load context:
 ```bash
-.claude/skills/code-intel/scripts/mod.sh engram context
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context
 ```
 ### Realtime saves (mandatory)
 Save learnings immediately as they happen — after every decision, bugfix, discovery, or pattern. Do NOT defer to session end. Announce scope before each save.
 ### Post-compaction recovery
 If you see a compaction message or "FIRST ACTION REQUIRED":
 1. Announce the project scope.
-2. Call `.claude/skills/code-intel/scripts/mod.sh engram context` to recover previous session context.
+2. Call `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context` to recover previous session context.
 3. Only THEN continue working.
 
 ## 5. Raw CLI Fallback (rare)
