@@ -14,6 +14,18 @@
 
 command -v jq >/dev/null 2>&1 || exit 0
 
+# This module is wired as a STANDALONE PreToolUse hook (matcher mcp__), so it
+# does NOT go through pre-tools/mod.sh and the parent never `export`s
+# tool_name. Claude Code delivers the hook input as JSON on STDIN, including
+# .tool_name. When tool_name is not in the env, read it from stdin. Env keeps
+# precedence so env-driven tests still pass; stdin is consumed exactly once.
+if [[ -z "$tool_name" ]]; then
+  _mcp_stdin=$(cat 2>/dev/null || true)
+  if [[ -n "$_mcp_stdin" ]]; then
+    tool_name=$(jq -r '.tool_name // empty' <<<"$_mcp_stdin" 2>/dev/null || true)
+  fi
+fi
+
 SETTINGS_DIR=$(detect_settings_dir)
 LIST_FILE="$SETTINGS_DIR/mcp-blocklist.txt"
 

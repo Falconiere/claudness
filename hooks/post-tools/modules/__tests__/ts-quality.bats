@@ -130,6 +130,20 @@ EOF
   echo "$output" | grep -q "non-Error literal"
 }
 
+# Regression: the PostToolUse matcher includes MultiEdit, but the file-path
+# extraction only ran for Write/Edit — a MultiEdit on a .ts file (with
+# CLAUDE_FILE_PATHS unset) silently skipped all quality checks.
+@test "ts-quality: MultiEdit extracts file path and flags violations (regression)" {
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+export function bad() { throw 42; }
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=MultiEdit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "non-Error literal"
+}
+
 @test "ts-quality: clean error handling produces no error output" {
   _ts_project
   cat > src/good.ts <<'EOF'
