@@ -104,6 +104,17 @@ _decision() {
   [ "$(_decision "$output")" = "deny" ]
 }
 
+# Regression: lowercase env-var prefixes (foo=bar engram …) are legal in bash.
+# The strip regex only matched uppercase NAME chars, so the lowercase prefix was
+# left in place and the segment no longer matched ^engram — the unscoped raw
+# call slipped through. Widening the NAME class keeps it denied.
+@test "engram-scope: lowercase env prefix before bare engram save is denied" {
+  payload=$(_mk 'foo=bar engram save title body')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
 @test "engram-scope: chained — bare engram search after && is denied" {
   payload=$(_mk 'ls && engram search foo')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"

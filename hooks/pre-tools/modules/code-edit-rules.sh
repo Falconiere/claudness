@@ -12,7 +12,9 @@
 # shellcheck source=../../lib/detect.sh
 . "${BASH_SOURCE%/*}/../../lib/detect.sh"
 
-[[ "$tool_name" != "Edit" && "$tool_name" != "Write" ]] && exit 0
+# MultiEdit is in the PreToolUse matcher and carries .tool_input.file_path just
+# like Edit/Write — include it so rule reminders are not dropped for MultiEdit.
+[[ "$tool_name" != "Edit" && "$tool_name" != "Write" && "$tool_name" != "MultiEdit" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
 SETTINGS_DIR=$(detect_settings_dir)
@@ -66,7 +68,7 @@ done
 
 [ -z "$docs" ] && exit 0
 
-jq -n --arg msg "Read relevant rules before editing: $docs" --arg file "$file_path" '{
+jq -n --arg msg "Apply these rules: $docs" --arg file "$file_path" '{
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "additionalContext": ("File: " + $file + "\n" + $msg)

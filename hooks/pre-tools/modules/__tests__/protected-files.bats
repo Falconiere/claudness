@@ -28,6 +28,17 @@ run_hook() {
   tool_name=Edit input="$payload" run bash "$HOOK" <<<"$payload"
 }
 
+# MultiEdit carries .tool_input.file_path (plus an edits[] array). The
+# PreToolUse matcher includes MultiEdit, so a protected path edited via
+# MultiEdit must be denied exactly like Edit/Write — not silently bypassed.
+run_hook_multiedit() {
+  local file="$1"
+  local payload
+  payload=$(jq -n --arg p "$file" \
+    '{tool_name:"MultiEdit",tool_input:{file_path:$p,edits:[{old_string:"a",new_string:"b"}]}}')
+  tool_name=MultiEdit input="$payload" run bash "$HOOK" <<<"$payload"
+}
+
 @test "protected-files: blocks .env (bare basename)" {
   run_hook ".env"
   [ "$status" -eq 0 ]
@@ -36,6 +47,15 @@ run_hook() {
 
 @test "protected-files: blocks hooks/lib/detect.sh (path glob)" {
   run_hook "hooks/lib/detect.sh"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+}
+
+# Regression: MultiEdit must be subject to the protected-files deny. The hook
+# previously skipped any tool that was not Edit/Write, letting MultiEdit bypass
+# protection on the same paths — a security-equivalent hole.
+@test "protected-files: blocks MultiEdit on hooks/lib/detect.sh (path glob)" {
+  run_hook_multiedit "hooks/lib/detect.sh"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }

@@ -42,6 +42,9 @@ claudness_dispatch_modules() {
     [[ ! -f "$script" ]] && continue
 
     rc=0
+    # Modules are always executed with `bash` regardless of their shebang. This
+    # is fine today because only *.sh files are globbed above; a future non-bash
+    # module would require this invocation to honor the script's interpreter.
     # shellcheck disable=SC2154 # $input is exported by the sourcing entrypoint.
     result=$(bash "$script" <<<"$input" 2>"$err_file") || rc=$?
 

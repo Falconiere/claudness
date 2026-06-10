@@ -53,6 +53,9 @@ fi
 # the leading command of a push), gate-status must still detect a quality
 # command that appears AFTER a shell operator in a compound command
 # (`cd crate && cargo test`), so the prefix also matches after a separator.
+# The trailing `|` (single pipe) in this alternation is BY DESIGN: a quality
+# command after a pipe (`find . | cargo test`) still ran, so it must trigger
+# gate registration. Do not drop it. (Locked in by gate-status.bats.)
 GATE_TRIGGER_PREFIX='(^|[[:space:]]|&&|\|\||;|\|)[[:space:]]*'
 GATE_TRIGGER_SUFFIX='([[:space:]]|$|&&|\|\||;|\|)'
 GATE_TRIGGER_ALTERNATION='tools/[A-Za-z0-9_.-]+/(check|test|format)\.sh|bun run (check|check:fix|check:duplication|ts:check|ts:check:fix|rust:check|rust:test|check-types|lint|lint:fix|format|format:check|format:fix|build|test)|bun test|vitest|jest|tsc|\./scripts/ts-check\.sh|cargo (clippy|test|build|nextest)'
