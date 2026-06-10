@@ -52,6 +52,13 @@ command that matches a deny rule is still allowed if it also matches an
 allowlist rule (the allowlist is an explicit override, not a default gate).
 Commands that match no deny rule are allowed by default.
 
+> Allowlist caveat: single-token allowlist entries match anywhere in the
+> command string as **substrings** (only multi-token entries are argv-aware —
+> see `bash-commands.sh`). A broad single-token entry such as `node` therefore
+> overrides far more than intended and quietly broadens the attack surface
+> (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
+> exemptions so the override stays argv-scoped to exactly the command you mean.
+
 Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`):
 `$MY_CLAUDE_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
 this repo's `settings/` directory, resolved relative to the hooks. There is
