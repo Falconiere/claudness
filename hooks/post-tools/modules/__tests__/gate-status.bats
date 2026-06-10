@@ -141,6 +141,23 @@ _write_gate() {
   jq -e '.status == "passing"' "$GATE_FILE"
 }
 
+# Lock-in: the `|` in GATE_TRIGGER_PREFIX is by design — a quality command
+# that runs after a pipe still executed, so it must trigger gate registration.
+# This guards against a future cleanup silently dropping `|` from the prefix.
+@test "gate-status: TRIGGER cargo test after a pipe" {
+  payload=$(_payload "find . | cargo test" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER tsc after a pipe" {
+  payload=$(_payload "foo | tsc" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
 @test "gate-status: TRIGGER bare tsc" {
   payload=$(_payload "tsc" 0)
   tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"

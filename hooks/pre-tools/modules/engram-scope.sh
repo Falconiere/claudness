@@ -96,7 +96,7 @@ while IFS= read -r segment; do
   # The regex is built in a variable (with \047 = single quote) so the literal
   # single-quote of the quoted-value alternation never sits inside [[ ]] — an
   # embedded ' there desyncs shellcheck's parser.
-  _env_re=$'^[A-Z_][A-Z0-9_]*=("[^"]*"|\047[^\047]*\047|[^[:space:]]+)[[:space:]]+(.*)$'
+  _env_re=$'^[A-Za-z_][A-Za-z0-9_]*=("[^"]*"|\047[^\047]*\047|[^[:space:]]+)[[:space:]]+(.*)$'
   while [[ "$segment" =~ $_env_re ]]; do
     env_prefix="${segment%%=*}"
     # ENGRAM_PROJECT=... acts as scope.

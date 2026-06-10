@@ -21,6 +21,16 @@ run_hook() {
   tool_name=Edit input="$payload" run bash "$HOOK" <<<"$payload"
 }
 
+# MultiEdit carries .tool_input.file_path and is in the PreToolUse matcher, so
+# rule reminders must surface for MultiEdit too.
+run_hook_multiedit() {
+  local file="$1"
+  local payload
+  payload=$(jq -n --arg p "$file" \
+    '{tool_name:"MultiEdit",tool_input:{file_path:$p,edits:[{old_string:"a",new_string:"b"}]}}')
+  tool_name=MultiEdit input="$payload" run bash "$HOOK" <<<"$payload"
+}
+
 @test "code-edit-rules: empty rules → no-op" {
   printf '%s\n' '{"rules":[]}' > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json"
   run_hook "/abs/src/foo.rs"
@@ -42,6 +52,17 @@ JSON
   run_hook "/abs/src/foo.rs"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("rust.md")'
+}
+
+# Regression: MultiEdit was skipped (tool != Edit/Write), dropping rule
+# reminders. MultiEdit on a code file must emit the same reminder as Edit.
+@test "code-edit-rules: MultiEdit on .rs file surfaces docs" {
+  cat > "$MY_CLAUDE_SETTINGS_DIR/code-edit-rules.json" <<'JSON'
+{ "rules": [ { "match": "*.rs", "docs": ["Rust: zero compiler/clippy warnings"] } ] }
+JSON
+  run_hook_multiedit "/abs/src/foo.rs"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("Rust: zero compiler/clippy warnings")'
 }
 
 # Regression: absolute path under a git repo must be normalized to repo-relative
