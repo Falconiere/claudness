@@ -19,7 +19,11 @@ cat > /dev/null 2>&1 || true
 case "$(claudness_engram_state)" in
   available)
     save_doc="$HOOK_DIR/docs/vector-helper-save.md"
-    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via .claude/skills/code-intel/scripts/mod.sh engram save.")
+    # Resolve the code-intel wrapper relative to this hook — works from the
+    # repo checkout and through the installed plugin's scripts→hooks symlink.
+    mod_sh="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/skills/code-intel/scripts/mod.sh"
+    [ -x "$mod_sh" ] || mod_sh="skills/code-intel/scripts/mod.sh"
+    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh engram save.")
     ctx="Session ending. $save_hint"
     ;;
   missing)
