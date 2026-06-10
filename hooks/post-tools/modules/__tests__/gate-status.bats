@@ -95,3 +95,91 @@ _write_gate() {
   jq -e '.status == "failing"' "$GATE_FILE"
   jq -e '.source == "gate-status-hook"' "$GATE_FILE"
 }
+
+# --- Trigger-regex anchoring (item 1) ---------------------------------------
+
+# Commands that SHOULD toggle the gate (genuine quality commands).
+@test "gate-status: TRIGGER cargo test" {
+  payload=$(_payload "cargo test" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER leading-whitespace cargo clippy" {
+  payload=$(_payload "  cargo clippy" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER cargo test after && in compound command" {
+  payload=$(_payload "cd crate && cargo test" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER bun test" {
+  payload=$(_payload "bun test" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER bun run check" {
+  payload=$(_payload "bun run check" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER bun test after && in compound command" {
+  payload=$(_payload "pnpm i && bun test" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER bare tsc" {
+  payload=$(_payload "tsc" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+@test "gate-status: TRIGGER tsc --noEmit" {
+  payload=$(_payload "tsc --noEmit" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+# Commands that must NOT toggle the gate (substring false positives).
+@test "gate-status: NO-TRIGGER cat tsconfig.json (was matching tsc)" {
+  payload=$(_payload "cat tsconfig.json" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ ! -f "$GATE_FILE" ]
+}
+
+@test "gate-status: NO-TRIGGER ls tooling/foo/test.sh (substring path)" {
+  payload=$(_payload "ls tooling/foo/test.sh" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ ! -f "$GATE_FILE" ]
+}
+
+@test "gate-status: NO-TRIGGER vitests-helper (no word boundary)" {
+  payload=$(_payload "vitests-helper" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ ! -f "$GATE_FILE" ]
+}
+
+@test "gate-status: NO-TRIGGER cattsc (embedded substring)" {
+  payload=$(_payload "cattsc" 0)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ ! -f "$GATE_FILE" ]
+}

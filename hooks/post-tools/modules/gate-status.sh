@@ -46,7 +46,17 @@ fi
 #   * Rust: cargo clippy/test/build/nextest
 # The wrapper-path regex is project-agnostic; per-project naming lives in the
 # wrapper script, not here.
-if ! echo "$command" | grep -qE '(tools/[A-Za-z0-9_.-]+/(check|test|format)\.sh|bun run (check|check:fix|check:duplication|ts:check|ts:check:fix|rust:check|rust:test|check-types|lint|lint:fix|format|format:check|format:fix|build|test)|bun test|vitest|jest|tsc|\./scripts/ts-check\.sh|cargo (clippy|test|build|nextest))'; then
+#
+# Anchor every alternative at a COMMAND boundary so substring false positives
+# (`cat tsconfig.json` → `tsc`, `vitests-helper` → `vitest`) no longer flip the
+# gate. Unlike quality-gate.sh (which only anchors at start-of-line, inspecting
+# the leading command of a push), gate-status must still detect a quality
+# command that appears AFTER a shell operator in a compound command
+# (`cd crate && cargo test`), so the prefix also matches after a separator.
+GATE_TRIGGER_PREFIX='(^|[[:space:]]|&&|\|\||;|\|)[[:space:]]*'
+GATE_TRIGGER_SUFFIX='([[:space:]]|$|&&|\|\||;|\|)'
+GATE_TRIGGER_ALTERNATION='tools/[A-Za-z0-9_.-]+/(check|test|format)\.sh|bun run (check|check:fix|check:duplication|ts:check|ts:check:fix|rust:check|rust:test|check-types|lint|lint:fix|format|format:check|format:fix|build|test)|bun test|vitest|jest|tsc|\./scripts/ts-check\.sh|cargo (clippy|test|build|nextest)'
+if ! echo "$command" | grep -qE "${GATE_TRIGGER_PREFIX}(${GATE_TRIGGER_ALTERNATION})${GATE_TRIGGER_SUFFIX}"; then
   exit 0
 fi
 

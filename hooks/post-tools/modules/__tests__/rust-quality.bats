@@ -142,6 +142,9 @@ EOF
   PATH="$TMP/bin:$PATH" tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "ast-grep failed"
+  # The captured stderr detail must be surfaced so the agent sees WHAT broke.
+  echo "$output" | grep -q "boom"
+  echo "$output" | grep -q "exit 2"
 }
 
 @test "rust-quality: gate-status file is written on violation" {
