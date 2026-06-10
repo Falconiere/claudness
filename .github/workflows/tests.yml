@@ -44,4 +44,9 @@ jobs:
           set -euo pipefail
           # Run every bats suite in the repo (hooks, tooling, skills).
           # Tooling tests stub curl on PATH, so they never hit real APIs.
-          find hooks tooling skills -name "*.bats" -print0 | xargs -0 bats
+          mapfile -d '' suites < <(find hooks tooling skills -name "*.bats" -print0)
+          if [ "${#suites[@]}" -eq 0 ]; then
+            echo "No bats suites found — test discovery is broken" >&2
+            exit 1
+          fi
+          bats "${suites[@]}"
