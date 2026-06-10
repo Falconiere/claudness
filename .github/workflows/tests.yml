@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   bats:
-    name: bats (hooks)
+    name: bats (hooks, tooling, skills)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,5 +42,6 @@ jobs:
       - name: Run bats suite
         run: |
           set -euo pipefail
-          # Print one TAP line per test so failures are easy to spot in the log.
-          find hooks -name "*.bats" -print0 | xargs -0 bats
+          # Run every bats suite in the repo (hooks, tooling, skills).
+          # Tooling tests stub curl on PATH, so they never hit real APIs.
+          find hooks tooling skills -name "*.bats" -print0 | xargs -0 bats
