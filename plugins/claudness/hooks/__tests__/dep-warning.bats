@@ -77,3 +77,14 @@ JSON
   echo "$output" | grep -q "/plugin install code-simplifier@claude-plugins-official"
   echo "$output" | grep -q "/plugin install caveman@caveman"
 }
+
+@test "dep-warning: a nameless dependency entry is skipped (no null@ spec)" {
+  _manifest <<'JSON'
+{"name":"claudness","dependencies":[{"marketplace":"caveman"},{"name":"caveman","marketplace":"caveman"}]}
+JSON
+  printf '%s' '{"plugins":{}}' > "$REG"
+  run _run_entry
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "/plugin install caveman@caveman"
+  ! echo "$output" | grep -q "null@"
+}
