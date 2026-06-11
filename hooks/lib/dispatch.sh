@@ -8,9 +8,15 @@
 #     REGISTRY_DIR (built-in modules first), feeding each the exported `input`
 #     variable (raw hook JSON) on stdin. EVENT_NAME is "PreToolUse" or
 #     "PostToolUse" and selects the decision semantics.
-#     Registry modules are namespaced "<plugin-spec>.<name>.sh" and run only
-#     when `claudness_plugin_active <plugin-spec>` succeeds (fail-open if that
-#     helper is not sourced). Built-in MODULES_DIR scripts are never gated.
+#     Registry modules (anything outside MODULES_DIR) MUST be namespaced
+#     "<plugin-spec>__<name>.sh" (specs must not contain "__"; "__" instead of
+#     "." so specs like "name@git.example.com" parse unambiguously) and run
+#     only when `claudness_plugin_active <plugin-spec>` succeeds. A registry
+#     file that is not namespaced, or dispatched without that helper sourced,
+#     is SKIPPED — fail closed, so a partial-sourcing bug degrades to "do
+#     less" instead of running ungated modules. Built-in MODULES_DIR scripts
+#     are never gated. The plugin-active lookup is memoized per spec within
+#     one dispatch call.
 #
 # Output discipline:
 #   - PreToolUse: a module emitting `hookSpecificOutput.permissionDecision ==
@@ -40,6 +46,13 @@ claudness_dispatch_modules() {
   local registry_dirs=("$@")
   local script result rc err_file decision ctx msg c base plugin
   local contexts=() messages=()
+  # Per-dispatch memo of plugin-active lookups (space-delimited spec lists;
+  # plain strings, not associative arrays, for bash 3.2 compatibility).
+  local active_specs=" " inactive_specs=" "
+
+  # Constant for the whole dispatch; resolved once instead of per module.
+  local plugin_helper_ok=0
+  declare -F claudness_plugin_active >/dev/null 2>&1 && plugin_helper_ok=1
 
   err_file=$(mktemp "${TMPDIR:-/tmp}/claudness-dispatch.XXXXXX") || return 0
 
@@ -59,12 +72,34 @@ claudness_dispatch_modules() {
   for script in "${scripts[@]}"; do
     [[ ! -f "$script" ]] && continue
 
-    # Registry modules are namespaced "<plugin-spec>.<name>.sh"; gate on install.
+    # Anything outside MODULES_DIR is a registry module and MUST satisfy the
+    # gating contract; violations are skipped, never run. The -z guard keeps
+    # an empty modules_dir (wrong entrypoint arg count) from making the
+    # "$modules_dir/"* pattern match every absolute path and bypass gating.
     base=$(basename "$script")
-    if [[ "$script" != "$modules_dir/"* && "$base" == *.*.sh ]]; then
-      plugin="${base%%.*}"
-      if declare -F claudness_plugin_active >/dev/null 2>&1; then
-        claudness_plugin_active "$plugin" || continue
+    if [[ -z "$modules_dir" || "$script" != "$modules_dir/"* ]]; then
+      # The spec must be non-empty: "__foo.sh" would otherwise yield an empty
+      # spec, and an empty lookup can read as indeterminate -> fail open.
+      plugin="${base%%__*}"
+      if [[ "$base" != *__*.sh || -z "$plugin" ]]; then
+        printf 'claudness-dispatch: registry module %s lacks <plugin-spec>__<name>.sh namespace; skipped\n' \
+          "$base" >&2
+        continue
+      fi
+      if [[ $plugin_helper_ok -ne 1 ]]; then
+        printf 'claudness-dispatch: claudness_plugin_active not sourced; registry module %s skipped\n' \
+          "$base" >&2
+        continue
+      fi
+      # Resolve each distinct spec at most once per dispatch (hot path: one
+      # jq per plugin instead of one per module).
+      if [[ "$active_specs" != *" $plugin "* ]]; then
+        [[ "$inactive_specs" == *" $plugin "* ]] && continue
+        if ! claudness_plugin_active "$plugin"; then
+          inactive_specs="${inactive_specs}${plugin} "
+          continue
+        fi
+        active_specs="${active_specs}${plugin} "
       fi
     fi
 

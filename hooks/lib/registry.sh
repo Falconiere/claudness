@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Shared runtime registry for hook modules contributed by other plugins.
-# Modules placed under <root>/<event>.d/<plugin-spec>.<name>.sh are executed by
-# the core dispatcher after its built-in modules, gated on the owning plugin
-# being installed. The registry holds GENERATED state (synced each session by
-# each plugin's register.sh); the source of truth for a module is its own plugin.
+# Modules placed under <root>/<event>.d/<plugin-spec>__<name>.sh are executed
+# by the core dispatcher after its built-in modules, gated on the owning plugin
+# being installed. The "__" separator is load-bearing: plugin specs may contain
+# "." (e.g. name@git.example.com) but must not contain "__". The registry holds
+# GENERATED state (synced each session by each plugin's register.sh); the
+# source of truth for a module is its own plugin.
 
 # claudness_registry_root -> prints the registry root dir (not created).
 claudness_registry_root() {
@@ -18,6 +20,9 @@ claudness_registry_event_dir() {
     PreToolUse)  slug="pre-tools" ;;
     PostToolUse) slug="post-tools" ;;
     *)
+      # Best-effort kebab-casing: consecutive-uppercase runs are NOT split
+      # (e.g. "MCPNotification" -> "mcpnotification"). Fine for the current
+      # Claude Code event names; extend the case table for anything odd.
       slug=$(printf '%s' "$event" \
         | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' \
         | tr '[:upper:]' '[:lower:]')

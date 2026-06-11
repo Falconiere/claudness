@@ -126,7 +126,7 @@ write_module() {
 
 @test "dispatch runs a registry module from an active plugin" {
   builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
-  cat > "$reg_dir/code-intel@falconiere.probe.sh" <<'EOF'
+  cat > "$reg_dir/code-intel@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"from-registry"}}'
 EOF
@@ -143,7 +143,7 @@ EOF
 
 @test "dispatch SKIPS a registry module whose plugin is inactive" {
   builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
-  cat > "$reg_dir/ghost@nowhere.probe.sh" <<'EOF'
+  cat > "$reg_dir/ghost@nowhere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"should-not-appear"}}'
 EOF
@@ -156,6 +156,100 @@ EOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   rm -rf "$builtin_dir" "$reg_dir"
+}
+
+@test "dispatch SKIPS an un-namespaced file in a registry dir (never runs ungated)" {
+  builtin_dir="$TMP/builtin"; reg_dir="$TMP/reg"
+  mkdir -p "$builtin_dir" "$reg_dir"
+  cat > "$reg_dir/foo.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"ungated-should-not-appear"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/detect.sh"; . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    claudness_plugin_active() { return 0; }
+    input="{}"; export input
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "ungated-should-not-appear"
+  # The skip is visible on stderr (merged into $output by bats).
+  echo "$output" | grep -q "foo.sh"
+}
+
+@test "dispatch SKIPS a registry file with an empty plugin spec (__name.sh)" {
+  builtin_dir="$TMP/builtin"; reg_dir="$TMP/reg"
+  mkdir -p "$builtin_dir" "$reg_dir"
+  cat > "$reg_dir/__sneaky.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"empty-spec-should-not-appear"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/detect.sh"; . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    input="{}"; export input
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "empty-spec-should-not-appear"
+}
+
+@test "dispatch SKIPS registry modules when claudness_plugin_active is not sourced (fail closed)" {
+  builtin_dir="$TMP/builtin"; reg_dir="$TMP/reg"
+  mkdir -p "$builtin_dir" "$reg_dir"
+  cat > "$builtin_dir/00-builtin.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"builtin-still-runs"}}'
+EOF
+  cat > "$reg_dir/ghost@nowhere__probe.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"registry-should-not-appear"}}'
+EOF
+  # dispatch.sh sourced WITHOUT detect.sh: helper undeclared.
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    input="{}"; export input
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "builtin-still-runs"
+  ! echo "$output" | grep -q "registry-should-not-appear"
+}
+
+@test "dispatch resolves each plugin spec at most once per dispatch (memoized)" {
+  builtin_dir="$TMP/builtin"; reg_dir="$TMP/reg"; counter="$TMP/lookup-count"
+  mkdir -p "$builtin_dir" "$reg_dir"
+  local n
+  for n in one two three; do
+    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/code-intel@falconiere__$n.sh"
+  done
+  printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/other@falconiere__solo.sh"
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    claudness_plugin_active() { echo "$1" >> "'"$counter"'"; return 0; }
+    input="{}"; export input
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  # 4 registry modules, 2 distinct specs -> exactly 2 lookups.
+  [ "$(wc -l < "$counter" | tr -d ' ')" = "2" ]
+  [ "$(sort -u "$counter" | wc -l | tr -d ' ')" = "2" ]
+}
+
+@test "dispatch gates ALL registry files when modules_dir is empty (no builtin bypass)" {
+  reg_dir="$TMP/reg"
+  mkdir -p "$reg_dir"
+  cat > "$reg_dir/foo.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"bypass-should-not-appear"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/detect.sh"; . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    claudness_plugin_active() { return 0; }
+    input="{}"; export input
+    claudness_dispatch_modules "" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "bypass-should-not-appear"
 }
 
 @test "dispatch still works with no registry dir argument (back-compat)" {
@@ -202,7 +296,7 @@ EOF
 @test "pre-tools entrypoint executes an active-plugin registry module" {
   cfg=$(mktemp -d)
   regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
-  cat > "$regdir/code-intel@falconiere.probe.sh" <<'EOF'
+  cat > "$regdir/code-intel@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"e2e-registry"}}'
 EOF
