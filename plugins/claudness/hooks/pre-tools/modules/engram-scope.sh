@@ -4,8 +4,8 @@
 # Without --project, `engram search` / `save` / `context` mix results across
 # every project in the local engram DB — wasted tokens at best, wrong-project
 # answers at worst. The `skills/code-intel/scripts/mod.sh engram <subcmd>`
-# wrapper (resolved relative to this module, so it works both in-repo and
-# through the installed plugin's scripts→hooks symlink) auto-scopes; this
+# wrapper (resolved relative to this module — skills/ is a sibling of hooks/
+# inside the plugin root, in-repo and installed alike) auto-scopes; this
 # module pushes the agent toward that path by denying unscoped raw calls.
 #
 # Subcommands that require scoping: search, save, context, summary, and

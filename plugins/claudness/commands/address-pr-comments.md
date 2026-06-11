@@ -160,7 +160,7 @@ One logical change at a time. Stay within the PR's changed-file set — if a fix
 
 Babysit is autonomous: **use a worktree** via `EnterWorktree` so the user's main working directory isn't disturbed while the cron runs. Check out the PR branch in the worktree, do the work, push from there, `ExitWorktree`.
 
-Reproduce + verify locally before pushing. Run the project's pre-push gate (for claudness: `bats hooks/` plus any tests for files you touched).
+Reproduce + verify locally before pushing. Run the project's pre-push gate (for claudness: `bats -r plugins/` plus any tests for files you touched).
 
 ---
 
@@ -242,7 +242,7 @@ For each failed check:
 
 | Failing check matches…                                                           | Action                                                                              |
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `bats`, hooks tests, or any branch-related check                                  | Reproduce locally with the failing command (e.g. `bats hooks/...`), fix, re-push    |
+| `bats`, hooks tests, or any branch-related check                                  | Reproduce locally with the failing command (e.g. `bats -r plugins/...`), fix, re-push |
 | Anything else — flaky/infra (transient, runner error, timeout unrelated to diff) | `gh run rerun <run-id> --failed`                                                    |
 
 For unfamiliar checks, fetch the failing job's logs via `gh run view <run-id> --log-failed` and triage from there.
