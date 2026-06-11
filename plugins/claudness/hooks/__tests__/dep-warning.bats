@@ -68,3 +68,12 @@ JSON
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "required plugins missing"
 }
+
+@test "dep-warning: real claudness manifest yields code-simplifier + caveman specs" {
+  cp "$REPO_ROOT/claudness/.claude-plugin/plugin.json" "$PLUGROOT/.claude-plugin/plugin.json"
+  printf '%s' '{"plugins":{}}' > "$REG"
+  run _run_entry
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "/plugin install code-simplifier@claude-plugins-official"
+  echo "$output" | grep -q "/plugin install caveman@caveman"
+}

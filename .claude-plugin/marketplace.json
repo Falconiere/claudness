@@ -5,6 +5,7 @@
     "email": "hello@falconiere.io",
     "url": "https://github.com/falconiere"
   },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official", "caveman"],
   "plugins": [
     {
       "name": "claudness",
@@ -17,19 +18,9 @@
       "category": "productivity",
       "keywords": ["caveman", "hooks", "skills", "agents"],
       "license": "MIT",
-      "requires": [
-        {
-          "plugin": "code-simplifier@claude-plugins-official",
-          "marketplace": "claude-plugins-official",
-          "source": { "source": "github", "repo": "anthropics/claude-plugins-official" },
-          "reason": "review-and-commit / push-review / address-pr-comments delegate simplification to the code-simplifier subagent"
-        },
-        {
-          "plugin": "caveman@caveman",
-          "marketplace": "caveman",
-          "source": { "source": "github", "repo": "JuliusBrussee/caveman" },
-          "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer"
-        }
+      "dependencies": [
+        { "name": "code-simplifier", "marketplace": "claude-plugins-official" },
+        { "name": "caveman", "marketplace": "caveman" }
       ]
     },
     {
@@ -43,13 +34,8 @@
       "category": "productivity",
       "keywords": ["ast-grep", "engram", "memory", "hooks"],
       "license": "MIT",
-      "requires": [
-        {
-          "plugin": "claudness@falconiere",
-          "marketplace": "falconiere",
-          "source": { "source": "github", "repo": "Falconiere/claudness" },
-          "reason": "registry hook modules execute through the claudness core dispatcher"
-        }
+      "dependencies": [
+        { "name": "claudness", "marketplace": "falconiere" }
       ]
     }
   ]

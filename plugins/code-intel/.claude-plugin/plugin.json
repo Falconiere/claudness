@@ -10,12 +10,7 @@
   "repository": "https://github.com/falconiere/claudness.git",
   "license": "MIT",
   "keywords": ["claude-code", "ast-grep", "engram", "memory", "hooks"],
-  "requires": [
-    {
-      "plugin": "claudness@falconiere",
-      "marketplace": "falconiere",
-      "source": { "source": "github", "repo": "Falconiere/claudness" },
-      "reason": "registry hook modules execute through the claudness core dispatcher and source its hooks/lib via CLAUDNESS_LIB_DIR"
-    }
+  "dependencies": [
+    { "name": "claudness", "marketplace": "falconiere" }
   ]
 }
