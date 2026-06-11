@@ -8,8 +8,8 @@
 # at a synthetic plugin dir and CLAUDE_PLUGINS_REGISTRY at a synthetic manifest.
 
 setup() {
-  REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
-  ENTRY="$REPO_ROOT/claudness/hooks/session-start.sh"
+  PLUGINS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
+  ENTRY="$PLUGINS_DIR/claudness/hooks/session-start.sh"
   TMP=$(mktemp -d)
   PLUGROOT="$TMP/plug"; mkdir -p "$PLUGROOT/.claude-plugin"
   REG="$TMP/installed_plugins.json"
@@ -70,7 +70,7 @@ JSON
 }
 
 @test "dep-warning: real claudness manifest yields code-simplifier + caveman specs" {
-  cp "$REPO_ROOT/claudness/.claude-plugin/plugin.json" "$PLUGROOT/.claude-plugin/plugin.json"
+  cp "$PLUGINS_DIR/claudness/.claude-plugin/plugin.json" "$PLUGROOT/.claude-plugin/plugin.json"
   printf '%s' '{"plugins":{}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
@@ -87,4 +87,14 @@ JSON
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "/plugin install caveman@caveman"
   ! echo "$output" | grep -q "null@"
+}
+
+@test "dep-warning: a malformed scalar entry does not suppress warnings for valid deps" {
+  _manifest <<'JSON'
+{"name":"claudness","dependencies":[42,{"name":"caveman","marketplace":"caveman"}]}
+JSON
+  printf '%s' '{"plugins":{}}' > "$REG"
+  run _run_entry
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "/plugin install caveman@caveman"
 }

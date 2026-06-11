@@ -186,9 +186,9 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
   done < <(jq -r '
     (.dependencies // [])[]
     | if type == "string" then .
-      elif (.name | type) != "string" then empty
-      elif .marketplace then "\(.name)@\(.marketplace)"
-      else .name end
+      elif (type == "object" and (.name | type) == "string")
+        then (if .marketplace then "\(.name)@\(.marketplace)" else .name end)
+      else empty end
   ' "$plugin_manifest" 2>/dev/null)
   if [ "$indeterminate" -eq 0 ] && [ "${#missing_plugins[@]}" -gt 0 ]; then
     pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
