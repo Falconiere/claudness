@@ -8,10 +8,13 @@ detect_project_root() {
 }
 
 # Print the project name (basename of the git toplevel) or "" if not in a git repo.
+# Returns 0 even outside a git repo: a bare `[ -n "$root" ] && basename` would
+# exit 1 when root is empty, which under `set -e` aborts callers before their
+# own "unknown"-style fallback can run.
 detect_project_name() {
   local root
-  root=$(detect_project_root) || return 0
-  [ -n "$root" ] && basename "$root"
+  root=$(detect_project_root)
+  if [ -n "$root" ]; then basename "$root"; fi
 }
 
 # Print the package manager: bun | pnpm | npm | yarn | "" (none detected).
