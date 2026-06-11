@@ -32,14 +32,37 @@
 #     stdout is DISCARDED, and dispatch continues with the next module.
 
 claudness_dispatch_modules() {
-  local modules_dir="$1" event="$2"
-  local script result rc err_file decision ctx msg c
+  local modules_dir="$1" event="$2"; shift 2
+  local registry_dirs=("$@")
+  local script result rc err_file decision ctx msg c base plugin
   local contexts=() messages=()
 
   err_file=$(mktemp "${TMPDIR:-/tmp}/claudness-dispatch.XXXXXX") || return 0
 
+  # Ordered module list: built-in dir first, then each registry dir.
+  local scripts=()
   for script in "$modules_dir"/*.sh; do
+    [[ -f "$script" ]] && scripts+=("$script")
+  done
+  local rdir
+  for rdir in "${registry_dirs[@]}"; do
+    [[ -d "$rdir" ]] || continue
+    for script in "$rdir"/*.sh; do
+      [[ -f "$script" ]] && scripts+=("$script")
+    done
+  done
+
+  for script in "${scripts[@]}"; do
     [[ ! -f "$script" ]] && continue
+
+    # Registry modules are namespaced "<plugin-spec>.<name>.sh"; gate on install.
+    base=$(basename "$script")
+    if [[ "$script" != "$modules_dir/"* && "$base" == *.*.sh ]]; then
+      plugin="${base%%.*}"
+      if declare -F claudness_plugin_active >/dev/null 2>&1; then
+        claudness_plugin_active "$plugin" || continue
+      fi
+    fi
 
     rc=0
     # Modules are always executed with `bash` regardless of their shebang. This
