@@ -4,17 +4,16 @@ Reusable Claude Code settings fragments plus data files consumed by hooks.
 
 ## Fragments
 
-- `hooks.fragment.json` — `PreToolUse` / `PostToolUse` / `SessionStart` / `Stop` / `UserPromptSubmit` / `PreCompact` wiring.
 - `permissions.fragment.json` — sanitized union of permission allowlists/denylists from the source repos.
+
+Hook wiring ships in the plugin manifest (`plugins/claudness/hooks/hooks.json`);
+installing the plugin registers all hooks — no manual settings merge needed.
 
 ### Merge into your settings
 
-Run from the repo root:
+For the permissions fragment, run from the repo root:
 
 ```bash
-jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/claudness/settings/hooks.fragment.json \
-  > ~/.claude/settings.json.new && mv ~/.claude/settings.json.new ~/.claude/settings.json
-
 jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/claudness/settings/permissions.fragment.json \
   > ~/.claude/settings.json.new && mv ~/.claude/settings.json.new ~/.claude/settings.json
 ```

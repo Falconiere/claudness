@@ -64,9 +64,8 @@ Unknown names are silently ignored (forward compatible).
     (`see plugins/claudness/settings/mcp-blocklist.txt` for file entries, or
     `disabled via claudness config (mcp.<name>=false …)` for config
     entries) so users know where to undo it.
-  - Matcher wiring lives in `plugins/claudness/settings/hooks.fragment.json`
-    and `plugins/claudness/hooks/hooks.json`; both route the `mcp__` prefix
-    through `plugins/claudness/hooks/pre-tools/modules/mcp-blocker.sh`.
+  - Matcher wiring lives in `plugins/claudness/hooks/hooks.json`, which routes
+    the `mcp__` prefix through `plugins/claudness/hooks/pre-tools/modules/mcp-blocker.sh`.
 
 Agents and commands are loaded by Claude Code from the plugin manifest at
 session start, so they cannot be toggled at runtime. A future `claudness
