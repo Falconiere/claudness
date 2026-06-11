@@ -2,6 +2,11 @@
 
 SCRIPT="${BATS_TEST_DIRNAME}/../search-nudge.sh"
 
+teardown() {
+  # Cleans the env-sourcing test's tempdir even when an assertion fails.
+  if [ -n "${tmp:-}" ] && [ -d "$tmp" ]; then rm -rf "$tmp"; fi
+}
+
 run_with() {
   local tool="$1" input="$2"
   tool_name="$tool" input="$input" bash "$SCRIPT"
@@ -52,5 +57,4 @@ run_with() {
     bash "$tmp/search-nudge.sh"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("ast-grep")' >/dev/null
-  rm -rf "$tmp"
 }
