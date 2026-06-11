@@ -6,16 +6,19 @@
 # already reads them from the environment).
 set -euo pipefail
 
-# Self-contained project detection — inlined verbatim from the claudness
-# core's hooks/lib/detect.sh so this plugin has no cross-plugin source path
-# (it may be installed without a claudness checkout next to it).
+# Self-contained project detection — inlined from the claudness core's
+# hooks/lib/detect.sh so this plugin has no cross-plugin source path (it may
+# be installed without a claudness checkout next to it). One deliberate
+# difference: detect_project_name returns 0 even outside a git repo — the
+# core version ends in a bare `[ -n ] && basename` whose non-zero exit kills
+# this script under `set -e` before the PROJECT="unknown" fallback can run.
 detect_project_root() {
   git rev-parse --show-toplevel 2>/dev/null || true
 }
 detect_project_name() {
   local root
-  root=$(detect_project_root) || return 0
-  [ -n "$root" ] && basename "$root"
+  root=$(detect_project_root)
+  if [ -n "$root" ]; then basename "$root"; fi
 }
 
 # No engram CLI? Graceful no-op so dependent skills don't break.
