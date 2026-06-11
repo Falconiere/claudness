@@ -148,8 +148,10 @@ if [ "${#missing_tools[@]}" -gt 0 ]; then
   parts+=("$warn")
 fi
 
-# Verify required plugin dependencies declared in plugin.json `requires`.
-# Claude Code has no auto-install hook for plugin deps; we surface the exact
+# Verify required plugin dependencies declared in plugin.json `dependencies`
+# (Claude Code's official schema: array of "name" strings or
+# {name, marketplace?, version?} objects). Auto-install only fires when the
+# dep's marketplace is already configured; we surface the exact
 # `/plugin install …` command so the user can fix in one paste.
 #
 # Scope: the check only fires when we can locate the claudness plugin manifest
@@ -167,7 +169,7 @@ fi
 if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/null 2>&1; then
   missing_plugins=()
   indeterminate=0
-  while IFS=$'\t' read -r req_spec req_repo; do
+  while IFS= read -r req_spec; do
     [ -z "$req_spec" ] && continue
     installed=$(detect_plugin_installed "$req_spec")
     rc=$?
@@ -179,13 +181,14 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
       break
     fi
     if [ -z "$installed" ]; then
-      if [ -n "$req_repo" ] && [ "$req_repo" != "null" ]; then
-        missing_plugins+=("/plugin install ${req_spec}   # github:${req_repo}")
-      else
-        missing_plugins+=("/plugin install ${req_spec}")
-      fi
+      missing_plugins+=("/plugin install ${req_spec}")
     fi
-  done < <(jq -r '(.requires // [])[] | [.plugin, (.source.repo // "")] | @tsv' "$plugin_manifest" 2>/dev/null)
+  done < <(jq -r '
+    (.dependencies // [])[]
+    | if type == "string" then .
+      elif .marketplace then "\(.name)@\(.marketplace)"
+      else .name end
+  ' "$plugin_manifest" 2>/dev/null)
   if [ "$indeterminate" -eq 0 ] && [ "${#missing_plugins[@]}" -gt 0 ]; then
     pwarn="WARN: required plugins missing — review/simplify pipelines will fail. Install:"
     for cmd in "${missing_plugins[@]}"; do
