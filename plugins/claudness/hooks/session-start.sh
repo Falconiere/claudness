@@ -186,6 +186,7 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
   done < <(jq -r '
     (.dependencies // [])[]
     | if type == "string" then .
+      elif (.name | type) != "string" then empty
       elif .marketplace then "\(.name)@\(.marketplace)"
       else .name end
   ' "$plugin_manifest" 2>/dev/null)
