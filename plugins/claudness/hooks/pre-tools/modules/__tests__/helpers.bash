@@ -7,6 +7,8 @@
 # dispatcher env vars (`tool_name`, `input`) exported, and JSON payload on
 # stdin.
 
+# Four levels up from modules/__tests__/ is the dir that CONTAINS hooks/ —
+# now plugins/claudness (was the repo root before the Plan 2 reorg).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 HOOK_SCRIPT="$REPO_ROOT/hooks/pre-tools/modules/push-review.sh"
 

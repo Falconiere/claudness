@@ -181,6 +181,8 @@ _decision() {
 
 @test "engram-scope: dispatcher picks up the module by glob" {
   shopt -s nullglob
+  # Four levels up = the dir containing hooks/ — plugins/claudness since the
+  # Plan 2 reorg (was the repo root).
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
   modules=("$REPO_ROOT"/hooks/pre-tools/modules/*.sh)
   found=0

@@ -79,6 +79,8 @@ teardown() {
 JSON
 
   payload=$(jq -n '{tool_name:"mcp__someserver__do",tool_input:{}}')
+  # Four levels up = the dir containing hooks/ — plugins/claudness since the
+  # Plan 2 reorg (was the repo root).
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../.." && pwd)"
   tool_name=mcp__someserver__do input="$payload" HOME="$TMPHOME" \
     run bash "$REPO_ROOT/hooks/pre-tools/modules/mcp-blocker.sh" <<<"$payload"
