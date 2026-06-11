@@ -16,18 +16,8 @@
     "hooks",
     "caveman"
   ],
-  "requires": [
-    {
-      "plugin": "code-simplifier@claude-plugins-official",
-      "marketplace": "claude-plugins-official",
-      "source": { "source": "github", "repo": "anthropics/claude-plugins-official" },
-      "reason": "review-and-commit / push-review / address-pr-comments delegate simplification to the code-simplifier subagent"
-    },
-    {
-      "plugin": "caveman@caveman",
-      "marketplace": "caveman",
-      "source": { "source": "github", "repo": "JuliusBrussee/caveman" },
-      "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer"
-    }
+  "dependencies": [
+    { "name": "code-simplifier", "marketplace": "claude-plugins-official" },
+    { "name": "caveman", "marketplace": "caveman" }
   ]
 }
