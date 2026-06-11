@@ -30,6 +30,15 @@ source_lib() {
   [ "$output" = "$(basename "$(pwd -P)")" ]
 }
 
+@test "detect_project_name returns 0 outside a git repo under set -e (fallback survives)" {
+  # A bare `[ -n "$root" ] && basename` exits 1 here; under set -e that aborts
+  # a caller before its own fallback runs. The helper must exit 0 and print "".
+  run bash -c 'set -euo pipefail; . "'"${BATS_TEST_DIRNAME}"'/detect.sh"; cd /tmp
+    P="${X:-$(detect_project_name)}"; [ -z "$P" ] && P="unknown"; echo "name=[$P]"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "name=[unknown]" ]
+}
+
 @test "detect_node_pm returns bun when bun.lock present" {
   touch bun.lock
   source_lib
