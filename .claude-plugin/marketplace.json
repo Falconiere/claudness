@@ -31,6 +31,18 @@
           "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer"
         }
       ]
+    },
+    {
+      "name": "statusline",
+      "source": { "source": "github", "repo": "Falconiere/statusline" },
+      "description": "Self-contained Claude Code statusline: model, org, effort, context, folder, git branch, caveman mode.",
+      "author": {
+        "name": "Falconiere Barbosa",
+        "email": "hello@falconiere.io"
+      },
+      "category": "productivity",
+      "keywords": ["statusline", "claude-code", "status-line"],
+      "license": "MIT"
     }
   ]
 }
