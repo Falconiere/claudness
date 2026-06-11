@@ -17,7 +17,7 @@
 # plugins/claudness/hooks/pre-tools/mod.sh before registry dispatch). Outside
 # that pipeline there is no relative path to it — fail SOFT: this module is
 # an advisory extra and must never break tool calls by erroring.
-[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
+[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] && [ -f "$CLAUDNESS_LIB_DIR/config.sh" ] || exit 0
 # shellcheck source=../../../claudness/hooks/lib/detect.sh
 . "$CLAUDNESS_LIB_DIR/detect.sh"
 # shellcheck source=../../../claudness/hooks/lib/config.sh
