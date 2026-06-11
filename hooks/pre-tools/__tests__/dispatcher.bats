@@ -27,6 +27,8 @@ setup() {
 
 teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
+  # Always clean the real-modules probe, even if an assertion failed mid-test.
+  [ -n "${REPO_ROOT:-}" ] && rm -f "$REPO_ROOT/hooks/pre-tools/modules/zzz-libdir-probe.sh"
 }
 
 write_module() {
@@ -120,4 +122,29 @@ write_module() {
   run claudness_dispatch_modules "$MODULES_DIR" "PreToolUse"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "pre-tools entrypoint exports CLAUDNESS_LIB_DIR to modules" {
+  # Drop a probe module into the REAL modules dir with a last-running name so
+  # it is dispatched by the actual mod.sh entrypoint. It echoes back whatever
+  # CLAUDNESS_LIB_DIR it inherited from the entrypoint's exported environment.
+  local probe="$REPO_ROOT/hooks/pre-tools/modules/zzz-libdir-probe.sh"
+  # Belt #1: clear any stale probe left by a prior hard-killed run before writing.
+  rm -f "$probe"
+  # Belt #2: the probe self-deletes after emitting JSON, so a single execution
+  # cleans itself even if bats is killed before teardown.
+  cat > "$probe" <<'EOF'
+#!/usr/bin/env bash
+jq -n --arg v "${CLAUDNESS_LIB_DIR:-UNSET}" \
+  '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:("LIBDIRPROBE="+$v)}}'
+rm -f "${BASH_SOURCE[0]}"
+EOF
+  chmod +x "$probe"
+
+  # Run the REAL entrypoint with the env var UNSET: only mod.sh's own export
+  # can make the probe see a value.
+  run env -u CLAUDNESS_LIB_DIR bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
+
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("LIBDIRPROBE=/") and (contains("LIBDIRPROBE=UNSET")|not)' >/dev/null
 }
