@@ -4,7 +4,7 @@ Reusable Claude Code settings fragments plus data files consumed by hooks.
 
 ## Fragments
 
-- `permissions.fragment.json` — sanitized union of permission allowlists/denylists from the source repos. The `code-intel` wrapper allow-rule uses a leading-wildcard path tail (`Bash(*/skills/code-intel/scripts/mod.sh:*)`) so it matches both the repo-checkout path and the installed-plugin path under `~/.claude/plugins/`.
+- `permissions.fragment.json` — sanitized union of permission allowlists/denylists from the source repos. This is a **dev-mode merge for the repo checkout**; the `code-intel` wrapper allow-rules pin the full `plugins/code-intel/` path (repo-root and `.claude/worktrees/*` variants) so an untrusted temp/checkout directory with a same-named tail cannot satisfy the allowlist. Installed plugins are governed by Claude Code's own plugin permissions, not this fragment.
 
 Hook wiring ships in the plugin manifest (`plugins/claudness/hooks/hooks.json`);
 installing the plugin registers all hooks — no manual settings merge needed.

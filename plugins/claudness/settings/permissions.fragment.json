@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*/skills/code-intel/scripts/mod.sh:*)",
+      "Bash(plugins/code-intel/skills/code-intel/scripts/mod.sh:*)",
+      "Bash(.claude/worktrees/*/plugins/code-intel/skills/code-intel/scripts/mod.sh:*)",
       "Bash(ast-grep:*)",
       "Bash(bun install:*)",
       "Bash(bun run:*)",
