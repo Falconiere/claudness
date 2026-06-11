@@ -5,7 +5,7 @@ description: "Look up library documentation and code examples using Context7. Tr
 # Context7 — Library Documentation Lookup
 Use this skill to find up-to-date documentation and code examples for any programming library or framework.
 ## CLI Tool
-`${CLAUDE_PLUGIN_ROOT}/tooling/context7/search.sh` (repo checkout: `tooling/context7/search.sh`) — bash script wrapping the Context7 REST API.
+`${CLAUDE_PLUGIN_ROOT}/tooling/context7/search.sh` (repo checkout: `plugins/claudness/tooling/context7/search.sh`) — bash script wrapping the Context7 REST API.
 ```
 search.sh <command> [options]
 Commands:
