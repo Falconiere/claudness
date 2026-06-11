@@ -22,6 +22,11 @@ cat > /dev/null 2>&1 || true
 [ -d "$SRC_DIR" ] || exit 0
 mkdir -p "$REG_DIR" 2>/dev/null || exit 0
 
+# Clear OUR orphaned atomic-write residue from prior crashed runs (a death
+# between cp and mv leaves <spec>__<name>.sh.tmp.<pid>; nothing executes
+# them, but nothing else cleans them either).
+rm -f "$REG_DIR/${SPEC}__"*.sh.tmp.* 2>/dev/null
+
 # Sync: copy each source module if missing or changed (atomic tmp+mv).
 for src in "$SRC_DIR"/*.sh; do
   [ -f "$src" ] || continue

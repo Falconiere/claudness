@@ -86,3 +86,14 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "register: clears its own orphaned tmp residue from crashed runs" {
+  regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
+  mkdir -p "$regdir"
+  echo 'partial' > "$regdir/code-intel@falconiere__search-nudge.sh.tmp.12345"
+  echo 'partial' > "$regdir/other@market__keep.sh.tmp.99"
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  [ ! -f "$regdir/code-intel@falconiere__search-nudge.sh.tmp.12345" ]
+  [ -f "$regdir/other@market__keep.sh.tmp.99" ]
+}
