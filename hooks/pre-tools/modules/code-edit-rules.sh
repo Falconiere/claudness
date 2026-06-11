@@ -9,8 +9,9 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 
 # MultiEdit is in the PreToolUse matcher and carries .tool_input.file_path just
 # like Edit/Write — include it so rule reminders are not dropped for MultiEdit.

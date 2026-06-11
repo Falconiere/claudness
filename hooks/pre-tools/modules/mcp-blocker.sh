@@ -7,10 +7,11 @@
 
 : "${tool_name:=}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 # shellcheck source=../../lib/config.sh
-. "${BASH_SOURCE%/*}/../../lib/config.sh"
+. "$_claudness_lib/config.sh"
 
 command -v jq >/dev/null 2>&1 || exit 0
 

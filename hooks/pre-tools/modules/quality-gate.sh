@@ -11,8 +11,9 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 
 # Owner kill-switch.
 [ "${MY_CLAUDE_QUALITY:-}" = "off" ] && exit 0

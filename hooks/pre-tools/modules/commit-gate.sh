@@ -7,8 +7,9 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0

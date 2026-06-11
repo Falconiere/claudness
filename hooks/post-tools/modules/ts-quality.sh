@@ -12,8 +12,9 @@
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 
 # Exit early if this isn't a TypeScript project.
 [ "$(detect_ts)" = "ts" ] || exit 0
