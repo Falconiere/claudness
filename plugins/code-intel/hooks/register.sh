@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# SessionStart registry sync for the code-intel plugin.
+#
+# Mirrors hooks/pre-tools.d/*.sh into the claudness runtime registry
+# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d/) under the
+# namespaced filename code-intel@falconiere__<name>.sh, and prunes entries
+# bearing OUR prefix whose source module no longer exists. Other plugins'
+# entries are never touched. The core claudness dispatcher executes the
+# synced copies, gated on this plugin being installed.
+#
+# Silent on success (SessionStart stdout becomes context); errors are
+# non-fatal — a failed sync means the registry copy is stale, not broken.
+
+SPEC="code-intel@falconiere"
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+SRC_DIR="$SELF_DIR/pre-tools.d"
+REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d"
+
+# Consume stdin so Claude Code's hook IPC never stalls.
+cat > /dev/null 2>&1 || true
+
+[ -d "$SRC_DIR" ] || exit 0
+mkdir -p "$REG_DIR" 2>/dev/null || exit 0
+
+# Sync: copy each source module if missing or changed (atomic tmp+mv).
+for src in "$SRC_DIR"/*.sh; do
+  [ -f "$src" ] || continue
+  name=$(basename "$src")
+  dst="$REG_DIR/${SPEC}__${name}"
+  if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+    tmp="${dst}.tmp.$$"
+    if cp "$src" "$tmp" 2>/dev/null; then
+      mv "$tmp" "$dst" 2>/dev/null || rm -f "$tmp"
+    else
+      rm -f "$tmp" 2>/dev/null
+    fi
+  fi
+done
+
+# Prune: remove OUR entries whose source module is gone. Never glob outside
+# our own spec prefix.
+for dst in "$REG_DIR/${SPEC}__"*.sh; do
+  [ -f "$dst" ] || continue
+  name=$(basename "$dst")
+  src="$SRC_DIR/${name#"${SPEC}"__}"
+  [ -f "$src" ] || rm -f "$dst"
+done
+
+exit 0
