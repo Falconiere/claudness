@@ -9,8 +9,8 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
 3. Hook reads `.claude/tmp/push-review/<branch-slug>.json`.
 4. If the state file is missing, has a stale `diff_sha`, or has `findings_count > 0` → DENY with instructions.
 5. Agent runs two reviewers against the diff **sequentially** (code-simplifier first):
-   1. `code-simplifier` (subagent from the `code-simplifier@claude-plugins-official` plugin — declared in `plugin.json` `requires`). Spawn via the Agent tool, apply its rewrites to the working tree, and commit.
-   2. `caveman:cavecrew-reviewer` (subagent from the `caveman@caveman` plugin — declared in `plugin.json` `requires`). Review the post-simplification diff and apply findings.
+   1. `code-simplifier` (subagent from the `code-simplifier@claude-plugins-official` plugin — declared in `plugin.json` `dependencies`). Spawn via the Agent tool, apply its rewrites to the working tree, and commit.
+   2. `caveman:cavecrew-reviewer` (subagent from the `caveman@caveman` plugin — declared in `plugin.json` `dependencies`). Review the post-simplification diff and apply findings.
 6. Re-run both reviewers on the new diff and loop until both return zero findings.
 7. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
 8. Agent retries `git push` → hook allows.

@@ -218,8 +218,8 @@ No performative agreement. No "Great point!". No "Thanks for catching that!". St
 
 Before push, run the two reviewers required by the `push-review` PreToolUse hook (writes `.claude/tmp/push-review/<branch>.json`; the push is denied otherwise). Run **sequentially — code-simplifier first**:
 
-1. `code-simplifier` subagent — from the `code-simplifier@claude-plugins-official` plugin (declared in `plugin.json` `requires`). Apply its rewrites directly to the worktree and commit.
-2. `caveman:cavecrew-reviewer` subagent — from the `caveman@caveman` plugin (declared in `plugin.json` `requires`). Review the post-simplification diff and apply findings.
+1. `code-simplifier` subagent — from the `code-simplifier@claude-plugins-official` plugin (declared in `plugin.json` `dependencies`). Apply its rewrites directly to the worktree and commit.
+2. `caveman:cavecrew-reviewer` subagent — from the `caveman@caveman` plugin (declared in `plugin.json` `dependencies`). Review the post-simplification diff and apply findings.
 
 Loop until both reviewers are clean, then commit:
 
