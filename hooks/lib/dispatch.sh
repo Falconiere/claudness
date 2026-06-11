@@ -3,10 +3,14 @@
 # Source via:   . "${BASH_SOURCE%/*}/../lib/dispatch.sh"
 #
 # Public API:
-#   claudness_dispatch_modules MODULES_DIR EVENT_NAME
-#     Runs every MODULES_DIR/*.sh in lexical order, feeding each the exported
-#     `input` variable (raw hook JSON) on stdin. EVENT_NAME is "PreToolUse"
-#     or "PostToolUse" and selects the decision semantics.
+#   claudness_dispatch_modules MODULES_DIR EVENT_NAME [REGISTRY_DIR...]
+#     Runs every MODULES_DIR/*.sh in lexical order, then every *.sh in each
+#     REGISTRY_DIR (built-in modules first), feeding each the exported `input`
+#     variable (raw hook JSON) on stdin. EVENT_NAME is "PreToolUse" or
+#     "PostToolUse" and selects the decision semantics.
+#     Registry modules are namespaced "<plugin-spec>.<name>.sh" and run only
+#     when `claudness_plugin_active <plugin-spec>` succeeds (fail-open if that
+#     helper is not sourced). Built-in MODULES_DIR scripts are never gated.
 #
 # Output discipline:
 #   - PreToolUse: a module emitting `hookSpecificOutput.permissionDecision ==
