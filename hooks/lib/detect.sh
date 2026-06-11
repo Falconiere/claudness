@@ -64,7 +64,9 @@ detect_engram() {
 detect_plugin_installed() {
   local spec="$1"
   [ -z "$spec" ] && return 0
-  local registry="${CLAUDE_PLUGINS_REGISTRY:-${HOME}/.claude/plugins/installed_plugins.json}"
+  # Same config-root resolution as registry.sh, so the install gate and the
+  # registry modules it gates follow CLAUDE_CONFIG_DIR together.
+  local registry="${CLAUDE_PLUGINS_REGISTRY:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json}"
   [ -f "$registry" ] || return 2
   command -v jq >/dev/null 2>&1 || return 2
   # Guard against malformed registry (top-level `plugins` missing or wrong

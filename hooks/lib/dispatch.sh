@@ -42,6 +42,9 @@
 #     stdout is DISCARDED, and dispatch continues with the next module.
 
 claudness_dispatch_modules() {
+  # With <2 args `shift 2` would not shift at all, leaving $1 to be re-globbed
+  # as a registry dir and every built-in module run twice.
+  [[ $# -lt 2 ]] && return 0
   local modules_dir="$1" event="$2"; shift 2
   local registry_dirs=("$@")
   local script result rc err_file decision ctx msg c base plugin
@@ -73,15 +76,18 @@ claudness_dispatch_modules() {
     [[ ! -f "$script" ]] && continue
 
     # Anything outside MODULES_DIR is a registry module and MUST satisfy the
-    # gating contract; violations are skipped, never run. The -z guard keeps
-    # an empty modules_dir (wrong entrypoint arg count) from making the
-    # "$modules_dir/"* pattern match every absolute path and bypass gating.
+    # gating contract; violations are skipped, never run. Built-ins are
+    # globbed directly from $modules_dir, so "registry" means the script's
+    # dirname is not EXACTLY $modules_dir — a prefix match would let a
+    # registry dir nested under the modules tree masquerade as built-in (and
+    # an empty modules_dir prefix would match every absolute path).
     base=$(basename "$script")
-    if [[ -z "$modules_dir" || "$script" != "$modules_dir/"* ]]; then
-      # The spec must be non-empty: "__foo.sh" would otherwise yield an empty
-      # spec, and an empty lookup can read as indeterminate -> fail open.
+    if [[ -z "$modules_dir" || "${script%/*}" != "$modules_dir" ]]; then
+      # The spec must be non-empty ("__foo.sh") and whitespace-free: the
+      # memo lists are space-delimited, so a spec containing whitespace
+      # could substring-collide with another spec's memo entry.
       plugin="${base%%__*}"
-      if [[ "$base" != *__*.sh || -z "$plugin" ]]; then
+      if [[ "$base" != *__*.sh || -z "$plugin" || "$plugin" == *[[:space:]]* ]]; then
         printf 'claudness-dispatch: registry module %s lacks <plugin-spec>__<name>.sh namespace; skipped\n' \
           "$base" >&2
         continue
