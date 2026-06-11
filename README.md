@@ -8,17 +8,21 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
 
 ```
 .
-├── plugins/        # Plugin bundles (manifest + grouped extensions)
-├── skills/         # Standalone skills (SKILL.md + supporting files)
-├── agents/         # Subagent definitions (.md with YAML frontmatter)
-├── commands/       # Slash commands (.md prompt templates)
-├── hooks/          # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.)
-├── tooling/        # Helper CLIs used by skills (context7, exa-search) + bats tests
-├── docs/           # Repo documentation (runtime config, design notes)
-└── settings/       # Reusable settings.json fragments + hook data files
+├── docs/                     # Repo documentation (runtime config, design notes, plans)
+└── plugins/
+    └── claudness/            # Self-contained plugin (installable from the marketplace)
+        ├── .claude-plugin/   # plugin.json manifest
+        ├── skills/           # Standalone skills (SKILL.md + supporting files)
+        ├── agents/           # Subagent definitions (.md with YAML frontmatter)
+        ├── commands/         # Slash commands (.md prompt templates)
+        ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
+        ├── tooling/          # Helper CLIs used by skills (context7, exa-search) + bats tests
+        └── settings/         # Reusable settings.json fragments + hook data files
 ```
 
-Add or drop directories as needed — nothing here is load-bearing on the layout.
+Everything a plugin ships lives under its own `plugins/<name>/` directory — no
+symlinks, no content outside the plugin root, so marketplace installs get the
+whole working tree.
 
 ## Conventions
 
@@ -28,12 +32,12 @@ Add or drop directories as needed — nothing here is load-bearing on the layout
 - Keep `SKILL.md` short; push detail into sibling files (`references/`, `scripts/`, `assets/`).
 
 ### Agents
-- One `.md` file per agent under `agents/`.
+- One `.md` file per agent under the plugin's `agents/`.
 - Frontmatter: `name`, `description`, `tools` (comma-separated or `*`), optional `model`.
 - Body is the system prompt.
 
 ### Commands
-- One `.md` file per command under `commands/`.
+- One `.md` file per command under the plugin's `commands/`.
 - Filename = invocation (e.g. `commands/review.md` → `/review`).
 - Frontmatter optional: `description`, `argument-hint`, `allowed-tools`.
 
@@ -64,7 +68,7 @@ From a local clone:
 /plugin install claudness@falconiere
 ```
 
-For settings fragments (permissions, denylists, etc.), see `settings/README.md`.
+For settings fragments (permissions, denylists, etc.), see `plugins/claudness/settings/README.md`.
 
 ## Runtime config
 

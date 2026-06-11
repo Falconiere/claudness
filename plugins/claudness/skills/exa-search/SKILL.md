@@ -11,7 +11,7 @@ Use this skill when you need to search the web, find code examples, crawl a URL,
 
 ## CLI Tool
 
-`${CLAUDE_PLUGIN_ROOT}/tooling/exa-search/search.sh` (repo checkout: `tooling/exa-search/search.sh`) — bash script wrapping the Exa REST API.
+`${CLAUDE_PLUGIN_ROOT}/tooling/exa-search/search.sh` (repo checkout: `plugins/claudness/tooling/exa-search/search.sh`) — bash script wrapping the Exa REST API.
 
 ```
 search.sh <command> [options]

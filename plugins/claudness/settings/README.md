@@ -9,11 +9,13 @@ Reusable Claude Code settings fragments plus data files consumed by hooks.
 
 ### Merge into your settings
 
+Run from the repo root:
+
 ```bash
-jq -s '.[0] * .[1]' ~/.claude/settings.json settings/hooks.fragment.json \
+jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/claudness/settings/hooks.fragment.json \
   > ~/.claude/settings.json.new && mv ~/.claude/settings.json.new ~/.claude/settings.json
 
-jq -s '.[0] * .[1]' ~/.claude/settings.json settings/permissions.fragment.json \
+jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/claudness/settings/permissions.fragment.json \
   > ~/.claude/settings.json.new && mv ~/.claude/settings.json.new ~/.claude/settings.json
 ```
 
@@ -59,9 +61,10 @@ Commands that match no deny rule are allowed by default.
 > (e.g. it would exempt `node -e '…'`). Prefer specific multi-token entries for
 > exemptions so the override stays argv-scoped to exactly the command you mean.
 
-Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`):
+Lookup order (see `detect_settings_dir` in `hooks/lib/detect.sh`, sibling of
+this directory inside the plugin):
 `$MY_CLAUDE_SETTINGS_DIR` (if set) → `~/.claude/settings` (if it exists) →
-this repo's `settings/` directory, resolved relative to the hooks. There is
+the plugin's own `settings/` directory, resolved relative to the hooks. There is
 no per-project `.claude/settings/` lookup — to override per project, point
 `MY_CLAUDE_SETTINGS_DIR` at a project-local directory.
 
@@ -71,7 +74,7 @@ no per-project `.claude/settings/` lookup — to override per project, point
 |---------------------------|-----------------------------------------|
 | `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
-| `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (`skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
+| `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (the plugin's `skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
 
 ## Runtime config
 
