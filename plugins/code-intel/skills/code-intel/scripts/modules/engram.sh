@@ -6,8 +6,17 @@
 # already reads them from the environment).
 set -euo pipefail
 
-# shellcheck source=../../../../hooks/lib/detect.sh
-. "${BASH_SOURCE%/*}/../../../../hooks/lib/detect.sh"
+# Self-contained project detection — inlined verbatim from the claudness
+# core's hooks/lib/detect.sh so this plugin has no cross-plugin source path
+# (it may be installed without a claudness checkout next to it).
+detect_project_root() {
+  git rev-parse --show-toplevel 2>/dev/null || true
+}
+detect_project_name() {
+  local root
+  root=$(detect_project_root) || return 0
+  [ -n "$root" ] && basename "$root"
+}
 
 # No engram CLI? Graceful no-op so dependent skills don't break.
 command -v engram >/dev/null 2>&1 || exit 0
