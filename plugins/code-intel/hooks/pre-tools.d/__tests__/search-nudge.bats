@@ -2,6 +2,11 @@
 
 SCRIPT="${BATS_TEST_DIRNAME}/../search-nudge.sh"
 
+# Core lib lives in the sibling claudness plugin; the dispatcher provides
+# this env var in production, the tests provide it here.
+CLAUDNESS_LIB_DIR="$(cd "${BATS_TEST_DIRNAME}/../../../../claudness/hooks/lib" && pwd)"
+export CLAUDNESS_LIB_DIR
+
 teardown() {
   # Cleans the env-sourcing test's tempdir even when an assertion fails.
   if [ -n "${tmp:-}" ] && [ -d "$tmp" ]; then rm -rf "$tmp"; fi
@@ -52,9 +57,17 @@ run_with() {
   # env var points at the real lib. Proves env-based sourcing works.
   tmp=$(mktemp -d)
   cp "${BATS_TEST_DIRNAME}/../search-nudge.sh" "$tmp/search-nudge.sh"
-  run env CLAUDNESS_LIB_DIR="${BATS_TEST_DIRNAME}/../../../lib" \
+  run env CLAUDNESS_LIB_DIR="${BATS_TEST_DIRNAME}/../../../../claudness/hooks/lib" \
     tool_name="Grep" input='{"tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}' \
     bash "$tmp/search-nudge.sh"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("ast-grep")' >/dev/null
+}
+
+@test "search-nudge: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+  run env -u CLAUDNESS_LIB_DIR \
+    tool_name="Grep" input='{"tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}' \
+    bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

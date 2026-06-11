@@ -22,9 +22,13 @@
 : "${tool_name:=}"
 : "${input:=}"
 
-_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
-# shellcheck source=../../lib/detect.sh
-. "$_claudness_lib/detect.sh"
+# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
+# plugins/claudness/hooks/pre-tools/mod.sh before registry dispatch). Outside
+# that pipeline there is no relative path to it — fail SOFT: this module is
+# an enforcement extra and must never break tool calls by erroring.
+[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../claudness/hooks/lib/detect.sh
+. "$CLAUDNESS_LIB_DIR/detect.sh"
 
 [[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
@@ -146,12 +150,14 @@ while IFS= read -r segment; do
 done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
-  # Resolve the auto-scoping wrapper relative to this module's location —
-  # three levels up is the plugin root, which contains skills/ both in the
-  # repo checkout and installed. Fall back to the repo path if that fails.
-  wrapper_root=$(cd "${BASH_SOURCE%/*}/../../.." 2>/dev/null && pwd)
+  # Resolve the auto-scoping wrapper. Two levels up from this module is the
+  # code-intel plugin root — valid in the repo checkout and installed plugin.
+  # When run from the runtime-registry COPY (~/.claude/claudness/pre-tools.d/)
+  # that path does not exist, so fall back to generic wording: the deny text
+  # only needs to point the agent at the wrapper, not at an exact path.
+  wrapper_root=$(cd "${BASH_SOURCE%/*}/../.." 2>/dev/null && pwd)
   wrapper="${wrapper_root:+$wrapper_root/}skills/code-intel/scripts/mod.sh"
-  [[ -x "$wrapper" ]] || wrapper="plugins/claudness/skills/code-intel/scripts/mod.sh"
+  [[ -x "$wrapper" ]] || wrapper="the code-intel plugin's skills/code-intel/scripts/mod.sh"
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
