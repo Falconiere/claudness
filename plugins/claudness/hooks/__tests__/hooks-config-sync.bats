@@ -1,16 +1,17 @@
 #!/usr/bin/env bats
-# Drift guard: settings/hooks.fragment.json and plugins/claudness/hooks/hooks.json
-# must define the exact same hooks, differing only in the command path prefix
-# (`${CLAUDE_PROJECT_DIR:-$HOME}/.claude/hooks/` vs `${CLAUDE_PLUGIN_ROOT}/scripts/`).
+# Drift guard: settings/hooks.fragment.json and hooks/hooks.json (both inside
+# plugins/claudness/) must define the exact same hooks, differing only in the
+# command path prefix (`${CLAUDE_PROJECT_DIR:-$HOME}/.claude/hooks/` vs
+# `${CLAUDE_PLUGIN_ROOT}/hooks/`).
 # If a hook is added/edited in one file but not the other, these tests fail.
 
 FRAGMENT_PREFIX='${CLAUDE_PROJECT_DIR:-$HOME}/.claude/hooks/'
-PLUGIN_PREFIX='${CLAUDE_PLUGIN_ROOT}/scripts/'
+PLUGIN_PREFIX='${CLAUDE_PLUGIN_ROOT}/hooks/'
 
 setup() {
-  REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"
-  FRAGMENT="$REPO_ROOT/settings/hooks.fragment.json"
-  PLUGIN="$REPO_ROOT/plugins/claudness/hooks/hooks.json"
+  PLUGIN_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)"   # plugins/claudness
+  FRAGMENT="$PLUGIN_DIR/settings/hooks.fragment.json"
+  PLUGIN="$PLUGIN_DIR/hooks/hooks.json"
 }
 
 # Strip the per-file command prefix, leaving the relative script path.
@@ -40,7 +41,7 @@ normalize() {
   [ "$output" = "0" ]
 }
 
-@test "hooks-config-sync: every plugin command uses the CLAUDE_PLUGIN_ROOT/scripts/ prefix" {
+@test "hooks-config-sync: every plugin command uses the CLAUDE_PLUGIN_ROOT/hooks/ prefix" {
   run jq -r --arg p "$PLUGIN_PREFIX" \
     '[.. | objects | select(has("command")) | .command | select(startswith($p) | not)] | length' \
     "$PLUGIN"
@@ -51,7 +52,7 @@ normalize() {
 @test "hooks-config-sync: fragment and plugin hooks are identical after prefix normalization" {
   run diff <(normalize "$FRAGMENT") <(normalize "$PLUGIN")
   if [ "$status" -ne 0 ]; then
-    echo "settings/hooks.fragment.json and plugins/claudness/hooks/hooks.json have drifted:"
+    echo "plugins/claudness/settings/hooks.fragment.json and plugins/claudness/hooks/hooks.json have drifted:"
     echo "$output"
   fi
   [ "$status" -eq 0 ]

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-end.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-end.sh"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-compact.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.sh"
           }
         ]
       }
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/user-prompt-submit.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.sh"
           }
         ]
       }
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tools/mod.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/mod.sh"
           }
         ]
       },
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tools/modules/mcp-blocker.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-tools/modules/mcp-blocker.sh"
           }
         ]
       }
@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/post-tools/mod.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tools/mod.sh"
           }
         ]
       }

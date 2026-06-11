@@ -147,11 +147,11 @@ done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
   # Resolve the auto-scoping wrapper relative to this module's location —
-  # works from the repo checkout and through the plugin's scripts→hooks
-  # symlink. Fall back to the repo-relative path if resolution fails.
+  # three levels up is the plugin root, which contains skills/ both in the
+  # repo checkout and installed. Fall back to the repo path if that fails.
   wrapper_root=$(cd "${BASH_SOURCE%/*}/../../.." 2>/dev/null && pwd)
   wrapper="${wrapper_root:+$wrapper_root/}skills/code-intel/scripts/mod.sh"
-  [[ -x "$wrapper" ]] || wrapper="skills/code-intel/scripts/mod.sh"
+  [[ -x "$wrapper" ]] || wrapper="plugins/claudness/skills/code-intel/scripts/mod.sh"
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
