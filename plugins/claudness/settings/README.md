@@ -78,7 +78,7 @@ no per-project `.claude/settings/` lookup — to override per project, point
 |---------------------------|-----------------------------------------|
 | `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
-| `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (the plugin's `skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
+| `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (the code-intel plugin's `skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
 
 ## Runtime config
 

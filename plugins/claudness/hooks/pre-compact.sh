@@ -18,11 +18,9 @@ cat > /dev/null 2>&1 || true
 
 case "$(claudness_engram_state)" in
   available)
-    # Resolve the code-intel wrapper relative to this hook — works from the
-    # repo checkout and the installed plugin alike (skills/ is a sibling of
-    # hooks/ inside the plugin root).
-    mod_sh="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/skills/code-intel/scripts/mod.sh"
-    [ -x "$mod_sh" ] || mod_sh="plugins/claudness/skills/code-intel/scripts/mod.sh"
+    # The wrapper ships in the code-intel plugin (Plan 3 extraction); its
+    # install path differs per machine, so reference the skill, not a path.
+    mod_sh="the code-intel plugin's mod.sh"
     reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run $mod_sh engram summary then $mod_sh engram context.")
     ;;
   missing)
