@@ -10,7 +10,7 @@ Run AFTER all tasks are completed. Reviews changes on the current branch, fixes 
 - Group changed files by package/crate.
 
 ## 2. Launch review subagents
-Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plugin.json` `requires`; SessionStart warns when missing):
+Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plugin.json` `dependencies`; SessionStart warns when missing):
 - `code-simplifier@claude-plugins-official` → `code-simplifier`
 - `caveman@caveman` → `caveman:cavecrew-reviewer`
 

@@ -158,7 +158,7 @@ fi
 # `code-review:xhigh` were dropped: `code-simplifier` (from
 # claude-plugins-official) runs first to rewrite for clarity, then
 # `caveman:cavecrew-reviewer` (from the caveman plugin) reviews the
-# post-simplification diff. Both are declared as plugin `requires`. Order is
+# post-simplification diff. Both are declared as plugin `dependencies`. Order is
 # enforced only in the deny-message — the membership check below is set-based.
 required_reviewers='["code-simplifier","caveman:cavecrew-reviewer"]'
 if ! jq -e --argjson req "$required_reviewers" \

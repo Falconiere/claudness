@@ -78,6 +78,27 @@ From a local clone:
 
 For settings fragments (permissions, denylists, etc.), see `plugins/claudness/settings/README.md`.
 
+## Plugin dependencies
+
+Declared via the official `dependencies` field in each `plugin.json`. Their
+marketplaces must be configured before install (Claude Code auto-installs a
+declared dependency only from an already-added marketplace); the root
+`marketplace.json` allowlists the cross-marketplace sources via
+`allowCrossMarketplaceDependenciesOn`.
+
+| Plugin | Depends on | Why |
+|--------|-----------|-----|
+| `claudness` | `code-simplifier@claude-plugins-official` | review/simplify pipelines (`review-and-commit`, `push-review`, `address-pr-comments`) delegate simplification to the `code-simplifier` subagent |
+| `claudness` | `caveman@caveman` | review pipelines delegate diff review to `caveman:cavecrew-reviewer` |
+| `code-intel` | `claudness@falconiere` | its registry hook modules execute through the claudness core dispatcher and source `hooks/lib` via `CLAUDNESS_LIB_DIR` |
+
+Add the upstream marketplaces first:
+
+```
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin marketplace add JuliusBrussee/caveman
+```
+
 ## Runtime config
 
 Drop a `~/.claude/claudness.config.json` (or per-project
