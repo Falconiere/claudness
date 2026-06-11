@@ -41,3 +41,16 @@ run_with() {
   run run_with "Grep" '{"tool_input":{"pattern":"fn x"}}'
   ! echo "$output" | grep -qE 'yamless|routo|/Volumes/Projects/(routo|yamless)'
 }
+
+@test "search-nudge: sources lib from CLAUDNESS_LIB_DIR when set" {
+  # Copy the module to a temp dir with NO ../../lib alongside it; only the
+  # env var points at the real lib. Proves env-based sourcing works.
+  tmp=$(mktemp -d)
+  cp "${BATS_TEST_DIRNAME}/../search-nudge.sh" "$tmp/search-nudge.sh"
+  run env CLAUDNESS_LIB_DIR="${BATS_TEST_DIRNAME}/../../../lib" \
+    tool_name="Grep" input='{"tool_input":{"pattern":"fn handle_request","glob":"*.rs"}}' \
+    bash "$tmp/search-nudge.sh"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("ast-grep")' >/dev/null
+  rm -rf "$tmp"
+}

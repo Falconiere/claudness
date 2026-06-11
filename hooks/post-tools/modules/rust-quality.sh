@@ -13,8 +13,9 @@
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 
 [ "$(detect_rust)" = "rust" ] || exit 0
 command -v cargo >/dev/null 2>&1 || exit 0

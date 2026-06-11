@@ -13,10 +13,11 @@
 : "${tool_name:=}"
 : "${input:=}"
 
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
 # shellcheck source=../../lib/detect.sh
-. "${BASH_SOURCE%/*}/../../lib/detect.sh"
+. "$_claudness_lib/detect.sh"
 # shellcheck source=../../lib/config.sh
-. "${BASH_SOURCE%/*}/../../lib/config.sh"
+. "$_claudness_lib/config.sh"
 
 # Decide ast-grep state lazily: config + CLI detection are only consulted when
 # a structural pattern or grep/rg invocation is actually matched, so the
