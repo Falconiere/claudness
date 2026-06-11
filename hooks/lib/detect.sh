@@ -181,3 +181,26 @@ to_relative_path() {
     echo "$p"
   fi
 }
+
+# claudness_plugin_active SPEC
+# Boolean wrapper over detect_plugin_installed, used to gate "registry" hook
+# modules on whether the contributing plugin is still installed.
+#
+# SPEC is the full "name@marketplace" spec (same arg detect_plugin_installed
+# takes — it matches by exact spec via `.plugins | has($spec)`).
+#
+# Returns:
+#   0 = plugin installed, OR indeterminate (no manifest / jq missing /
+#       malformed) -> fail open, so enforcement isn't silently lost on
+#       environments without the install registry.
+#   1 = plugin definitively absent (registry parsed, spec not present).
+claudness_plugin_active() {
+  local rc out
+  out=$(detect_plugin_installed "$1")
+  rc=$?
+  # Indeterminate (exit 2): fail open.
+  [ "$rc" -eq 2 ] && return 0
+  # Installed: detect_plugin_installed echoes the spec.
+  [ -n "$out" ] && return 0
+  return 1
+}
