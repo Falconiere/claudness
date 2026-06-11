@@ -18,10 +18,13 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
     │   ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
     │   ├── tooling/          # Helper CLIs used by skills (context7, exa-search) + bats tests
     │   └── settings/         # Reusable settings.json fragments + hook data files
-    └── code-intel/           # Domain plugin: ast-grep + engram skills, registry-driven hooks
+    ├── code-intel/           # Domain plugin: ast-grep + engram skills, registry-driven hooks
+    │   ├── .claude-plugin/   # plugin.json manifest
+    │   ├── skills/           # code-intel, agent-memory, ast-grep
+    │   └── hooks/            # register.sh (SessionStart) + pre-tools.d/ source modules
+    └── lang-quality/         # Domain plugin: Rust + TypeScript PostToolUse quality checks
         ├── .claude-plugin/   # plugin.json manifest
-        ├── skills/           # code-intel, agent-memory, ast-grep
-        └── hooks/            # register.sh (SessionStart) + pre-tools.d/ source modules
+        └── hooks/            # register.sh (SessionStart) + post-tools.d/ source modules
 ```
 
 Everything a plugin ships lives under its own `plugins/<name>/` directory — no
@@ -91,6 +94,7 @@ declared dependency only from an already-added marketplace); the root
 | `claudness` | `code-simplifier@claude-plugins-official` | review/simplify pipelines (`review-and-commit`, `push-review`, `address-pr-comments`) delegate simplification to the `code-simplifier` subagent |
 | `claudness` | `caveman@caveman` | review pipelines delegate diff review to `caveman:cavecrew-reviewer` |
 | `code-intel` | `claudness@falconiere` | its registry hook modules execute through the claudness core dispatcher and source `hooks/lib` via `CLAUDNESS_LIB_DIR` |
+| `lang-quality` | `claudness@falconiere` | its PostToolUse quality modules execute through the claudness core dispatcher and source `hooks/lib` via `CLAUDNESS_LIB_DIR` |
 
 Add the upstream marketplaces first:
 
