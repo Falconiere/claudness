@@ -294,19 +294,38 @@ EOF
 }
 
 @test "pre-tools entrypoint executes an active-plugin registry module" {
-  cfg=$(mktemp -d)
+  cfg="$TMP/e2e-cfg"
   regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
   cat > "$regdir/code-intel@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"e2e-registry"}}'
 EOF
-  # Make code-intel@falconiere read as installed (manifest key = full spec).
-  mkdir -p "$cfg/.claude/plugins"
-  printf '%s' '{"plugins":{"code-intel@falconiere":{}}}' > "$cfg/.claude/plugins/installed_plugins.json"
+  # Make code-intel@falconiere read as installed. With CLAUDE_CONFIG_DIR set,
+  # detect_plugin_installed reads <config-dir>/plugins/installed_plugins.json
+  # — NOT <HOME>/.claude/plugins/. Writing the wrong path passes via fail-open
+  # (manifest missing = indeterminate) and silently stops testing the gate.
+  mkdir -p "$cfg/plugins"
+  printf '%s' '{"plugins":{"code-intel@falconiere":{}}}' > "$cfg/plugins/installed_plugins.json"
   # macOS BSD `env` requires option flags (-u) before VAR=val operands.
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$cfg" HOME="$cfg" \
     bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("e2e-registry")' >/dev/null
-  rm -rf "$cfg"
+}
+
+@test "pre-tools entrypoint SKIPS a registry module whose plugin is definitively absent" {
+  cfg="$TMP/e2e-cfg-absent"
+  regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
+  cat > "$regdir/code-intel@falconiere__probe.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"should-not-appear"}}'
+EOF
+  # Manifest EXISTS and the spec is absent: definitively not installed
+  # (rules out the fail-open path a missing manifest would take).
+  mkdir -p "$cfg/plugins"
+  printf '%s' '{"plugins":{}}' > "$cfg/plugins/installed_plugins.json"
+  run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$cfg" HOME="$cfg" \
+    bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "should-not-appear"
 }
