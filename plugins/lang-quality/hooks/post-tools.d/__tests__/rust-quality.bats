@@ -1,7 +1,12 @@
 #!/usr/bin/env bats
-# Tests for hooks/post-tools/modules/rust-quality.sh
+# Tests for the lang-quality plugin's rust-quality.sh registry module.
 
 HOOK="${BATS_TEST_DIRNAME}/../rust-quality.sh"
+
+# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# env var in production, the tests provide it here.
+CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
+export CLAUDNESS_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
@@ -176,4 +181,11 @@ EOF
   [ -f "$TMP/.claude/tmp/quality-gate-status.json" ]
   jq -e '.status == "failing"' "$TMP/.claude/tmp/quality-gate-status.json"
   jq -e '.source == "rust-quality-hook"' "$TMP/.claude/tmp/quality-gate-status.json"
+}
+
+@test "rust-quality: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/main.rs"}}'
+  run env -u CLAUDNESS_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP" bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
