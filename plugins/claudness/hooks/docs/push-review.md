@@ -54,8 +54,8 @@ round exceeds 3 (`MAX_ROUNDS`), so the loop cannot run unbounded.
 
 ## Tests
 
-`hooks/pre-tools/modules/__tests__/push-review.bats` — run with:
+`hooks/pre-tools/modules/__tests__/push-review.bats` — run from the repo root with:
 
 ```bash
-bats hooks/pre-tools/modules/__tests__/push-review.bats
+bats plugins/claudness/hooks/pre-tools/modules/__tests__/push-review.bats
 ```

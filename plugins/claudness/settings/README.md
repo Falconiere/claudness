@@ -35,6 +35,10 @@ the security model to hold:
 
 ## Data files (read by hooks)
 
+Consumer paths below are relative to the plugin root (`plugins/claudness/`);
+the merge commands above are written for the repo root because cwd matters
+when you run them.
+
 | File                          | Consumer                                          | Purpose                                                            |
 |-------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
 | `bash-allowlist.txt`          | `hooks/pre-tools/modules/bash-commands.sh`        | Explicit overrides on top of the denylist (deny + allow → allowed). |
