@@ -8,10 +8,10 @@ set -euo pipefail
 
 # Self-contained project detection — inlined from the claudness core's
 # hooks/lib/detect.sh so this plugin has no cross-plugin source path (it may
-# be installed without a claudness checkout next to it). One deliberate
-# difference: detect_project_name returns 0 even outside a git repo — the
-# core version ends in a bare `[ -n ] && basename` whose non-zero exit kills
-# this script under `set -e` before the PROJECT="unknown" fallback can run.
+# be installed without a claudness checkout next to it). detect_project_name
+# uses an if-block (not a bare `[ -n ] && basename`) so it exits 0 outside a
+# git repo and `set -e` reaches the PROJECT="unknown" fallback below; the
+# core helper matches this contract.
 detect_project_root() {
   git rev-parse --show-toplevel 2>/dev/null || true
 }
