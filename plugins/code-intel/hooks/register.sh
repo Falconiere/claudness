@@ -24,8 +24,9 @@ mkdir -p "$REG_DIR" 2>/dev/null || exit 0
 
 # Clear OUR orphaned atomic-write residue from prior crashed runs (a death
 # between cp and mv leaves <spec>__<name>.sh.tmp.<pid>; nothing executes
-# them, but nothing else cleans them either).
-rm -f "$REG_DIR/${SPEC}__"*.sh.tmp.* 2>/dev/null
+# them, but nothing else cleans them either). Age-gated so a concurrent
+# SessionStart's in-flight tmp (seconds old) is never clobbered.
+find "$REG_DIR" -maxdepth 1 -name "${SPEC}__*.sh.tmp.*" -mmin +1 -delete 2>/dev/null
 
 # Sync: copy each source module if missing or changed (atomic tmp+mv).
 for src in "$SRC_DIR"/*.sh; do

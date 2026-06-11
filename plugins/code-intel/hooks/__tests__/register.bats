@@ -87,13 +87,20 @@ teardown() { rm -rf "$TMP"; }
   [ -z "$output" ]
 }
 
-@test "register: clears its own orphaned tmp residue from crashed runs" {
+@test "register: clears its own AGED orphaned tmp residue, keeps fresh + foreign tmp" {
   regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
   mkdir -p "$regdir"
+  # Aged orphan (ours): from a crashed run — must be removed.
   echo 'partial' > "$regdir/code-intel@falconiere__search-nudge.sh.tmp.12345"
+  touch -t 202601010000 "$regdir/code-intel@falconiere__search-nudge.sh.tmp.12345"
+  # Fresh tmp (ours): a concurrent SessionStart mid-write — must survive.
+  echo 'partial' > "$regdir/code-intel@falconiere__engram-scope.sh.tmp.777"
+  # Foreign tmp: never ours to touch, fresh or aged.
   echo 'partial' > "$regdir/other@market__keep.sh.tmp.99"
+  touch -t 202601010000 "$regdir/other@market__keep.sh.tmp.99"
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
   [ ! -f "$regdir/code-intel@falconiere__search-nudge.sh.tmp.12345" ]
+  [ -f "$regdir/code-intel@falconiere__engram-scope.sh.tmp.777" ]
   [ -f "$regdir/other@market__keep.sh.tmp.99" ]
 }
