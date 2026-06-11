@@ -13,11 +13,15 @@
 : "${tool_name:=}"
 : "${input:=}"
 
-_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
-# shellcheck source=../../lib/detect.sh
-. "$_claudness_lib/detect.sh"
-# shellcheck source=../../lib/config.sh
-. "$_claudness_lib/config.sh"
+# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
+# plugins/claudness/hooks/pre-tools/mod.sh before registry dispatch). Outside
+# that pipeline there is no relative path to it — fail SOFT: this module is
+# an advisory extra and must never break tool calls by erroring.
+[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../claudness/hooks/lib/detect.sh
+. "$CLAUDNESS_LIB_DIR/detect.sh"
+# shellcheck source=../../../claudness/hooks/lib/config.sh
+. "$CLAUDNESS_LIB_DIR/config.sh"
 
 # Decide ast-grep state lazily: config + CLI detection are only consulted when
 # a structural pattern or grep/rg invocation is actually matched, so the

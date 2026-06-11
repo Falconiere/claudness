@@ -1,7 +1,12 @@
 #!/usr/bin/env bats
-# Tests for hooks/pre-tools/modules/engram-scope.sh
+# Tests for the code-intel plugin's engram-scope.sh registry module.
 
 HOOK="${BATS_TEST_DIRNAME}/../engram-scope.sh"
+
+# Core lib lives in the sibling claudness plugin; the dispatcher provides
+# this env var in production, the tests provide it here.
+CLAUDNESS_LIB_DIR="$(cd "${BATS_TEST_DIRNAME}/../../../../claudness/hooks/lib" && pwd)"
+export CLAUDNESS_LIB_DIR
 
 _mk() {
   jq -n --arg c "$1" '{tool_name:"Bash", tool_input:{command:$c}}'
@@ -179,15 +184,16 @@ _decision() {
   [ "$(_decision "$output")" = "allow" ]
 }
 
-@test "engram-scope: dispatcher picks up the module by glob" {
-  shopt -s nullglob
-  # Four levels up = the dir containing hooks/ — plugins/claudness since the
-  # Plan 2 reorg (was the repo root).
-  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../../.." && pwd)"
-  modules=("$REPO_ROOT"/hooks/pre-tools/modules/*.sh)
-  found=0
-  for m in "${modules[@]}"; do
-    [[ "$m" == *engram-scope.sh ]] && found=1
-  done
-  [ "$found" -eq 1 ]
+@test "engram-scope: module ships in the plugin's pre-tools.d source dir" {
+  # The module no longer lives in core's modules/ glob — it reaches the
+  # dispatcher via the runtime registry (register.sh sync). This asserts the
+  # source-of-truth location register.sh mirrors.
+  [ -f "${BATS_TEST_DIRNAME}/../engram-scope.sh" ]
+}
+
+@test "engram-scope: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+  payload=$(_mk 'engram search foo')
+  run env -u CLAUDNESS_LIB_DIR tool_name=Bash input="$payload" bash "$HOOK"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
