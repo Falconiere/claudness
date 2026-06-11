@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(plugins/claudness/skills/code-intel/scripts/mod.sh:*)",
+      "Bash(plugins/code-intel/skills/code-intel/scripts/mod.sh:*)",
       "Bash(ast-grep:*)",
       "Bash(bun install:*)",
       "Bash(bun run:*)",
