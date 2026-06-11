@@ -198,3 +198,21 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.additionalContext | test("LIBDIRPROBE=/") and (contains("LIBDIRPROBE=UNSET")|not)' >/dev/null
 }
+
+@test "pre-tools entrypoint executes an active-plugin registry module" {
+  cfg=$(mktemp -d)
+  regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
+  cat > "$regdir/code-intel@falconiere.probe.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"e2e-registry"}}'
+EOF
+  # Make code-intel@falconiere read as installed (manifest key = full spec).
+  mkdir -p "$cfg/.claude/plugins"
+  printf '%s' '{"plugins":{"code-intel@falconiere":{}}}' > "$cfg/.claude/plugins/installed_plugins.json"
+  # macOS BSD `env` requires option flags (-u) before VAR=val operands.
+  run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$cfg" HOME="$cfg" \
+    bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("e2e-registry")' >/dev/null
+  rm -rf "$cfg"
+}
