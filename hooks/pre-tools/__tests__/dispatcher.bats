@@ -124,6 +124,56 @@ write_module() {
   [ -z "$output" ]
 }
 
+@test "dispatch runs a registry module from an active plugin" {
+  builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
+  cat > "$reg_dir/code-intel@falconiere.probe.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"from-registry"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/detect.sh"; . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    claudness_plugin_active() { return 0; }       # force active
+    input="{}"; tool_name="Read"; export input tool_name
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("from-registry")' >/dev/null
+  rm -rf "$builtin_dir" "$reg_dir"
+}
+
+@test "dispatch SKIPS a registry module whose plugin is inactive" {
+  builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
+  cat > "$reg_dir/ghost@nowhere.probe.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"should-not-appear"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/detect.sh"; . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    claudness_plugin_active() { return 1; }        # force inactive
+    input="{}"; tool_name="Read"; export input tool_name
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse" "'"$reg_dir"'"
+  '
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  rm -rf "$builtin_dir" "$reg_dir"
+}
+
+@test "dispatch still works with no registry dir argument (back-compat)" {
+  builtin_dir=$(mktemp -d)
+  cat > "$builtin_dir/00-a.sh" <<'EOF'
+#!/usr/bin/env bash
+jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"builtin"}}'
+EOF
+  run bash -c '
+    . "'"$REPO_ROOT"'/hooks/lib/dispatch.sh"
+    input="{}"; tool_name="Read"; export input tool_name
+    claudness_dispatch_modules "'"$builtin_dir"'" "PreToolUse"
+  '
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("builtin")' >/dev/null
+  rm -rf "$builtin_dir"
+}
+
 @test "pre-tools entrypoint exports CLAUDNESS_LIB_DIR to modules" {
   # Drop a probe module into the REAL modules dir with a last-running name so
   # it is dispatched by the actual mod.sh entrypoint. It echoes back whatever
