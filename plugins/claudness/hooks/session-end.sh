@@ -20,9 +20,10 @@ case "$(claudness_engram_state)" in
   available)
     save_doc="$HOOK_DIR/docs/vector-helper-save.md"
     # Resolve the code-intel wrapper relative to this hook — works from the
-    # repo checkout and through the installed plugin's scripts→hooks symlink.
+    # repo checkout and the installed plugin alike (skills/ is a sibling of
+    # hooks/ inside the plugin root).
     mod_sh="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/skills/code-intel/scripts/mod.sh"
-    [ -x "$mod_sh" ] || mod_sh="skills/code-intel/scripts/mod.sh"
+    [ -x "$mod_sh" ] || mod_sh="plugins/claudness/skills/code-intel/scripts/mod.sh"
     save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh engram save.")
     ctx="Session ending. $save_hint"
     ;;

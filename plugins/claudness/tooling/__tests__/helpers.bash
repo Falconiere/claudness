@@ -6,6 +6,8 @@
 # curl.log to verify behavior. API keys are passed via the environment
 # variables CONTEXT7_API_KEY / EXA_API_KEY — never via a .env file.
 
+# Two levels up from tooling/__tests__/ is the dir that CONTAINS tooling/ —
+# now plugins/claudness (was the repo root before the Plan 2 reorg).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 setup_sandbox() {
