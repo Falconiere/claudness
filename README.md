@@ -10,19 +10,27 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
 .
 ├── docs/                     # Repo documentation (runtime config, design notes, plans)
 └── plugins/
-    └── claudness/            # Self-contained plugin (installable from the marketplace)
+    ├── claudness/            # Core plugin: hook engine + security/process gates
+    │   ├── .claude-plugin/   # plugin.json manifest
+    │   ├── skills/           # Standalone skills (SKILL.md + supporting files)
+    │   ├── agents/           # Subagent definitions (.md with YAML frontmatter)
+    │   ├── commands/         # Slash commands (.md prompt templates)
+    │   ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
+    │   ├── tooling/          # Helper CLIs used by skills (context7, exa-search) + bats tests
+    │   └── settings/         # Reusable settings.json fragments + hook data files
+    └── code-intel/           # Domain plugin: ast-grep + engram skills, registry-driven hooks
         ├── .claude-plugin/   # plugin.json manifest
-        ├── skills/           # Standalone skills (SKILL.md + supporting files)
-        ├── agents/           # Subagent definitions (.md with YAML frontmatter)
-        ├── commands/         # Slash commands (.md prompt templates)
-        ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
-        ├── tooling/          # Helper CLIs used by skills (context7, exa-search) + bats tests
-        └── settings/         # Reusable settings.json fragments + hook data files
+        ├── skills/           # code-intel, agent-memory, ast-grep
+        └── hooks/            # register.sh (SessionStart) + pre-tools.d/ source modules
 ```
 
 Everything a plugin ships lives under its own `plugins/<name>/` directory — no
 symlinks, no content outside the plugin root, so marketplace installs get the
-whole working tree.
+whole working tree. Domain plugins contribute hook modules to the core
+dispatcher through the runtime registry: their `register.sh` (SessionStart)
+mirrors `hooks/<event>.d/*.sh` into `~/.claude/claudness/<event>.d/` as
+`<plugin-spec>__<name>.sh`, and the claudness core executes those copies only
+while the owning plugin is installed.
 
 ## Conventions
 

@@ -50,8 +50,9 @@ Unknown names are silently ignored (forward compatible).
     hint in `UserPromptSubmit`, the engram entry in the `SessionStart`
     "missing tools" warning, and the engram reminder in `PreCompact` and
     `SessionEnd`. `skills.ast-grep = false` removes the ast-grep STOP /
-    install-hint advisories in `search-nudge`; the generic
-    `grep/rg → Grep tool` advisory still fires.
+    install-hint advisories in `search-nudge` (a registry module shipped
+    by the code-intel plugin); the generic `grep/rg → Grep tool` advisory
+    still fires.
 
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained
