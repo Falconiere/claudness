@@ -31,6 +31,26 @@
           "reason": "review pipelines delegate diff review to caveman:cavecrew-reviewer"
         }
       ]
+    },
+    {
+      "name": "code-intel",
+      "source": "./plugins/code-intel",
+      "description": "ast-grep + engram skills with registry-driven enforcement hooks.",
+      "author": {
+        "name": "Falconiere Barbosa",
+        "email": "hello@falconiere.io"
+      },
+      "category": "productivity",
+      "keywords": ["ast-grep", "engram", "memory", "hooks"],
+      "license": "MIT",
+      "requires": [
+        {
+          "plugin": "claudness@falconiere",
+          "marketplace": "falconiere",
+          "source": { "source": "github", "repo": "Falconiere/claudness" },
+          "reason": "registry hook modules execute through the claudness core dispatcher"
+        }
+      ]
     }
   ]
 }
