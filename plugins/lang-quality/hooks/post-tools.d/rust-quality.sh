@@ -13,9 +13,13 @@
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
 
-_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
-# shellcheck source=../../lib/detect.sh
-. "$_claudness_lib/detect.sh"
+# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
+# plugins/claudness/hooks/post-tools/mod.sh before registry dispatch). Outside
+# that pipeline there is no relative path to it — fail SOFT: a quality check
+# must never break a tool call by erroring.
+[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../claudness/hooks/lib/detect.sh
+. "$CLAUDNESS_LIB_DIR/detect.sh"
 
 [ "$(detect_rust)" = "rust" ] || exit 0
 command -v cargo >/dev/null 2>&1 || exit 0
