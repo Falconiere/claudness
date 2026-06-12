@@ -117,6 +117,16 @@ session start, so they cannot be toggled at runtime. A future `claudness
 sync` command may rewrite the manifest from config; until then, install or
 uninstall the plugin to control them.
 
+## comemory version
+
+claudness targets **comemory ≥ 0.8.0** (pinned as `COMEMORY_MIN_VERSION` in
+`plugins/claudness/hooks/lib/detect.sh`). The wrapper uses comemory's full verb
+surface — the retrieval-quality loop (`feedback`/`mine`/`tune`/`eval`/`prune`/
+`gc`/`rebuild`) and code-intel (`search-code`/`index-code`/`graph`). An older
+binary lacks some of these and will error on them, so session start emits a
+non-fatal upgrade WARN when it detects one. Basics (`search`/`save`/`list`)
+still work. Upgrade with `brew upgrade comemory` or `cargo install comemory`.
+
 ## Examples
 
 Disable comemory completely (no recall hint, no install nag):
