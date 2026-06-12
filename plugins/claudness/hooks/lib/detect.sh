@@ -207,6 +207,35 @@ read_list() {
   grep -vE '^\s*(#|$)' "$1"
 }
 
+# count_code_lines FILE  ->  lines of real code (blank lines and comments
+# excluded). Handles // line comments and /* ... */ blocks (incl. multi-line and
+# inline), for both TS and Rust (/// and //! reduce to // and are dropped).
+# Heuristic: does not track // or /* inside string literals — consistent with
+# the other comment-stripping passes in the quality modules. Lives here (not in
+# quality-config.sh) so the lang modules get one honest definition with no
+# fallback — they already hard-require detect.sh.
+count_code_lines() {
+  awk '
+    BEGIN { inblock=0; n=0 }
+    {
+      line=$0
+      if (inblock) {
+        idx=index(line,"*/")
+        if (idx>0) { line=substr(line, idx+2); inblock=0 } else next
+      }
+      while ((s=index(line,"/*"))>0) {
+        rest=substr(line, s+2); e=index(rest,"*/")
+        if (e>0) { line=substr(line,1,s-1) substr(rest, e+2) }
+        else { line=substr(line,1,s-1); inblock=1; break }
+      }
+      c=index(line,"//"); if (c>0) line=substr(line,1,c-1)
+      gsub(/^[ \t]+|[ \t]+$/, "", line)
+      if (length(line)>0) n++
+    }
+    END { print n }
+  ' "$1" 2>/dev/null
+}
+
 # Echo a repo-relative path for the given (potentially absolute) file_path.
 # Falls back to the input unchanged if it cannot determine the project root
 # or if the path is not under that root.

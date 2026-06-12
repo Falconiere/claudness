@@ -24,7 +24,7 @@
 [ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
 command -v ts_max_file_lines >/dev/null 2>&1 || ts_max_file_lines() { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
 command -v ts_max_fn_lines   >/dev/null 2>&1 || ts_max_fn_lines()   { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
-command -v count_code_lines  >/dev/null 2>&1 || count_code_lines()  { wc -l < "$1" | tr -d ' '; }
+# count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
 # Exit early if this isn't a TypeScript project.
 [ "$(detect_ts)" = "ts" ] || exit 0
