@@ -28,7 +28,13 @@ statusline_src="${statusline_dir:+$statusline_dir/statusline.sh}"
 if [ -n "$statusline_src" ] && [ -f "$statusline_src" ]; then
   reg_root="$(claudness_registry_root)"
   mkdir -p "$reg_root" 2>/dev/null || true
-  ln -sf "$statusline_src" "$reg_root/statusline.sh" 2>/dev/null || true
+  # Own the path only when it is already our symlink or absent — never clobber a
+  # real file a user may have placed at $reg_root/statusline.sh. (-L catches a
+  # broken/relinked symlink that -e would report as missing.)
+  _sl_dst="$reg_root/statusline.sh"
+  if [ -L "$_sl_dst" ] || [ ! -e "$_sl_dst" ]; then
+    ln -sf "$statusline_src" "$_sl_dst" 2>/dev/null || true
+  fi
 fi
 
 if ! claudness_enabled hooks session-start; then

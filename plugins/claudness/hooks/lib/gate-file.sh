@@ -52,6 +52,12 @@ gate_record_failure() {
      else {} end) as $prev
     | ($prev + { ($file): {source: $source, reason: $reason,
                            violations: $violations, updatedAt: $now} }) as $entries
+    # `violations` aggregates every open entry, intentionally: readers (statusline,
+    # session-start, user-prompt-submit) must surface ALL unresolved violations,
+    # not just the latest. Growth is bounded by the count of distinct failing
+    # files in a session (each clears on the next passing edit), so it stays
+    # small in practice. If a long session ever shows this string bloating
+    # hot-path reads, add a per-entry cap here rather than dropping entries.
     | { status: "failing", reason: $reason, source: $source, file: $file,
         violations: ([$entries | to_entries | sort_by(.value.updatedAt // "", .key)[]
                       | (.value.violations // "")] | join("")),
