@@ -11,9 +11,12 @@ HOOK_DIR="$(dirname "$0")"
 # ── Autonomous comemory maintenance (zero Claude tokens) ───────────────────
 # Keeps the retrieval store sharp: mine/prune/gc are all local (no LLM, no API).
 # Throttled to once per UTC day via a stamp file; the stamp is written BEFORE
-# the work so a mid-run crash never retry-loops the same day. Silent and
-# non-fatal, and each call is timeout-bounded so a hung comemory binary can
-# never delay or block session exit.
+# the work so a mid-run crash never retry-loops the same day. The work is
+# detached (backgrounded + disowned) so a hung comemory binary can never delay
+# the Stop event on ANY platform — including stock macOS, which ships neither
+# `timeout` nor `gtimeout`. When a timeout binary IS present we additionally
+# bound the detached run's lifetime; without one the run is unbounded but still
+# cannot block Stop, and the once-per-day throttle caps the orphan to one.
 #
 # Gated on `claudness_enabled hooks session-end` (opt-OUT, default on): unlike
 # the reminder below — which is opt-IN — maintenance runs by default, but
@@ -26,11 +29,14 @@ if claudness_enabled hooks session-end && [ "$(claudness_comemory_state)" = "ava
   if [ -n "$_cm_today" ] && [ "$(cat "$_cm_stamp" 2>/dev/null || echo '')" != "$_cm_today" ]; then
     mkdir -p "$_cm_data" 2>/dev/null || true
     printf '%s' "$_cm_today" > "$_cm_stamp" 2>/dev/null || true
-    # timeout/gtimeout if present, else run bare (macOS has neither by default).
+    # Bound each call's lifetime with timeout/gtimeout when available (absent on
+    # stock macOS); the trailing `&` + `disown` detaches the whole sequence so
+    # Stop never waits on it regardless.
     _cm_to=""
     if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
     elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
-    { $_cm_to comemory mine --apply; $_cm_to comemory prune --apply; $_cm_to comemory gc; } >/dev/null 2>&1 || true
+    { $_cm_to comemory mine --apply; $_cm_to comemory prune --apply; $_cm_to comemory gc; } >/dev/null 2>&1 &
+    disown 2>/dev/null || true
   fi
 fi
 
