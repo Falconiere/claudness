@@ -128,7 +128,10 @@ if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
         add_error "Test nested in __tests__/ subdirectory: $FILE_PATH — keep __tests__/ flat (only fixtures/helpers/mocks/utils subdirs allowed)"
       fi
     fi
-    _tests_dir="${FILE_PATH%%__tests__/*}__tests__"
+    # `%` (shortest suffix) resolves to the NEAREST __tests__, matching the
+    # `##` (last __tests__) used for the nested-subdir check above; `%%` would
+    # pick the OUTERMOST __tests__ and mis-validate a doubly-nested path.
+    _tests_dir="${FILE_PATH%__tests__/*}__tests__"
     _parent_dir=$(dirname "$_tests_dir")
     if ! find "$_parent_dir" -maxdepth 1 -type f \( -name "*.ts" -o -name "*.tsx" \) \
         ! -name "*.test.*" ! -name "*.spec.*" ! -name "*.d.ts" 2>/dev/null | grep -q . \

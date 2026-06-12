@@ -113,14 +113,16 @@ if [[ "$exit_code" == "0" ]]; then
   # intact and the gate stays failing until that file is fixed too.
   gate_clear_file "$GATE_FILE" "$GATE_COMMAND_KEY" "gate-status-hook"
 
-  # Assert an affirmative passing record (keeps statusline/session-start green)
-  # UNLESS a foreign failure still owns the gate. gate_clear_file already flips
-  # the gate to passing when our slot was the last entry; re-assert only when the
-  # gate is absent or not failing, so a live file-hook failure is never clobbered.
-  # CONCURRENCY: this write and the gate_record_failure above share gate-file.sh's
-  # single-writer assumption — safe only while PostToolUse hooks fire serially;
-  # see the CONCURRENCY note in gate-file.sh.
-  if [ ! -f "$GATE_FILE" ] || [ "$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null)" != "failing" ]; then
+  # Assert an affirmative passing record ONLY when no gate file exists yet — the
+  # first-ever passing command, with nothing tracked. In every other case
+  # gate_clear_file already did the right thing: it flips the gate to passing when
+  # our slot was the last entry, and leaves a live file-hook failure (owned by a
+  # different source) untouched. Gating on `! -f` alone means we never re-write a
+  # file the helper just wrote (no hot-path double-write) and never clobber a
+  # foreign failure (the file is present, so we skip).
+  # CONCURRENCY: this write shares gate-file.sh's single-writer assumption — safe
+  # only while PostToolUse hooks fire serially; see the CONCURRENCY note there.
+  if [ ! -f "$GATE_FILE" ]; then
     jq -n \
       --arg status "passing" \
       --arg source "$command" \
