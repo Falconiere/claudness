@@ -97,6 +97,26 @@ _decision() {
   [ "$(_decision "$output")" = "allow" ]
 }
 
+# Regression: the wrapper-skip used to match the WHOLE command, so a single
+# `mod.sh comemory` token short-circuited enforcement for every other segment.
+# Per-segment skipping must still deny an unscoped raw call chained after a
+# legitimate wrapper call.
+@test "comemory-scope: wrapper call chained with a raw unscoped search is denied" {
+  payload=$(_mk 'mod.sh comemory list && comemory search foo')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
+# Regression: a mere mention of `mod.sh comemory` (in an echo / comment) must
+# not disable enforcement for a real unscoped call in another segment.
+@test "comemory-scope: mod.sh comemory token in echo does not excuse a later raw save" {
+  payload=$(_mk 'echo using mod.sh comemory ; comemory save body --kind note')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
 @test "comemory-scope: comemory list is allowed (global by design)" {
   payload=$(_mk 'comemory list --repo claudness')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
