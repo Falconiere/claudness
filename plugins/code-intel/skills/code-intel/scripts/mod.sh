@@ -15,11 +15,11 @@ if [[ -z "$tool" ]]; then
 Usage: mod.sh <tool> <subcommand> [args...]
 
 Tools:
-  engram      Persistent memory (search, save, context)
+  comemory    Persistent memory (search, save, list)
   ast-grep    Structural/AST pattern matching
 
 Examples:
-  mod.sh engram save "Fixed bug" "Root cause was X" --type bugfix
+  mod.sh comemory save "Fixed bug" "Root cause was X"
   mod.sh ast-grep search 'fn $NAME($$$ARGS)' --lang rust
 USAGE
   exit 1
@@ -28,7 +28,7 @@ fi
 module="$MODULES_DIR/$tool.sh"
 
 if [[ ! -f "$module" ]]; then
-  echo "Error: Unknown tool '$tool'. Available: engram, ast-grep" >&2
+  echo "Error: Unknown tool '$tool'. Available: comemory, ast-grep" >&2
   exit 1
 fi
 

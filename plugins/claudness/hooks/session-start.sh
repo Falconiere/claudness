@@ -153,11 +153,11 @@ fi
 
 # Warn when optional tools referenced by docs/skills are missing — keeps the
 # session start honest about which capabilities are actually available.
-HAS_ENGRAM="$(detect_engram)"
+HAS_COMEMORY="$(detect_comemory)"
 HAS_ASTGREP="$(detect_ast_grep)"
 missing_tools=()
-if [ "$HAS_ENGRAM" != "engram" ] && claudness_enabled skills engram; then
-  missing_tools+=("engram (persistent memory recall/save)")
+if [ "$HAS_COMEMORY" != "comemory" ] && claudness_enabled skills comemory; then
+  missing_tools+=("comemory (persistent memory recall/save)")
 fi
 if [ "$HAS_ASTGREP" != "ast-grep" ] && claudness_enabled skills ast-grep; then
   missing_tools+=("ast-grep (structural code search)")

@@ -69,9 +69,9 @@ advisory wording. Resolver: `plugins/claudness/hooks/lib/quality-config.sh`.
 
 | Category | Names                                                                              |
 |----------|------------------------------------------------------------------------------------|
-| `skills` | `engram`, `ast-grep` (the only skill keys any hook reads)                          |
+| `skills` | `comemory`, `ast-grep` (the only skill keys any hook reads)                        |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact`, `session-end` |
-| `mcp`    | any MCP server name — e.g. `engram`, `canva`, `figma`                              |
+| `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
 
 Unknown names are silently ignored (forward compatible).
 
@@ -81,9 +81,9 @@ Unknown names are silently ignored (forward compatible).
   - The hooks that reference the skill behave as if its CLI is not
     installed AND they suppress the "not installed" warning. Skill files
     themselves stay on disk.
-  - Concretely: `skills.engram = false` silences the `MANDATORY: recall`
-    hint in `UserPromptSubmit`, the engram entry in the `SessionStart`
-    "missing tools" warning, and the engram reminder in `PreCompact` and
+  - Concretely: `skills.comemory = false` silences the `MANDATORY: recall`
+    hint in `UserPromptSubmit`, the comemory entry in the `SessionStart`
+    "missing tools" warning, and the comemory reminder in `PreCompact` and
     `SessionEnd`. `skills.ast-grep = false` removes the ast-grep STOP /
     install-hint advisories in `search-nudge` (a registry module shipped
     by the code-intel plugin); the generic `grep/rg → Grep tool` advisory
@@ -92,7 +92,7 @@ Unknown names are silently ignored (forward compatible).
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained
     first so Claude Code's IPC does not stall.
-  - **Exception — `session-end` is opt-IN**: the end-of-session engram
+  - **Exception — `session-end` is opt-IN**: the end-of-session comemory
     "save your learnings" reminder is OFF by default (the agent-memory
     protocol already saves proactively, so the Stop-time nag is redundant
     noise). It emits only when you set `hooks.session-end: true`. Every other
@@ -114,10 +114,10 @@ uninstall the plugin to control them.
 
 ## Examples
 
-Disable engram completely (no recall hint, no install nag, no MCP calls):
+Disable comemory completely (no recall hint, no install nag):
 
 ```json
-{ "version": 1, "skills": { "engram": false }, "mcp": { "engram": false } }
+{ "version": 1, "skills": { "comemory": false } }
 ```
 
 Disable a single hook only in this project:

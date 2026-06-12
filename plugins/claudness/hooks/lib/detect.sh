@@ -46,9 +46,9 @@ detect_ts() {
     | grep -q . && echo ts
 }
 
-# Echo "engram" if the engram CLI is on PATH.
-detect_engram() {
-  command -v engram >/dev/null 2>&1 && echo engram
+# Echo "comemory" if the comemory CLI is on PATH.
+detect_comemory() {
+  command -v comemory >/dev/null 2>&1 && echo comemory
 }
 
 # Echo the project's TS linter: biome | oxc | eslint | "" (presence-only, by

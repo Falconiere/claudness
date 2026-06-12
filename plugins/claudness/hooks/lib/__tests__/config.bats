@@ -22,48 +22,48 @@ teardown() {
 }
 
 @test "enabled by default when no config files exist" {
-  run claudness_enabled skills engram
+  run claudness_enabled skills comemory
   [ "$status" -eq 0 ]
 }
 
 @test "user config disables skill" {
-  echo '{"version":1,"skills":{"engram":false}}' > "$HOME/.claude/claudness.config.json"
-  run claudness_enabled skills engram
+  echo '{"version":1,"skills":{"comemory":false}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_enabled skills comemory
   [ "$status" -eq 1 ]
 }
 
 @test "project config overrides user config" {
-  echo '{"version":1,"skills":{"engram":false}}' > "$HOME/.claude/claudness.config.json"
-  echo '{"version":1,"skills":{"engram":true}}'  > "$CLAUDE_PROJECT_DIR/.claude/claudness.config.json"
-  run claudness_enabled skills engram
+  echo '{"version":1,"skills":{"comemory":false}}' > "$HOME/.claude/claudness.config.json"
+  echo '{"version":1,"skills":{"comemory":true}}'  > "$CLAUDE_PROJECT_DIR/.claude/claudness.config.json"
+  run claudness_enabled skills comemory
   [ "$status" -eq 0 ]
 }
 
 @test "unrelated category remains enabled" {
-  echo '{"version":1,"skills":{"engram":false}}' > "$HOME/.claude/claudness.config.json"
+  echo '{"version":1,"skills":{"comemory":false}}' > "$HOME/.claude/claudness.config.json"
   run claudness_enabled hooks session-start
   [ "$status" -eq 0 ]
 }
 
 @test "malformed user JSON falls back to defaults" {
   printf '{' > "$HOME/.claude/claudness.config.json"
-  run claudness_enabled skills engram
+  run claudness_enabled skills comemory
   [ "$status" -eq 0 ]
 }
 
-@test "engram_state returns 'disabled' when skills.engram=false" {
-  echo '{"version":1,"skills":{"engram":false}}' > "$HOME/.claude/claudness.config.json"
-  run claudness_engram_state
+@test "comemory_state returns 'disabled' when skills.comemory=false" {
+  echo '{"version":1,"skills":{"comemory":false}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_comemory_state
   [ "$status" -eq 0 ]
   [ "$output" = "disabled" ]
 }
 
-@test "engram_state returns 'missing' when enabled but CLI absent" {
+@test "comemory_state returns 'missing' when enabled but CLI absent" {
   # Use a subshell with env -i so the PATH override stays scoped to the
   # child process; the bats `run` function would otherwise mutate the
   # outer shell's PATH for the remainder of this test.
   run env -i HOME="$HOME" PATH=/usr/bin:/bin bash -c \
-    ". \"$REPO_ROOT/hooks/lib/config.sh\"; claudness_engram_state"
+    ". \"$REPO_ROOT/hooks/lib/config.sh\"; claudness_comemory_state"
   [ "$status" -eq 0 ]
   [ "$output" = "missing" ]
 }
@@ -75,7 +75,7 @@ teardown() {
 }
 
 @test "claudness_enabled_explicit: disabled when key absent but config exists" {
-  echo '{"version":1,"skills":{"engram":true}}' > "$HOME/.claude/claudness.config.json"
+  echo '{"version":1,"skills":{"comemory":true}}' > "$HOME/.claude/claudness.config.json"
   run claudness_enabled_explicit hooks session-end
   [ "$status" -eq 1 ]
 }

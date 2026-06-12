@@ -7,7 +7,7 @@ setup() {
   TMP=$(mktemp -d)
   export MY_CLAUDE_SETTINGS_DIR="$TMP/settings"
   mkdir -p "$MY_CLAUDE_SETTINGS_DIR"
-  printf '%s\n' "engram" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
   # TMPHOME is created lazily by tests that need a per-test $HOME sandbox;
   # registering it here lets teardown clean it up even if the test aborts
   # mid-assertion.
@@ -25,7 +25,7 @@ teardown() {
 }
 
 @test "mcp-blocker: blocks a listed server" {
-  tool_name=mcp__engram__search run bash "$HOOK"
+  tool_name=mcp__exampleblocked__search run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
@@ -54,8 +54,8 @@ teardown() {
 }
 
 @test "mcp-blocker: exact server name still blocks itself" {
-  printf '%s\n' "engram" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
-  tool_name=mcp__engram__save run bash "$HOOK"
+  printf '%s\n' "exampleblocked" > "$MY_CLAUDE_SETTINGS_DIR/mcp-blocklist.txt"
+  tool_name=mcp__exampleblocked__save run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
 }
@@ -65,7 +65,7 @@ teardown() {
 # .tool_name in the JSON on STDIN. With tool_name unset in the env, the gate
 # must still read it from stdin and block a listed server.
 @test "mcp-blocker: reads tool_name from stdin when env is unset (standalone path)" {
-  payload=$(jq -n '{tool_name:"mcp__engram__search",tool_input:{}}')
+  payload=$(jq -n '{tool_name:"mcp__exampleblocked__search",tool_input:{}}')
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
@@ -113,7 +113,7 @@ JSON
 
 @test "block-from-file deny reason directs user to mcp-blocklist.txt, not config" {
   # File-source block must NOT mention claudness.config.json
-  tool_name=mcp__engram__search run bash "$HOOK"
+  tool_name=mcp__exampleblocked__search run bash "$HOOK"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("mcp-blocklist.txt")'
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("claudness config") | not'

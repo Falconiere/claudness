@@ -36,8 +36,8 @@ case "$tool_name" in
   *) exit 0 ;;
 esac
 
-# Fast-path: matcher widened from mcp__engram to mcp__ now routes every MCP
-# tool call through here. Skip config-load work entirely when there is no
+# Fast-path: the matcher is mcp__, so every MCP tool call routes through
+# here. Skip config-load work entirely when there is no
 # blocklist file AND no user/project config to consult — the common case for
 # anyone who has not opted into the gate.
 if [ ! -f "$LIST_FILE" ] && ! claudness_config_exists; then

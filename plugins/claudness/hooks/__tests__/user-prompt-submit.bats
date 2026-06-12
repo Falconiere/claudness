@@ -57,7 +57,7 @@ CTX
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'Recall first'
-  ! echo "$output" | grep -q 'engram search'
+  ! echo "$output" | grep -q 'comemory search'
 }
 
 @test "user-prompt-submit: recall hint NOT emitted for 'paste' (substring of past)" {
@@ -65,16 +65,16 @@ CTX
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q 'Recall first'
-  ! echo "$output" | grep -q 'engram search'
+  ! echo "$output" | grep -q 'comemory search'
 }
 
 @test "user-prompt-submit: recall hint emitted when prompt mentions architecture" {
   payload=$(build_input "explain the architecture of the auth module")
   run bash "$HOOK" <<<"$payload"
   [ "$status" -eq 0 ]
-  # Recall hint only when engram is available; warning when missing.
-  # Either way the response must mention engram or a warn, not be silent.
-  echo "$output" | grep -qE 'engram|Recall first|WARN'
+  # Recall hint only when comemory is available; warning when missing.
+  # Either way the response must mention comemory or a warn, not be silent.
+  echo "$output" | grep -qE 'comemory|Recall first|WARN'
 }
 
 @test "user-prompt-submit: emits at most one intent hint per prompt" {

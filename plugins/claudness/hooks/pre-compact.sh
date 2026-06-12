@@ -16,15 +16,15 @@ fi
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true
 
-case "$(claudness_engram_state)" in
+case "$(claudness_comemory_state)" in
   available)
     # The wrapper ships in the code-intel plugin (Plan 3 extraction); its
     # install path differs per machine, so reference the skill, not a path.
     mod_sh="the code-intel plugin's mod.sh"
-    reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run $mod_sh engram summary then $mod_sh engram context.")
+    reminder=$(cat "$HOOK_DIR/docs/post-compaction.md" 2>/dev/null || echo "Context compacted. Run $mod_sh comemory summary then $mod_sh comemory search \"<topic>\".")
     ;;
   missing)
-    reminder="Context compacted. WARN: engram CLI not installed — memory summary/recall disabled. Continue from in-window context only."
+    reminder="Context compacted. WARN: comemory CLI not installed — memory summary/recall disabled. Continue from in-window context only."
     ;;
   disabled|*)
     reminder="Context compacted. Continue from in-window context only."

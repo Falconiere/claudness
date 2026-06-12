@@ -5,5 +5,4 @@
 # blocks `mcp__claude_ai_Canva__*` and `mcp__claude_ai_Figma__*`. An exact
 # server name is the special case of a prefix with no extra characters.
 #
-# Original hook blocked mcp__engram__* to force the CLI wrapper path.
-engram
+# Empty by default — add one server-name prefix per line to block it.

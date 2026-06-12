@@ -8,7 +8,7 @@
 # Public API:
 #   claudness_load_config          - load + cache the merged config
 #   claudness_enabled CAT NAME     - 0 if enabled (default), 1 if disabled
-#   claudness_engram_state         - print 'available' | 'missing' | 'disabled'
+#   claudness_comemory_state       - print 'available' | 'missing' | 'disabled'
 #   claudness_config_exists        - 0 if any config file is on disk (cheap stat-only check)
 #
 # Defaults: missing key = enabled. Malformed JSON or missing jq = all enabled
@@ -85,7 +85,7 @@ claudness_enabled() {
 }
 
 # Like claudness_enabled but DEFAULT OFF: returns 0 only when the key is
-# explicitly `true`. For opt-in components (e.g. the session-end engram
+# explicitly `true`. For opt-in components (e.g. the session-end comemory
 # reminder) where the default-enabled opt-out semantics are wrong. Missing jq or
 # a missing/non-true value -> 1 (disabled).
 claudness_enabled_explicit() {
@@ -111,19 +111,19 @@ claudness_config_exists() {
   return 1
 }
 
-# Print engram availability for hook reminder text:
-#   'available' — CLI installed AND skills.engram != false
-#   'missing'   — CLI absent AND skills.engram != false (emit install hint)
-#   'disabled'  — skills.engram == false (silent; user opted out)
+# Print comemory availability for hook reminder text:
+#   'available' — CLI installed AND skills.comemory != false
+#   'missing'   — CLI absent AND skills.comemory != false (emit install hint)
+#   'disabled'  — skills.comemory == false (silent; user opted out)
 #
 # Centralizes the tri-state so pre-compact / session-end / user-prompt-submit
 # do not each hand-roll the branching.
-claudness_engram_state() {
-  if ! claudness_enabled skills engram; then
+claudness_comemory_state() {
+  if ! claudness_enabled skills comemory; then
     printf 'disabled'
     return 0
   fi
-  if command -v engram >/dev/null 2>&1; then
+  if command -v comemory >/dev/null 2>&1; then
     printf 'available'
   else
     printf 'missing'
