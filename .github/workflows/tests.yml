@@ -39,6 +39,20 @@ jobs:
           python3 --version
           bun --version
 
+      - name: Enforce colocated __tests__ layout
+        run: |
+          set -euo pipefail
+          # Every .bats suite must live in a colocated __tests__/ dir next to the
+          # code it exercises. Fail the build (with the offending paths) if any
+          # test file sits outside a __tests__ directory.
+          stray=$(find plugins -name "*.bats" -not -path "*/__tests__/*" || true)
+          if [ -n "$stray" ]; then
+            echo "Test files outside a __tests__/ dir:" >&2
+            echo "$stray" >&2
+            echo "Move each into a colocated __tests__/ folder." >&2
+            exit 1
+          fi
+
       - name: Run bats suite
         run: |
           set -euo pipefail

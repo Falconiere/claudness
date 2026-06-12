@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-SCRIPT="${BATS_TEST_DIRNAME}/session-end.sh"
+SCRIPT="${BATS_TEST_DIRNAME}/../session-end.sh"
 
 @test "session-end exits 0 with empty stdin" {
   run bash -c "'$SCRIPT' < /dev/null"

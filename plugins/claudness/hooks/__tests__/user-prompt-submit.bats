@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Tests for hooks/user-prompt-submit.sh — must remain project-agnostic.
 
-HOOK="${BATS_TEST_DIRNAME}/user-prompt-submit.sh"
+HOOK="${BATS_TEST_DIRNAME}/../user-prompt-submit.sh"
 
 setup() {
   TMP=$(mktemp -d)

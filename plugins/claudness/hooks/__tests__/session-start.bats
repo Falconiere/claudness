@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Tests for hooks/session-start.sh — must remain project-agnostic.
 
-HOOK="${BATS_TEST_DIRNAME}/session-start.sh"
+HOOK="${BATS_TEST_DIRNAME}/../session-start.sh"
 
 setup() {
   TMP=$(mktemp -d)
