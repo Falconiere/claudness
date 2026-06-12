@@ -592,6 +592,32 @@ EOF
   echo "$output" | grep -q "Forbidden 'as' type assertion"
 }
 
+@test "ts-quality: raw radix import is flagged" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+import { Dialog } from "@radix-ui/react-dialog";
+export const x = 1;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Raw radix import"
+}
+
+# Regression: the rule used a raw grep, so a radix import on a `//` comment line
+# false-positived. Comment lines are now filtered first.
+@test "ts-quality: radix import only in a comment is NOT flagged" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+// import { Dialog } from "@radix-ui/react-dialog";
+export const x = 1;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Raw radix import"
+}
+
 @test "ts-quality: long exported arrow const is subject to the fn-length limit" {
   _ts_project
   mkdir -p "$TMP/.claude"

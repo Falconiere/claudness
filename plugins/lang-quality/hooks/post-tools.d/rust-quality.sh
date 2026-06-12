@@ -106,8 +106,14 @@ esac
 # #[bench] and #[wasm_bindgen_test] are deliberately NOT in the alternation:
 # benches belong in benches/ (cargo convention) and wasm-bindgen tests have no
 # single canonical home — "move to tests/" would be a false positive for both.
+# Generalized over `#[<any::path>::test]` rather than a hardcoded runtime list,
+# so test_log::test, trace_test::test, actix_web::test, etc. all trip the rule;
+# `test_case` (the test_case crate's generator) is added explicitly. `#[rstest]`
+# is its own alternation (the macro name is not `test`). `#[cfg(test)]` is NOT
+# matched here — no `test`/`test_case` token follows `#[` — and stays owned by
+# the inline-cfg(test) rule above.
 if [[ "$_is_rust_test" -eq 0 ]] \
-   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b|^[[:space:]]*#\[rstest\b' "$FILE_PATH" 2>/dev/null; then
+   && grep -qE '^[[:space:]]*#\[([A-Za-z_][A-Za-z0-9_]*::)*(test|test_case)\b|^[[:space:]]*#\[rstest\b' "$FILE_PATH" 2>/dev/null; then
   _is_rust_test=1
 fi
 if [[ "$_is_rust_test" -eq 1 && "$_has_inline_cfg_test" -eq 0 ]]; then
@@ -146,7 +152,28 @@ if [ -f "$EXEMPTIONS_FILE" ]; then
   done <<< "$(read_list "$EXEMPTIONS_FILE")"
 fi
 if [ "$exempt" -eq 0 ]; then
-  if grep -qE '\bunsafe\b[[:space:]]*(\{|fn )' "$FILE_PATH" 2>/dev/null; then
+  # Strip // line comments and /* */ blocks (incl. multi-line) before matching,
+  # so a commented-out or doc-mentioned `unsafe {` does not false-positive. The
+  # block-comment state machine mirrors count_code_lines in detect.sh. String
+  # literals containing the pattern are not handled — same heuristic limit as the
+  # other comment-stripping passes here. BSD awk (macOS) has no \b, so explicit
+  # boundaries are used instead.
+  if awk '
+    { line=$0
+      if (inblock) {
+        idx=index(line,"*/")
+        if (idx>0) { line=substr(line, idx+2); inblock=0 } else next
+      }
+      while ((s=index(line,"/*"))>0) {
+        rest=substr(line, s+2); e=index(rest,"*/")
+        if (e>0) { line=substr(line,1,s-1) substr(rest, e+2) }
+        else { line=substr(line,1,s-1); inblock=1; break }
+      }
+      sub(/\/\/.*$/, "", line)        # // line comment
+      if (line ~ /(^|[^A-Za-z0-9_])unsafe[ \t]*(\{|fn )/) { found=1; exit }
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$FILE_PATH" 2>/dev/null; then
     add_error "Forbidden unsafe code in $FILE_PATH — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing)."
   fi
 fi

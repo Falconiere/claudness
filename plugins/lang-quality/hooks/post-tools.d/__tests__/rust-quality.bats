@@ -310,6 +310,119 @@ EOF
   ! echo "$output" | grep -q "Forbidden lint suppression"
 }
 
+@test "rust-quality: unsafe block in src/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/u.rs <<'EOF'
+pub fn f() {
+    unsafe {
+        do_thing();
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/u.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden unsafe code"
+}
+
+# Regression: the rule used a raw grep, so `unsafe {` inside a comment
+# false-positived. It now strips comments before matching.
+@test "rust-quality: unsafe mentioned only in a comment is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/ok.rs <<'EOF'
+// we deliberately avoid unsafe { } here; use safe wrappers instead.
+pub fn f() -> u8 {
+    1
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/ok.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Forbidden unsafe code"
+}
+
+# Regression: a multi-line /* ... */ block comment containing `unsafe {` must
+# be stripped (block-comment state machine), not just single-line comments.
+@test "rust-quality: unsafe inside a multi-line block comment is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/ok.rs <<'EOF'
+/*
+legacy implementation:
+unsafe {
+    do_thing();
+}
+*/
+pub fn f() -> u8 {
+    1
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/ok.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Forbidden unsafe code"
+}
+
+# Regression: the test-attribute alternation hardcoded a few runtime prefixes,
+# so `#[test_log::test]` (any `path::test`) and `#[test_case]` escaped the
+# placement rule. The generalized `(path::)*test|test_case` now catches them.
+@test "rust-quality: #[test_log::test] attribute outside tests/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+#[test_log::test]
+fn it_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Rust test file outside tests/"
+}
+
+@test "rust-quality: #[test_case(...)] attribute outside tests/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+#[test_case(1)]
+fn it_works(x: u8) {
+    assert_eq!(x, x);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Rust test file outside tests/"
+}
+
+# Guard: #[cfg(test)] must stay owned by the inline-cfg rule, not the widened
+# test-attribute alternation (no `test`/`test_case` token follows `#[`).
+@test "rust-quality: #[cfg(test)] is not caught by the widened test-attr rule" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/lib.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/lib.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+  ! echo "$output" | grep -q "Rust test file outside tests/"
+}
+
 @test "rust-quality: canonical inline #[cfg(test)] mod produces one violation, not two" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
