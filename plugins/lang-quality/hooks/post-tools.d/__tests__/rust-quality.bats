@@ -441,6 +441,52 @@ EOF
   ! echo "$output" | grep -q "Rust test file outside tests/"
 }
 
+# Regression: inline test config gated with all()/any() combinators
+# (`#[cfg(all(test, feature = "x"))]`) must trip the inline-cfg(test) rule.
+@test "rust-quality: inline #[cfg(all(test, ...))] is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/lib.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(all(test, feature = "unit"))]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/lib.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
+# Guard the no-false-positive contract: `not(test)` is the OPPOSITE gate and a
+# `feature = "test-..."` string must not be read as an inline test config.
+@test "rust-quality: #[cfg(not(test))] and feature=\"test-x\" are NOT flagged as inline cfg(test)" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/m.rs <<'EOF'
+#[cfg(not(test))]
+pub fn prod_only() -> u8 {
+    1
+}
+
+#[cfg(feature = "test-utils")]
+pub fn helper() -> u8 {
+    2
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+}
+
 @test "rust-quality: canonical inline #[cfg(test)] mod produces one violation, not two" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
