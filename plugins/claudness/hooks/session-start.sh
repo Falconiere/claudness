@@ -159,6 +159,12 @@ missing_tools=()
 if [ "$HAS_COMEMORY" != "comemory" ] && claudness_enabled skills comemory; then
   missing_tools+=("comemory (persistent memory recall/save)")
 fi
+# Present but outdated: claudness relies on comemory's full verb surface — an
+# older binary lacks the retrieval-loop / code-intel verbs and will error on
+# them. Advisory only (non-fatal); the basics still work.
+if [ "$HAS_COMEMORY" = "comemory" ] && claudness_enabled skills comemory && ! comemory_version_ok; then
+  parts+=("WARN: comemory $(comemory_version) is older than the v$COMEMORY_MIN_VERSION claudness targets — feedback/mine/tune/search-code/graph may be unavailable. Upgrade: \`brew upgrade comemory\` or \`cargo install comemory\`.")
+fi
 if [ "$HAS_ASTGREP" != "ast-grep" ] && claudness_enabled skills ast-grep; then
   missing_tools+=("ast-grep (structural code search)")
 fi

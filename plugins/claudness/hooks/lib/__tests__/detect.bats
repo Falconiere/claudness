@@ -321,3 +321,49 @@ source_lib() {
   run count_code_lines f.ts
   [ "$output" = "4" ]
 }
+
+# ── comemory version detection ──────────────────────────────────────────────
+# Stub `comemory` on PATH so these assert the helper logic, not the host's
+# installed version.
+_stub_comemory() {  # $1 = version string the stub reports
+  mkdir -p "$TMP/stub"
+  printf '#!/bin/sh\necho "comemory %s"\n' "$1" > "$TMP/stub/comemory"
+  chmod +x "$TMP/stub/comemory"
+}
+
+@test "comemory_version parses X.Y.Z from --version output" {
+  source_lib
+  _stub_comemory "1.2.3"
+  PATH="$TMP/stub:$PATH" run comemory_version
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.2.3" ]
+}
+
+@test "comemory_version_ok: 0 when installed > minimum" {
+  source_lib
+  _stub_comemory "0.9.0"
+  PATH="$TMP/stub:$PATH" run comemory_version_ok
+  [ "$status" -eq 0 ]
+}
+
+@test "comemory_version_ok: 0 when installed == minimum (boundary)" {
+  source_lib
+  _stub_comemory "$COMEMORY_MIN_VERSION"
+  PATH="$TMP/stub:$PATH" run comemory_version_ok
+  [ "$status" -eq 0 ]
+}
+
+@test "comemory_version_ok: 1 when installed < minimum" {
+  source_lib
+  _stub_comemory "0.6.0"
+  PATH="$TMP/stub:$PATH" run comemory_version_ok
+  [ "$status" -eq 1 ]
+}
+
+@test "comemory_version_ok: 2 (indeterminate) when comemory absent" {
+  source_lib
+  bin="$TMP/cleanbin"; mkdir -p "$bin"
+  for t in bash sh grep sort head; do ln -s "$(command -v "$t")" "$bin/$t" 2>/dev/null || true; done
+  PATH="$bin" run comemory_version_ok
+  [ "$status" -eq 2 ]
+}
