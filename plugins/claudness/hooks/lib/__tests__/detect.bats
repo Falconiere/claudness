@@ -135,6 +135,34 @@ source_lib() {
   [ -z "$output" ]
 }
 
+@test "count_code_lines: excludes blanks and // comments" {
+  printf '%s\n' 'let a = 1;' '' '// a comment' '   ' 'let b = 2;' > f.ts
+  source_lib
+  run count_code_lines f.ts
+  [ "$output" = "2" ]
+}
+
+@test "count_code_lines: excludes multi-line /* */ block" {
+  printf '%s\n' 'let a = 1;' '/*' ' block' ' comment' '*/' 'let b = 2;' > f.rs
+  source_lib
+  run count_code_lines f.rs
+  [ "$output" = "2" ]
+}
+
+@test "count_code_lines: code with trailing comment still counts" {
+  printf '%s\n' 'let a = 1; // trailing' '// pure comment' 'let b = 2;' > f.ts
+  source_lib
+  run count_code_lines f.ts
+  [ "$output" = "2" ]
+}
+
+@test "count_code_lines: inline /* */ leaving code counts; rust /// dropped" {
+  printf '%s\n' 'let a = /* x */ 1;' '/// doc line' 'let b = 2;' > f.rs
+  source_lib
+  run count_code_lines f.rs
+  [ "$output" = "2" ]
+}
+
 @test "detect_rustfmt / detect_clippy: token when config present" {
   touch rustfmt.toml clippy.toml
   source_lib

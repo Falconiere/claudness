@@ -137,34 +137,6 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/claudness.config.json"; }
   [ "$output" = "300" ]
 }
 
-@test "count_code_lines: excludes blanks and // comments" {
-  load_libs
-  printf '%s\n' 'let a = 1;' '' '// a comment' '   ' 'let b = 2;' > "$TMP/f.ts"
-  run count_code_lines "$TMP/f.ts"
-  [ "$output" = "2" ]
-}
-
-@test "count_code_lines: excludes multi-line /* */ block" {
-  load_libs
-  printf '%s\n' 'let a = 1;' '/*' ' block' ' comment' '*/' 'let b = 2;' > "$TMP/f.rs"
-  run count_code_lines "$TMP/f.rs"
-  [ "$output" = "2" ]
-}
-
-@test "count_code_lines: code with trailing comment still counts" {
-  load_libs
-  printf '%s\n' 'let a = 1; // trailing' '// pure comment' 'let b = 2;' > "$TMP/f.ts"
-  run count_code_lines "$TMP/f.ts"
-  [ "$output" = "2" ]
-}
-
-@test "count_code_lines: inline /* */ leaving code counts; rust /// dropped" {
-  load_libs
-  printf '%s\n' 'let a = /* x */ 1;' '/// doc line' 'let b = 2;' > "$TMP/f.rs"
-  run count_code_lines "$TMP/f.rs"
-  [ "$output" = "2" ]
-}
-
 @test "rust project override works" {
   _project_cfg '{"lang":{"rust":{"maxFileLines":250,"maxFnLines":30,"maxImplLines":150}}}'
   load_libs
