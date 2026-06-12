@@ -13,7 +13,7 @@ teardown() {
 
 source_lib() {
   # shellcheck disable=SC1091
-  . "${BATS_TEST_DIRNAME}/detect.sh"
+  . "${BATS_TEST_DIRNAME}/../detect.sh"
 }
 
 @test "detect_project_root returns git toplevel" {
@@ -33,7 +33,7 @@ source_lib() {
 @test "detect_project_name returns 0 outside a git repo under set -e (fallback survives)" {
   # A bare `[ -n "$root" ] && basename` exits 1 here; under set -e that aborts
   # a caller before its own fallback runs. The helper must exit 0 and print "".
-  run bash -c 'set -euo pipefail; . "'"${BATS_TEST_DIRNAME}"'/detect.sh"; cd /tmp
+  run bash -c 'set -euo pipefail; . "'"${BATS_TEST_DIRNAME}"'/../detect.sh"; cd /tmp
     P="${X:-$(detect_project_name)}"; [ -z "$P" ] && P="unknown"; echo "name=[$P]"'
   [ "$status" -eq 0 ]
   [ "$output" = "name=[unknown]" ]
@@ -86,6 +86,68 @@ source_lib() {
   source_lib
   run detect_ts
   [ "$output" = "ts" ]
+}
+
+@test "detect_ts_linter: biome wins over oxc and eslint" {
+  touch biome.json .oxlintrc.json .eslintrc.json
+  source_lib
+  run detect_ts_linter
+  [ "$output" = "biome" ]
+}
+
+@test "detect_ts_linter: oxc when only .oxlintrc.json" {
+  touch .oxlintrc.json
+  source_lib
+  run detect_ts_linter
+  [ "$output" = "oxc" ]
+}
+
+@test "detect_ts_linter: eslint for legacy .eslintrc.cjs" {
+  touch .eslintrc.cjs
+  source_lib
+  run detect_ts_linter
+  [ "$output" = "eslint" ]
+}
+
+@test "detect_ts_linter: empty when no linter config" {
+  source_lib
+  run detect_ts_linter
+  [ -z "$output" ]
+}
+
+@test "detect_ts_formatter: prettier for .prettierrc" {
+  touch .prettierrc
+  source_lib
+  run detect_ts_formatter
+  [ "$output" = "prettier" ]
+}
+
+@test "detect_ts_formatter: biome for biome.jsonc" {
+  touch biome.jsonc
+  source_lib
+  run detect_ts_formatter
+  [ "$output" = "biome" ]
+}
+
+@test "detect_ts_formatter: empty when none present" {
+  source_lib
+  run detect_ts_formatter
+  [ -z "$output" ]
+}
+
+@test "detect_rustfmt / detect_clippy: token when config present" {
+  touch rustfmt.toml clippy.toml
+  source_lib
+  run detect_rustfmt
+  [ "$output" = "rustfmt" ]
+  run detect_clippy
+  [ "$output" = "clippy" ]
+}
+
+@test "detect_rustfmt: empty when absent" {
+  source_lib
+  run detect_rustfmt
+  [ -z "$output" ]
 }
 
 @test "detect_base_branch falls back to main when no remote" {

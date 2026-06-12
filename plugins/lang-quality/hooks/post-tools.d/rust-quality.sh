@@ -20,6 +20,13 @@
 [ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
 # shellcheck source=../../../claudness/hooks/lib/detect.sh
 . "$CLAUDNESS_LIB_DIR/detect.sh"
+# Threshold resolver (defaults + project/native overrides). Soft if absent.
+# shellcheck source=../../../claudness/hooks/lib/quality-config.sh
+[ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
+command -v rust_max_file_lines >/dev/null 2>&1 || rust_max_file_lines() { echo "${DEFAULT_RUST_MAX_FILE_LINES:-500}"; }
+command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "${DEFAULT_RUST_MAX_FN_LINES:-50}"; }
+command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
+command -v count_code_lines    >/dev/null 2>&1 || count_code_lines()    { wc -l < "$1" | tr -d ' '; }
 
 [ "$(detect_rust)" = "rust" ] || exit 0
 command -v cargo >/dev/null 2>&1 || exit 0
@@ -44,13 +51,41 @@ add_error() {
   MESSAGES="${MESSAGES}${1}\n"
 }
 
-LINE_COUNT=$(wc -l < "$FILE_PATH" | tr -d ' ')
-if [[ "$LINE_COUNT" -gt 500 ]]; then
-  add_error "File exceeds 500-line limit: $FILE_PATH ($LINE_COUNT lines) — split into submodules"
+RUST_MAX_FILE=$(rust_max_file_lines)
+LINE_COUNT=$(count_code_lines "$FILE_PATH")
+if [[ "$LINE_COUNT" -gt "$RUST_MAX_FILE" ]]; then
+  _split_hint="split into submodules"
+  [ -n "$(detect_clippy)" ] && _split_hint="$_split_hint (clippy enforces complexity here)"
+  add_error "File exceeds ${RUST_MAX_FILE}-line limit: $FILE_PATH ($LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
 fi
 
 if [[ "$FILE_PATH" == */src/* ]] && grep -qE '#\[cfg\(test\)\]' "$FILE_PATH" 2>/dev/null; then
   add_error "Inline #[cfg(test)] in $FILE_PATH — tests must live in tests/ directory"
+fi
+
+# Test placement: a test-bearing .rs file must live under a tests/ dir, kept
+# flat (only fixtures/helpers/common subdirs allowed — common/mod.rs is the
+# cargo idiom for shared test helpers).
+_is_rust_test=0
+case "$(basename "$FILE_PATH")" in
+  *_test.rs|*_tests.rs) _is_rust_test=1 ;;
+esac
+if [[ "$_is_rust_test" -eq 0 ]] \
+   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b' "$FILE_PATH" 2>/dev/null; then
+  _is_rust_test=1
+fi
+if [[ "$_is_rust_test" -eq 1 ]]; then
+  if [[ "$FILE_PATH" != */tests/* ]]; then
+    add_error "Rust test file outside tests/: $FILE_PATH — move to a sibling tests/ directory"
+  else
+    _after_tests="${FILE_PATH##*/tests/}"
+    if [[ "$_after_tests" == */* ]]; then
+      _subdir="${_after_tests%%/*}"
+      if [[ "$_subdir" != "fixtures" && "$_subdir" != "helpers" && "$_subdir" != "common" ]]; then
+        add_error "Rust test nested in tests/ subdirectory: $FILE_PATH — keep tests/ flat (only fixtures/helpers/common subdirs allowed)"
+      fi
+    fi
+  fi
 fi
 
 # Forbidden #[allow(...)] / #![allow(...)] / #[expect(...)] / #![expect(...)]
@@ -76,28 +111,30 @@ if [ "$exempt" -eq 0 ]; then
   fi
 fi
 
-LONG_RS_FUNCS=$(awk '
+RUST_MAX_FN=$(rust_max_fn_lines)
+LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" '
   /^[[:space:]]*(pub )?(async )?fn / { start=NR; name=$0 }
   start && /^[[:space:]]*\}/ {
     len=NR-start
-    if (len > 50) printf "%s:%d (%d lines)\n", name, start, len
+    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
     start=0
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_RS_FUNCS" ]]; then
-  add_error "Function too long in $FILE_PATH (>50 lines) — extract helpers."
+  add_error "Function too long in $FILE_PATH (>${RUST_MAX_FN} lines) — extract helpers."
 fi
 
-LONG_IMPL=$(awk '
+RUST_MAX_IMPL=$(rust_max_impl_lines)
+LONG_IMPL=$(awk -v max="$RUST_MAX_IMPL" '
   /^impl / { start=NR; name=$0 }
   start && /^\}/ {
     len=NR-start
-    if (len > 200) printf "%s:%d (%d lines)\n", name, start, len
+    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
     start=0
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_IMPL" ]]; then
-  add_error "Impl block too large in $FILE_PATH (>200 lines) — split into trait impls or modules."
+  add_error "Impl block too large in $FILE_PATH (>${RUST_MAX_IMPL} lines) — split into trait impls or modules."
 fi
 
 # --- Error-handling rules (zero tolerance) ---
@@ -158,6 +195,35 @@ if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
   fi
 fi
 
+# --- Docs (soft advisory, never blocks) ---
+# A public API item in src/ should carry a concise /// doc comment. Advisory
+# only — collected separately from MESSAGES so it never sets the failing gate.
+DOC_ADVISORY=""
+if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]]; then
+  _undoc=$(awk '
+    /^[[:space:]]*$/   { next }   # blanks do not reset the doc context
+    /^[[:space:]]*#\[/ { next }   # attributes sit between doc and item
+    {
+      if ($0 ~ /^[[:space:]]*pub[[:space:]]+(fn|struct|enum|trait)[[:space:]]/) {
+        if (prev !~ /^[[:space:]]*(\/\/\/|\/\/!)/) printf "%d: %s\n", NR, $0
+      }
+      prev=$0
+    }
+  ' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$_undoc" ]]; then
+    DOC_ADVISORY="Public items missing a /// doc comment in $FILE_PATH — add a concise one-line doc:\n${_undoc}"
+  fi
+  # Concise cap: flag doc-comment runs that have grown long.
+  _verbose_doc=$(awk '
+    /^[[:space:]]*\/\/[\/!]/ { if (run==0) start=NR; run++; next }
+    { if (run>12) printf "%d: doc block is %d lines — trim to the essentials\n", start, run; run=0 }
+    END { if (run>12) printf "%d: doc block is %d lines — trim to the essentials\n", start, run }
+  ' "$FILE_PATH" 2>/dev/null | head -2)
+  if [[ -n "$_verbose_doc" ]]; then
+    DOC_ADVISORY="${DOC_ADVISORY:+$DOC_ADVISORY\n}Verbose doc comment in $FILE_PATH — docs must be present but concise:\n${_verbose_doc}"
+  fi
+fi
+
 # --- Output ---
 
 if [[ -n "$MESSAGES" ]]; then
@@ -201,6 +267,16 @@ else
         --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         '{status: $status, source: $source, updatedAt: $updatedAt}' > "$GATE_FILE"
     fi
+  fi
+
+  # Docs advisory (non-blocking — no gate write).
+  if [[ -n "$DOC_ADVISORY" ]]; then
+    jq -n --arg ctx "$DOC_ADVISORY" '{
+      "hookSpecificOutput": {
+        "hookEventName": "PostToolUse",
+        "additionalContext": $ctx
+      }
+    }'
   fi
 fi
 

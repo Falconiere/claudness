@@ -217,3 +217,60 @@ EOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "ts-quality: project config lowers maxFileLines, flags a file the default would not" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/claudness.config.json"
+  : > src/big.ts
+  for i in $(seq 1 15); do echo "export const v$i = $i;" >> src/big.ts; done
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/big.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "exceeds 10-line limit"
+}
+
+@test "ts-quality: comments and blank lines do not count toward maxFileLines" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/claudness.config.json"
+  # 8 code lines, padded with comments + blanks past the raw-line limit of 10.
+  : > src/padded.ts
+  for i in $(seq 1 8); do
+    echo "// explanatory comment $i" >> src/padded.ts
+    echo "" >> src/padded.ts
+    echo "export const v$i = $i;" >> src/padded.ts
+  done
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/padded.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "exceeds 10-line limit"
+}
+
+@test "ts-quality: exported function without JSDoc emits a non-blocking docs advisory" {
+  _ts_project
+  cat > src/api.ts <<'EOF'
+export function doThing() {
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "missing a JSDoc"
+  ! echo "$output" | grep -q "QUALITY VIOLATION"
+}
+
+@test "ts-quality: documented export produces no docs advisory" {
+  _ts_project
+  cat > src/api.ts <<'EOF'
+/** Does the thing. */
+export function doThing() {
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "missing a JSDoc"
+}
