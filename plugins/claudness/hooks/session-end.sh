@@ -8,6 +8,23 @@ HOOK_DIR="$(dirname "$0")"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
 
+# ── Autonomous comemory maintenance (zero Claude tokens) ───────────────────
+# Runs INDEPENDENTLY of the opt-in reminder below: keep the retrieval store
+# sharp even when the Stop reminder is disabled. mine/prune/gc are all local
+# (no LLM, no API). Throttled to once per UTC day via a stamp file; the stamp
+# is written BEFORE the work so a mid-run crash never retry-loops the same day.
+# Silent and non-fatal — must never delay or block session exit.
+if [ "$(claudness_comemory_state)" = "available" ]; then
+  _cm_data="${COMEMORY_DATA_DIR:-$HOME/.comemory}"
+  _cm_stamp="$_cm_data/.claudness-last-maintain"
+  _cm_today="$(date -u +%Y%m%d 2>/dev/null || echo '')"
+  if [ -n "$_cm_today" ] && [ "$(cat "$_cm_stamp" 2>/dev/null || echo '')" != "$_cm_today" ]; then
+    mkdir -p "$_cm_data" 2>/dev/null || true
+    printf '%s' "$_cm_today" > "$_cm_stamp" 2>/dev/null || true
+    { comemory mine --apply; comemory prune --apply; comemory gc; } >/dev/null 2>&1 || true
+  fi
+fi
+
 # OPT-IN: the end-of-session comemory reminder is OFF by default. The agent-memory
 # protocol is always-active and saves proactively during the session, so a
 # Stop-time nag is redundant noise for most users. It emits only when explicitly

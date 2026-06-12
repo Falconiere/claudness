@@ -15,7 +15,8 @@ if [[ -z "$tool" ]]; then
 Usage: mod.sh <tool> <subcommand> [args...]
 
 Tools:
-  comemory    Persistent memory (search, save, list)
+  comemory    Persistent memory + code-intel (search, save, list, search-code,
+              graph, feedback, mine, prune, gc, maintain — run comemory.sh for all)
   ast-grep    Structural/AST pattern matching
 
 Examples:

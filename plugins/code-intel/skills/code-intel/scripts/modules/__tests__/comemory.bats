@@ -84,3 +84,54 @@ teardown() {
 @test "comemory: filter_project is gone from the wrapper" {
   ! grep -q 'filter_project' "$COMEMORY_SH"
 }
+
+# ── Code-intel verbs: repo-scoped (wrapper injects --repo) ─────────────────
+@test "comemory: search-code/index-code/graph inject --repo" {
+  grep -q 'comemory search-code "\$query" --repo "\$REPO"' "$COMEMORY_SH"
+  grep -q 'comemory index-code --repo "\$REPO"' "$COMEMORY_SH"
+  grep -q 'comemory graph --repo "\$REPO"' "$COMEMORY_SH"
+}
+
+@test "comemory: search-code runs against the real binary (lexical, empty index → no results, exit 0)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-sc"
+  run bash "$MOD" comemory search-code "nonexistent_symbol_xyz"
+  [ "$status" -eq 0 ]
+}
+
+# ── Retrieval-loop verbs: GLOBAL (must NOT inject --repo) ───────────────────
+@test "comemory: global loop verbs exec without --repo injection" {
+  # The combined branch forwards the subcommand verbatim — no --repo appended.
+  grep -q 'mine|tune|eval|prune|gc|rebuild)' "$COMEMORY_SH"
+  grep -q 'exec comemory "\$subcmd" "\$@"' "$COMEMORY_SH"
+  # feedback forwards the positional query_id, also without --repo.
+  grep -q 'exec comemory feedback "\$query_id" "\$@"' "$COMEMORY_SH"
+  # No --repo anywhere on the global-verb lines.
+  ! grep -E 'comemory (mine|tune|eval|prune|gc|rebuild|feedback).*--repo' "$COMEMORY_SH"
+}
+
+@test "comemory: maintain runs mine+prune+gc against the real binary (isolated store, exit 0)" {
+  # Isolated data dir so prune --apply / gc never touch the real store.
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-maint"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run bash "$MOD" comemory maintain
+  [ "$status" -eq 0 ]
+}
+
+@test "comemory: feedback round-trips against the real binary (isolated store)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-fb"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  # Save a memory, then search --json to obtain the query_id the loop feeds back.
+  run bash "$MOD" comemory save "fb-title" "fb body content" --json
+  [ "$status" -eq 0 ]
+  local mem_id qid
+  mem_id=$(echo "$output" | jq -r '.id')
+  [ -n "$mem_id" ] && [ "$mem_id" != "null" ]
+  run bash "$MOD" comemory search "fb-title" --json
+  [ "$status" -eq 0 ]
+  qid=$(echo "$output" | jq -r '.query_id // .queryId // empty')
+  if [ -z "$qid" ]; then
+    skip "comemory search --json did not expose a query_id field in this version"
+  fi
+  run bash "$MOD" comemory feedback "$qid" --used "$mem_id" --json
+  [ "$status" -eq 0 ]
+}

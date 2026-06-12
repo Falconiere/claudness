@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # Pre-tool check: enforce --repo scope on raw `comemory` CLI invocations.
 #
-# Without --repo, `comemory search` / `save` / `context` mix results across
-# every repo in the local comemory store — wasted tokens at best, wrong-repo
-# answers at worst. The `skills/code-intel/scripts/mod.sh comemory <subcmd>`
-# wrapper (resolved relative to this module — skills/ is a sibling of hooks/
-# inside the plugin root, in-repo and installed alike) auto-scopes; this
-# module pushes the agent toward that path by denying unscoped raw calls.
+# Without --repo, `comemory search` / `save` / `context` / `search-code` mix
+# results across every repo in the local comemory store — wasted tokens at
+# best, wrong-repo answers at worst. The `skills/code-intel/scripts/mod.sh
+# comemory <subcmd>` wrapper (resolved relative to this module — skills/ is a
+# sibling of hooks/ inside the plugin root, in-repo and installed alike)
+# auto-scopes; this module pushes the agent toward that path by denying
+# unscoped raw calls.
 #
-# Subcommands that require scoping: search, save, context. Anything else
-# (list, doctor, stats, tui, serve, --help, --version) is intentionally global.
+# Subcommands that require scoping: search, save, context, search-code.
+# The retrieval-loop verbs (mine, tune, eval, prune, gc, rebuild, feedback)
+# and list/doctor/stats/serve/--help/--version are intentionally global —
+# comemory accepts no --repo on them.
 #
 # Always allowed: wrapper calls (`mod.sh comemory …` adds --repo itself), and
 # raw calls that already include --repo. comemory has no `-p` short flag and no
@@ -119,9 +122,10 @@ while IFS= read -r segment; do
   subcmd="${BASH_REMATCH[1]:-}"
   [[ -z "$subcmd" ]] && continue
 
-  # Only search/save/context require scoping; everything else is global.
+  # Only search/save/context/search-code require scoping; everything else
+  # is global (comemory accepts no --repo on the retrieval-loop verbs).
   case "$subcmd" in
-    search|save|context) ;;
+    search|save|context|search-code) ;;
     *) continue ;;
   esac
 
@@ -149,7 +153,7 @@ if [[ -n "$violation" ]]; then
       "permissionDecision": "deny",
       "permissionDecisionReason": (
         "comemory call missing --repo scope:\n  " + $cmd + "\n\n" +
-        "comemory stores memories across multiple repos. Without --repo, search/save/context leak across repos.\n\n" +
+        "comemory stores memories across multiple repos. Without --repo, search/save/context/search-code leak across repos.\n\n" +
         "Fix one of:\n" +
         "  1. Prefer the wrapper (auto-scopes):\n" +
         "       " + $wrapper + " comemory <subcmd> …\n" +
