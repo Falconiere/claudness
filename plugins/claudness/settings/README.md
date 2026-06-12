@@ -79,6 +79,36 @@ no per-project `.claude/settings/` lookup — to override per project, point
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
 | `MY_CLAUDE_ENGRAM_PROJECT`| Overrides the engram project scope used by the code-intel wrapper (the code-intel plugin's `skills/code-intel/scripts/modules/engram.sh`). Not read by any hook. |
 
+## Statusline
+
+`plugins/claudness/statusline.sh` is a Claude Code statusline: `model | effort |
+ctx | <gate> | folder | branch | <caveman>`. Its claudness-specific segment is a
+loud red `✗ gate:failing` whenever this project's PostToolUse quality gate is
+failing — the same state the lang-quality hooks write to
+`.claude/tmp/quality-gate-status.json`.
+
+Claude Code does not let a plugin declare `statusLine` in its manifest, so the
+SessionStart hook symlinks the script to a stable, version-independent path:
+
+```
+~/.claude/claudness/statusline.sh   (→ the installed plugin's statusline.sh)
+```
+
+Wire it up once in your `settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/claudness/statusline.sh"
+  }
+}
+```
+
+(Use `$CLAUDE_CONFIG_DIR/claudness/statusline.sh` if you run with a custom
+config dir.) The symlink is refreshed every session, so plugin updates are
+picked up automatically with no settings change.
+
 ## Runtime config
 
 For per-skill, per-hook, or per-MCP opt-out without touching the data

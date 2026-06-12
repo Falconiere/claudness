@@ -13,6 +13,19 @@ shopt -u patsub_replacement 2>/dev/null || true
 . "$HOOK_DIR/lib/detect.sh"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
+# shellcheck source=lib/registry.sh
+. "$HOOK_DIR/lib/registry.sh"
+
+# Symlink the statusline to a stable path so settings.json can point at it
+# without hardcoding the version-specific plugin cache path (plugins cannot
+# declare statusLine in their manifest). Done before the enabled gate so the
+# statusline stays wired even when session-start context injection is disabled.
+statusline_src="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/statusline.sh"
+if [ -f "$statusline_src" ]; then
+  reg_root="$(claudness_registry_root)"
+  mkdir -p "$reg_root" 2>/dev/null || true
+  ln -sf "$statusline_src" "$reg_root/statusline.sh" 2>/dev/null || true
+fi
 
 if ! claudness_enabled hooks session-start; then
   cat > /dev/null 2>&1 || true
