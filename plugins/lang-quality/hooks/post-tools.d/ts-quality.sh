@@ -22,8 +22,9 @@
 # Threshold resolver (defaults + project/native overrides). Soft if absent.
 # shellcheck source=../../../claudness/hooks/lib/quality-config.sh
 [ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
-command -v ts_max_file_lines >/dev/null 2>&1 || ts_max_file_lines() { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
-command -v ts_max_fn_lines   >/dev/null 2>&1 || ts_max_fn_lines()   { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
+command -v ts_max_file_lines        >/dev/null 2>&1 || ts_max_file_lines()        { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
+command -v ts_max_fn_lines          >/dev/null 2>&1 || ts_max_fn_lines()          { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
+command -v ts_max_file_lines_source >/dev/null 2>&1 || ts_max_file_lines_source() { printf 'default'; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
 # Exit early if this isn't a TypeScript project.
@@ -116,7 +117,7 @@ if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
     # Only claim the linter owns the limit when the limit truly came from its
     # config; if a linter is present but its config isn't machine-readable
     # (e.g. .eslintrc.cjs / eslint.config.js), say so instead of contradicting.
-    case "$(command -v ts_max_file_lines_source >/dev/null 2>&1 && ts_max_file_lines_source)" in
+    case "$(ts_max_file_lines_source)" in
       native)  _split_hint="$_split_hint ($_linter enforces this max-lines limit)" ;;
       default) _split_hint="$_split_hint ($_linter is present but its config isn't machine-readable here — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
     esac
