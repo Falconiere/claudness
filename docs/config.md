@@ -38,12 +38,25 @@ The lang-quality gate's line limits are not hardcoded. Each threshold resolves
 with this precedence (first hit wins, always a positive integer):
 
 1. **Project / user override** — the `lang.<ts|rust>.<key>` value above.
-2. **Native linter config** (TS `maxFileLines` only) — the `max-lines` rule read
-   from `.eslintrc.json` then `.oxlintrc.json` (all encodings: `N`,
-   `["error", N]`, `["error", {"max": N}]`). Flat config
-   `eslint.config.{js,mjs,ts}` is JavaScript and not parsed — it falls through.
+2. **Native linter config** (TS `maxFileLines` only) — the `max-lines` rule from
+   the *active* linter's JSON config: `.oxlintrc.json` when oxc is detected,
+   `.eslintrc.json` when eslint is (detection precedence is biome > oxc > eslint;
+   biome has no `max-lines`, so it falls through to the default). Only the active
+   linter's file is read — a repo carrying both (e.g. mid-migration) does not
+   chain between them. All encodings parse: `N`, `["error", N]`,
+   `["error", {"max": N}]`. Flat config `eslint.config.{js,mjs,ts}` is JavaScript
+   and not parsed — it falls through.
 3. **Built-in default** — TS `maxFileLines` 300 / `maxFnLines` 60; Rust
    `maxFileLines` 500 / `maxFnLines` 50 / `maxImplLines` 200.
+
+The file-size limit counts real code only: `count_code_lines`
+(`plugins/claudness/hooks/lib/detect.sh`) excludes blank lines and `//` + `/* */`
+comments. It is a lexical heuristic, not a parser — a `//` inside a string literal
+(e.g. a `"https://…"` URL) is treated as a line-ending comment, so a file dense in
+such literals can count slightly low. The gate deliberately fails *toward*
+flagging: when the scan ends mid-`/* */` (an unterminated block, or a `/*` inside a
+string), it falls back to the raw line count rather than risk under-counting an
+oversized file.
 
 A value of `0`, a negative, or `"off"` is treated as "no override" and falls
 through to the next layer — it does not mean a limit of zero. A stringified

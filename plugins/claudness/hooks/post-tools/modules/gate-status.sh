@@ -28,28 +28,15 @@ if [[ -z "$exit_code" || "$exit_code" == "null" ]]; then
   fi
 fi
 
-# Don't overwrite a failing gate owned by a file-level quality hook
-# (ts-quality-hook, rust-quality-hook, ...): those hooks manage their own
-# lifecycle and only clear the gate when the offending file is re-edited
-# clean. A passing quality command here must not mask their failures.
-#
-# Ordering note: gate-file.sh mirrors the MOST RECENT failure into the
-# top-level `source`. So while any *-quality-hook file entry is the latest
-# failure, this guard holds even if a gate-status-hook command failure is
-# also seeded in `entries.__global__` — a passing `bun test` won't clear the
-# gate until every file-level failure is fixed first. Intended; see the
-# single-slot passing write below (it depends on this guard).
-if [[ -f "$GATE_FILE" ]]; then
-  current_source=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
-  current_status=$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null || echo "")
-  # NAMING CONTRACT: every file-level quality hook must set its gate `source`
-  # ending in `-quality-hook` (e.g. ts-quality-hook, rust-quality-hook) so this
-  # `*-quality-hook` guard recognises it; a new hook with a different suffix
-  # would be silently clobbered by a passing command here.
-  if [[ "$current_source" == *-quality-hook && "$current_status" == "failing" ]]; then
-    exit 0
-  fi
-fi
+# A failing gate owned by a file-level quality hook (ts-quality-hook,
+# rust-quality-hook, ...) is NOT clobbered by what follows: this module records
+# and clears only its OWN command-channel slot (key "__global__", source
+# "gate-status-hook") through gate-file.sh's ownership-checked helpers, so a file
+# hook's entry — owned by a different source — survives until that file is fixed.
+# This replaces an earlier top-level `source == *-quality-hook` guard that, while
+# a file failure was live, dropped a failing command outright; fixing the file
+# then cleared the only tracked entry and flipped the gate to passing even though
+# the command was still failing.
 
 # Quality / test commands that should toggle the global gate:
 #   * Project tool wrappers: tools/<name>/{check,test,format}.sh (any project basename)
@@ -74,17 +61,42 @@ if ! echo "$command" | grep -qE "${GATE_TRIGGER_PREFIX}(${GATE_TRIGGER_ALTERNATI
   exit 0
 fi
 
-if [[ "$exit_code" =~ ^[0-9]+$ && "$exit_code" -ne 0 ]]; then
-  jq -n \
-    --arg status "failing" \
-    --arg reason "Quality command failed: $command (exit $exit_code)" \
+# Multi-slot gate writer/clearer (entries keyed by file/channel) so a command
+# failure no longer clobbers a file hook's failure and vice-versa. Soft if
+# absent: the fallbacks keep legacy single-slot behavior when the claudness lib
+# predates gate-file.sh.
+_claudness_lib="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}/../../lib}"
+# shellcheck source=../../lib/gate-file.sh
+[ -f "$_claudness_lib/gate-file.sh" ] && . "$_claudness_lib/gate-file.sh"
+command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {
+  jq -n --arg reason "$4" --arg source "$3" --arg file "$2" --arg violations "$5" \
     --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{
-      status: $status,
-      reason: $reason,
-      source: "gate-status-hook",
-      updatedAt: $updatedAt
-    }' > "$GATE_FILE"
+    '{status: "failing", reason: $reason, source: $source, file: $file,
+      violations: $violations, updatedAt: $updatedAt}' > "$1"
+}
+command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
+  [ -f "$1" ] || return 0
+  local _src _file
+  _src=$(jq -r '.source // ""' "$1" 2>/dev/null || echo "")
+  _file=$(jq -r '.file // ""' "$1" 2>/dev/null || echo "")
+  if [ "$_src" = "$3" ] && [ "$_file" = "$2" ]; then
+    jq -n --arg source "$3" --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{status: "passing", source: $source, updatedAt: $updatedAt}' > "$1"
+  fi
+}
+
+# The quality-command gate slot. "__global__" is the same key gate-file.sh
+# assigns a no-`file` command failure when it seeds a legacy record, so a record
+# written here and a promoted legacy command failure occupy one slot.
+GATE_COMMAND_KEY="__global__"
+
+if [[ "$exit_code" =~ ^[0-9]+$ && "$exit_code" -ne 0 ]]; then
+  # Record the command failure as its OWN slot. When a file hook's failure is
+  # also live this coexists with it (different source/key); fixing the file later
+  # promotes this slot instead of flipping the gate to passing while the command
+  # is still broken.
+  gate_record_failure "$GATE_FILE" "$GATE_COMMAND_KEY" "gate-status-hook" \
+    "Quality command failed: $command (exit $exit_code)" ""
 
   jq -n --arg ctx "Global quality gate failing. Fix all errors/warnings/tests before new tasks.\nFailed: $command (exit $exit_code)" '{
     "hookSpecificOutput": {
@@ -96,24 +108,29 @@ if [[ "$exit_code" =~ ^[0-9]+$ && "$exit_code" -ne 0 ]]; then
 fi
 
 if [[ "$exit_code" == "0" ]]; then
-  # Single-slot passing write — deliberately drops any `entries` map from
-  # gate-file.sh. SAFE ONLY because the early-exit above bails whenever a
-  # *-quality-hook owns a failing gate, so we never reach here while
-  # file-level entries are live. If that guard is ever loosened, this write
-  # must merge/clear entries instead of replacing the whole object.
-  # CONCURRENCY: this is the third writer of $GATE_FILE, alongside
-  # gate-file.sh's gate_record_failure / gate_clear_file and their single-slot
-  # fallback. It shares their single-writer assumption and the same fix if a
-  # parallel-edit flow is ever added — see the CONCURRENCY note in gate-file.sh.
-  jq -n \
-    --arg status "passing" \
-    --arg source "$command" \
-    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{
-      status: $status,
-      source: $source,
-      updatedAt: $updatedAt
-    }' > "$GATE_FILE"
+  # Clear ONLY this command-channel slot. gate_clear_file is ownership-checked: a
+  # live *-quality-hook file entry is owned by a different source, so it is left
+  # intact and the gate stays failing until that file is fixed too.
+  gate_clear_file "$GATE_FILE" "$GATE_COMMAND_KEY" "gate-status-hook"
+
+  # Assert an affirmative passing record (keeps statusline/session-start green)
+  # UNLESS a foreign failure still owns the gate. gate_clear_file already flips
+  # the gate to passing when our slot was the last entry; re-assert only when the
+  # gate is absent or not failing, so a live file-hook failure is never clobbered.
+  # CONCURRENCY: this write and the gate_record_failure above share gate-file.sh's
+  # single-writer assumption — safe only while PostToolUse hooks fire serially;
+  # see the CONCURRENCY note in gate-file.sh.
+  if [ ! -f "$GATE_FILE" ] || [ "$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null)" != "failing" ]; then
+    jq -n \
+      --arg status "passing" \
+      --arg source "$command" \
+      --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{
+        status: $status,
+        source: $source,
+        updatedAt: $updatedAt
+      }' > "$GATE_FILE"
+  fi
 fi
 
 exit 0
