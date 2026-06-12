@@ -26,7 +26,13 @@ detect_project_name() {
 command -v comemory >/dev/null 2>&1 || exit 0
 
 REPO="${MY_CLAUDE_COMEMORY_REPO:-$(detect_project_name)}"
-[ -z "$REPO" ] && REPO="unknown"
+if [ -z "$REPO" ]; then
+  REPO="unknown"
+  # Visibility: outside a git repo with MY_CLAUDE_COMEMORY_REPO unset, every
+  # memory lands in the shared "unknown" pool, silently co-mingling across
+  # repo-less runs. Warn once so the contamination is not invisible.
+  printf 'comemory.sh: no git repo and MY_CLAUDE_COMEMORY_REPO unset — scoping to "unknown" (set MY_CLAUDE_COMEMORY_REPO to isolate)\n' >&2
+fi
 
 subcmd="${1:-}"
 shift 2>/dev/null || true

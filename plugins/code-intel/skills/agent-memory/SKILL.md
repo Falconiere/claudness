@@ -45,7 +45,7 @@ comemory **auto-warns on near-duplicates**: if a similar memory already exists, 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<query>" --kind KIND
 ```
-Query-driven recall — you must supply a natural-language `<query>`. Returns compact ranked results scoped to the current repo. The wrapper bakes in `--k 20`; add `--kind` to filter by memory kind.
+Query-driven recall — you must supply a natural-language `<query>`. Returns compact ranked results scoped to the current repo. comemory's default candidate window is 12; pass `--k N` to widen it, and `--kind` to filter by memory kind.
 
 ### Browse memories
 ```bash

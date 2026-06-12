@@ -9,19 +9,28 @@ HOOK_DIR="$(dirname "$0")"
 . "$HOOK_DIR/lib/config.sh"
 
 # ── Autonomous comemory maintenance (zero Claude tokens) ───────────────────
-# Runs INDEPENDENTLY of the opt-in reminder below: keep the retrieval store
-# sharp even when the Stop reminder is disabled. mine/prune/gc are all local
-# (no LLM, no API). Throttled to once per UTC day via a stamp file; the stamp
-# is written BEFORE the work so a mid-run crash never retry-loops the same day.
-# Silent and non-fatal — must never delay or block session exit.
-if [ "$(claudness_comemory_state)" = "available" ]; then
+# Keeps the retrieval store sharp: mine/prune/gc are all local (no LLM, no API).
+# Throttled to once per UTC day via a stamp file; the stamp is written BEFORE
+# the work so a mid-run crash never retry-loops the same day. Silent and
+# non-fatal, and each call is timeout-bounded so a hung comemory binary can
+# never delay or block session exit.
+#
+# Gated on `claudness_enabled hooks session-end` (opt-OUT, default on): unlike
+# the reminder below — which is opt-IN — maintenance runs by default, but
+# `hooks.session-end: false` disables BOTH, honoring the docs/config.md contract
+# that a disabled hook "exits early and emits nothing" (and here, mutates nothing).
+if claudness_enabled hooks session-end && [ "$(claudness_comemory_state)" = "available" ]; then
   _cm_data="${COMEMORY_DATA_DIR:-$HOME/.comemory}"
   _cm_stamp="$_cm_data/.claudness-last-maintain"
   _cm_today="$(date -u +%Y%m%d 2>/dev/null || echo '')"
   if [ -n "$_cm_today" ] && [ "$(cat "$_cm_stamp" 2>/dev/null || echo '')" != "$_cm_today" ]; then
     mkdir -p "$_cm_data" 2>/dev/null || true
     printf '%s' "$_cm_today" > "$_cm_stamp" 2>/dev/null || true
-    { comemory mine --apply; comemory prune --apply; comemory gc; } >/dev/null 2>&1 || true
+    # timeout/gtimeout if present, else run bare (macOS has neither by default).
+    _cm_to=""
+    if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
+    elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
+    { $_cm_to comemory mine --apply; $_cm_to comemory prune --apply; $_cm_to comemory gc; } >/dev/null 2>&1 || true
   fi
 fi
 
