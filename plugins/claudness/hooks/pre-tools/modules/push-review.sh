@@ -31,7 +31,10 @@ command -v git >/dev/null 2>&1 || exit 0
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
 cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|$)' || exit 0
+# The trailing boundary must also catch statement terminators (`git push;`,
+# `git push&`, `git push|tee`) — without them an agent could append `;` and
+# slip the push past the gate, which is now the only push-time check.
+echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|;|&|\||$)' || exit 0
 
 _branch_slug() {
   local branch="$1"

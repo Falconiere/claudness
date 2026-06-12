@@ -22,8 +22,13 @@ detect_project_name() {
   if [ -n "$root" ]; then basename "$root"; fi
 }
 
-# No comemory CLI? Graceful no-op so dependent skills don't break.
-command -v comemory >/dev/null 2>&1 || exit 0
+# No comemory CLI? Graceful no-op so dependent skills don't break — but warn on
+# stderr first so the agent SEES that this operation (e.g. a save) was dropped,
+# not silently swallowed mid-session.
+if ! command -v comemory >/dev/null 2>&1; then
+  printf 'comemory.sh: comemory CLI not installed — "%s" skipped (no-op). Install comemory to persist/recall.\n' "${1:-<subcommand>}" >&2
+  exit 0
+fi
 
 REPO="${MY_CLAUDE_COMEMORY_REPO:-$(detect_project_name)}"
 if [ -z "$REPO" ]; then
@@ -81,7 +86,10 @@ Retrieval-quality loop (GLOBAL — no --repo; local, no LLM/API):
   prune [--apply]                     Soft-delete low-value memories + orphan edges
   gc                                  Hard-delete trashed entries + stale telemetry
   rebuild                             Rebuild the SQLite mirror from markdown source of truth
-  maintain                            Autonomous upkeep: mine --apply + prune --apply + gc
+  maintain                            Autonomous upkeep: mine --apply + prune --apply + gc.
+                                      Each step is bounded by timeout/gtimeout when present; on a
+                                      host with neither (stock macOS) a hung comemory can block a
+                                      manual call — the session-end hook runs it detached instead.
   stats                               Data-directory + index health report (comemory doctor)
 
 Pass-through flags: --kind <kind>, --tags <csv>, --quality N, --k N, --lang <lang>, --json
@@ -89,19 +97,23 @@ USAGE
   exit 1
 }
 
+# Positional values (query, save body) are passed AFTER a `--` end-of-options
+# marker so a value with a leading `--` (e.g. a title/query that starts with
+# "--foo") is parsed as the positional, not mistaken for a flag. comemory/clap
+# requires every flag BEFORE the `--`, so the order is: <verb> <flags> -- <value>.
 case "$subcmd" in
   search)
     query="${1:?search requires a query}"
     shift
     repo_flag "$@"
-    exec comemory search "$query" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
+    exec comemory search ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query"
     ;;
   save)
     title="${1:?save requires a title}"
     content="${2:?save requires content}"
     shift 2
     repo_flag "$@"
-    exec comemory save "$(printf '%s\n\n%s' "$title" "$content")" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
+    exec comemory save ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$(printf '%s\n\n%s' "$title" "$content")"
     ;;
   list)
     repo_flag "$@"
@@ -117,9 +129,9 @@ case "$subcmd" in
     # comemory's own default (note) so a caller may override it via "$@".
     case " $* " in
       *" --tags "*|*" --tags="*)
-        exec comemory save "$body" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" ;;
+        exec comemory save ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$body" ;;
       *)
-        exec comemory save "$body" --tags session-summary ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" ;;
+        exec comemory save --tags session-summary ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$body" ;;
     esac
     ;;
   stats)
@@ -133,7 +145,7 @@ case "$subcmd" in
     query="${1:?search-code requires a query}"
     shift
     repo_flag "$@"
-    exec comemory search-code "$query" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
+    exec comemory search-code ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query"
     ;;
   index-code)
     # --path is required by comemory; caller supplies it. --repo auto-injected
@@ -151,7 +163,7 @@ case "$subcmd" in
   feedback)
     query_id="${1:?feedback requires a query_id (from a prior search --json)}"
     shift
-    exec comemory feedback "$query_id" "$@"
+    exec comemory feedback "$@" -- "$query_id"
     ;;
   mine|tune|eval|prune|gc|rebuild)
     exec comemory "$subcmd" "$@"
