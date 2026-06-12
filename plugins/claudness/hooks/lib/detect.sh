@@ -63,7 +63,12 @@ COMEMORY_MIN_VERSION="0.8.0"
 comemory_version() {
   command -v comemory >/dev/null 2>&1 || return 1
   local v
-  v=$(comemory --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  # Pin to comemory's OWN version token (`comemory <X.Y.Z>`), not any X.Y.Z in
+  # the output, so a future `--version` that also prints a dep version (e.g.
+  # "built against sqlite 3.45.0, version 0.8.0") can't match the wrong number.
+  v=$(comemory --version 2>/dev/null \
+        | grep -oE 'comemory[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+' \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
   [ -n "$v" ] && { echo "$v"; return 0; }
   return 1
 }

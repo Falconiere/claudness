@@ -360,6 +360,16 @@ _stub_comemory() {  # $1 = version string the stub reports
   [ "$status" -eq 1 ]
 }
 
+@test "comemory_version picks comemory's own version, not a trailing dependency version" {
+  source_lib
+  mkdir -p "$TMP/stub"
+  printf '#!/bin/sh\necho "comemory 1.2.3 (built against sqlite 3.45.0)"\n' > "$TMP/stub/comemory"
+  chmod +x "$TMP/stub/comemory"
+  PATH="$TMP/stub:$PATH" run comemory_version
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.2.3" ]
+}
+
 @test "comemory_version_ok: 2 (indeterminate) when comemory absent" {
   source_lib
   bin="$TMP/cleanbin"; mkdir -p "$bin"
