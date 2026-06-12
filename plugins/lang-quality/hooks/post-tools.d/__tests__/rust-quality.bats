@@ -434,6 +434,31 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: a lone brace inside a "..." string or '{' char literal skewed the
+# brace-depth counter, leaving the fn unmeasured (silently skipped).
+@test "rust-quality: long fn with unbalanced brace in a string is still measured" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+fn unbalanced_string(x: u8) -> u8 {
+    let open = "{";
+    let close = '{';
+    if x > 0 {
+        return 1;
+    }
+    let a = 2;
+    let b = 3;
+    a + b
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
 @test "rust-quality: #[bench] and #[wasm_bindgen_test] do not trigger tests/ placement" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project

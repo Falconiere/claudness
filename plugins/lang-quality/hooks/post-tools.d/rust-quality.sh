@@ -157,15 +157,20 @@ RUST_MAX_FN=$(rust_max_fn_lines)
 # The fn end is found with a brace-depth counter from the fn's own line, so a
 # method inside an impl/mod is measured to ITS close (not the impl's), and an
 # inner if/match/loop close can't end the range early. Body-less trait decls
-# (`fn f();`) are released on the `;`. Known limitation: an UNBALANCED brace
-# inside a string literal skews the count — balanced pairs (format strings
-# like "{}", "{:?}") cancel out and are fine.
-LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" '
+# (`fn f();`) are released on the `;`. Single-line "..." strings and the
+# '{'/'}' char literals are stripped before counting so a lone brace inside
+# them cannot skew the depth. Known limitation: a brace inside a MULTI-LINE
+# string (incl. raw strings) still leaks into the count — an unbalanced one
+# leaves the fn unmeasured (fail-open), never falsely flagged short.
+LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" -v q="'" '
   !infn && /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / {
     infn=1; start=NR; name=$0; depth=0; opened=0
   }
   infn {
     line=$0
+    gsub(/\\"/, "", line)            # escaped quotes would derail the span strip
+    gsub(/"[^"]*"/, "", line)        # single-line string contents
+    gsub(q "[{}]" q, "", line)       # brace char literals (lifetimes never contain braces)
     no=gsub(/\{/, "{", line); nc=gsub(/\}/, "}", line)
     depth += no - nc
     if (no > 0) opened=1
