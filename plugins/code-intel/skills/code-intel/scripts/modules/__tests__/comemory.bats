@@ -75,21 +75,24 @@ teardown() {
   [[ "$output" == *"$id"* ]]
 }
 
-@test "comemory: wrapper injects --repo into the comemory invocation" {
-  grep -q 'comemory search "\$query" --repo "\$REPO"' "$COMEMORY_SH"
-  grep -q 'comemory save .* --repo "\$REPO"' "$COMEMORY_SH"
-  grep -q 'comemory list --repo "\$REPO"' "$COMEMORY_SH"
+@test "comemory: repo_flag helper carries --repo \$REPO and is used by all scoped verbs" {
+  # --repo is injected via the repo_flag helper / REPO_ARGS array (not inline),
+  # so a caller-supplied --repo can suppress it (see the override test above).
+  grep -q 'REPO_ARGS=(--repo "\$REPO")' "$COMEMORY_SH"
+  # Each repo-scoped verb (search, save, list, summary, search-code, index-code,
+  # graph) calls the helper before exec — 7 invocations.
+  [ "$(grep -c 'repo_flag "\$@"' "$COMEMORY_SH")" -ge 7 ]
 }
 
 @test "comemory: filter_project is gone from the wrapper" {
   ! grep -q 'filter_project' "$COMEMORY_SH"
 }
 
-# ── Code-intel verbs: repo-scoped (wrapper injects --repo) ─────────────────
-@test "comemory: search-code/index-code/graph inject --repo" {
-  grep -q 'comemory search-code "\$query" --repo "\$REPO"' "$COMEMORY_SH"
-  grep -q 'comemory index-code --repo "\$REPO"' "$COMEMORY_SH"
-  grep -q 'comemory graph --repo "\$REPO"' "$COMEMORY_SH"
+# ── Code-intel verbs: repo-scoped via the same REPO_ARGS injection ─────────
+@test "comemory: search-code/index-code/graph use the REPO_ARGS injection" {
+  grep -q 'comemory search-code "\$query" ${REPO_ARGS' "$COMEMORY_SH"
+  grep -q 'comemory index-code ${REPO_ARGS' "$COMEMORY_SH"
+  grep -q 'comemory graph ${REPO_ARGS' "$COMEMORY_SH"
 }
 
 @test "comemory: search-code runs against the real binary (lexical, empty index → no results, exit 0)" {
@@ -114,6 +117,26 @@ teardown() {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-maint"
   mkdir -p "$COMEMORY_DATA_DIR"
   run bash "$MOD" comemory maintain
+  [ "$status" -eq 0 ]
+}
+
+@test "comemory: caller-supplied --repo overrides without a clap duplicate-flag collision" {
+  # The wrapper must NOT also inject --repo when the caller passed one; a second
+  # --repo would clap-collide and exit non-zero.
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-repo"
+  run bash "$MOD" comemory save "ovr-title" "ovr body" --repo custom-scope --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ] && [ "$id" != "null" ]
+  # It landed under the caller's repo, not the auto-detected default.
+  run bash -c "comemory list --repo custom-scope --json | jq -r '.[].id'"
+  [[ "$output" == *"$id"* ]]
+}
+
+@test "comemory: flag-like MY_CLAUDE_COMEMORY_REPO falls back to unknown (no flag injection)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-flag"
+  MY_CLAUDE_COMEMORY_REPO="-evil" run bash "$MOD" comemory list --json
   [ "$status" -eq 0 ]
 }
 

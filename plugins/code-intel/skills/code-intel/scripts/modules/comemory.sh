@@ -33,6 +33,24 @@ if [ -z "$REPO" ]; then
   # repo-less runs. Warn once so the contamination is not invisible.
   printf 'comemory.sh: no git repo and MY_CLAUDE_COMEMORY_REPO unset — scoping to "unknown" (set MY_CLAUDE_COMEMORY_REPO to isolate)\n' >&2
 fi
+# A flag-like repo value (leading '-') would be parsed by comemory/clap as a
+# flag rather than the --repo argument. Refuse it — fall back to "unknown".
+case "$REPO" in
+  -*)
+    printf 'comemory.sh: ignoring flag-like repo name "%s" — scoping to "unknown"\n' "$REPO" >&2
+    REPO="unknown" ;;
+esac
+
+# Inject `--repo "$REPO"` UNLESS the caller already passed --repo: a second
+# --repo would clap-collide on a duplicate single-value flag (the same hazard
+# the `summary` verb guards for --tags). Sets the REPO_ARGS array; expand it
+# set-u-safe with ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} (empty-array-safe on bash 3.2).
+repo_flag() {
+  case " $* " in
+    *" --repo "*|*" --repo="*) REPO_ARGS=() ;;
+    *)                          REPO_ARGS=(--repo "$REPO") ;;
+  esac
+}
 
 subcmd="${1:-}"
 shift 2>/dev/null || true
@@ -75,29 +93,33 @@ case "$subcmd" in
   search)
     query="${1:?search requires a query}"
     shift
-    exec comemory search "$query" --repo "$REPO" "$@"
+    repo_flag "$@"
+    exec comemory search "$query" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
   save)
     title="${1:?save requires a title}"
     content="${2:?save requires content}"
     shift 2
-    exec comemory save "$(printf '%s\n\n%s' "$title" "$content")" --repo "$REPO" "$@"
+    repo_flag "$@"
+    exec comemory save "$(printf '%s\n\n%s' "$title" "$content")" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
   list)
-    exec comemory list --repo "$REPO" "$@"
+    repo_flag "$@"
+    exec comemory list ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
   summary)
     content="${1:?summary requires content}"
     shift
     body="$(printf '%s\n\n%s' "Session summary" "$content")"
+    repo_flag "$@"
     # Default the session-summary tag, but yield to a caller-supplied --tags:
     # comemory/clap rejects a duplicate single-value flag. --kind is left to
     # comemory's own default (note) so a caller may override it via "$@".
     case " $* " in
       *" --tags "*|*" --tags="*)
-        exec comemory save "$body" --repo "$REPO" "$@" ;;
+        exec comemory save "$body" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" ;;
       *)
-        exec comemory save "$body" --tags session-summary --repo "$REPO" "$@" ;;
+        exec comemory save "$body" --tags session-summary ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" ;;
     esac
     ;;
   stats)
@@ -110,14 +132,18 @@ case "$subcmd" in
   search-code)
     query="${1:?search-code requires a query}"
     shift
-    exec comemory search-code "$query" --repo "$REPO" "$@"
+    repo_flag "$@"
+    exec comemory search-code "$query" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
   index-code)
-    # --path is required by comemory; caller supplies it. --repo auto-injected.
-    exec comemory index-code --repo "$REPO" "$@"
+    # --path is required by comemory; caller supplies it. --repo auto-injected
+    # unless the caller passed their own.
+    repo_flag "$@"
+    exec comemory index-code ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
   graph)
-    exec comemory graph --repo "$REPO" "$@"
+    repo_flag "$@"
+    exec comemory graph ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
     ;;
 
   # ── Retrieval-quality loop (GLOBAL — comemory has no --repo on these) ──
@@ -132,10 +158,15 @@ case "$subcmd" in
     ;;
   maintain)
     # Autonomous upkeep bundle. Each step is best-effort and non-fatal so a
-    # failure in one never blocks the others (or a Stop hook calling this).
-    comemory mine --apply >/dev/null 2>&1 || true
-    comemory prune --apply >/dev/null 2>&1 || true
-    comemory gc >/dev/null 2>&1 || true
+    # failure in one never blocks the others. Each is bounded by timeout/gtimeout
+    # when available (matching session-end.sh) so a hung step can't block a
+    # manual `mod.sh comemory maintain`; bare on hosts with neither.
+    _cm_to=""
+    if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
+    elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
+    $_cm_to comemory mine --apply >/dev/null 2>&1 || true
+    $_cm_to comemory prune --apply >/dev/null 2>&1 || true
+    $_cm_to comemory gc >/dev/null 2>&1 || true
     ;;
 
   *)
