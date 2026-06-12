@@ -122,7 +122,10 @@ case "$subcmd" in
   summary)
     content="${1:?summary requires content}"
     shift
-    body="$(printf '%s\n\n%s' "Session summary" "$content")"
+    # Stamp the title with a UTC timestamp so repeated summaries are not
+    # title-identical (a fixed "Session summary" title makes comemory's
+    # near-duplicate auto-warn fire on every save).
+    body="$(printf 'Session summary %s\n\n%s' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null)" "$content")"
     repo_flag "$@"
     # Default the session-summary tag, but yield to a caller-supplied --tags:
     # comemory/clap rejects a duplicate single-value flag. --kind is left to
@@ -135,6 +138,8 @@ case "$subcmd" in
     esac
     ;;
   stats)
+    # No REPO_ARGS: `doctor` is a global command (data-dir/index health), not
+    # repo-scoped — matching the retrieval-loop verbs below. Do not add --repo.
     exec comemory doctor "$@"
     ;;
 

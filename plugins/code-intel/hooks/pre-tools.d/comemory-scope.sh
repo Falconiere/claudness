@@ -10,6 +10,9 @@
 # unscoped raw calls.
 #
 # Subcommands that require scoping: search, save, context, search-code.
+# `context` is a real comemory verb (a repo-scoped headline lookup) and so is
+# guarded here even though the mod.sh wrapper does not dispatch it — a raw
+# `comemory context` without --repo would still leak across repos.
 # The retrieval-loop verbs (mine, tune, eval, prune, gc, rebuild, feedback)
 # and list/doctor/stats/serve/--help/--version are intentionally global —
 # comemory accepts no --repo on them.
