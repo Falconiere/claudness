@@ -185,10 +185,16 @@ if grep -nE '^\s*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | 
   add_error "Forbidden console.log in $FILE_PATH — use console.error/warn/info\n${CONSOLE_LINES}"
 fi
 
-# Check: disable comments (@ts-ignore, @ts-nocheck)
-DISABLE_LINES=$(grep -nE '//\s*(@ts-ignore|@ts-nocheck)\b' "$FILE_PATH" 2>/dev/null | head -3)
+# Check: suppression comments — fix the issue in code, never silence the tool.
+# @ts-expect-error is exempt in test/spec files, where asserting a compile error
+# is a legitimate test; banned everywhere else like the rest.
+SUPPRESS_TOKENS='@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore'
+if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
+  SUPPRESS_TOKENS="${SUPPRESS_TOKENS}|@ts-expect-error"
+fi
+DISABLE_LINES=$(grep -nE "(//|/\*)[[:space:]]*(${SUPPRESS_TOKENS})" "$FILE_PATH" 2>/dev/null | head -3)
 if [[ -n "$DISABLE_LINES" ]]; then
-  add_error "Forbidden disable comment in $FILE_PATH — fix the underlying violation\n${DISABLE_LINES}"
+  add_error "Forbidden suppression comment in $FILE_PATH — fix the underlying issue in code, never silence it\n${DISABLE_LINES}"
 fi
 
 # Check: confirm()/alert() in frontend files
@@ -236,6 +242,22 @@ if command -v ast-grep >/dev/null 2>&1; then
   UNDEF_CATCH_HANDLER=$(ast-grep --lang ts -p '$_.catch(() => undefined)' "$FILE_PATH" 2>/dev/null | head -3)
   if [[ -n "$EMPTY_CATCH_HANDLER" || -n "$NULL_CATCH_HANDLER" || -n "$UNDEF_CATCH_HANDLER" ]]; then
     add_error "Silent promise rejection in $FILE_PATH — log or rethrow the error\n${EMPTY_CATCH_HANDLER}${NULL_CATCH_HANDLER}${UNDEF_CATCH_HANDLER}"
+  fi
+
+  # Swallow via a catch that just returns a nullish value — error vanishes.
+  SWALLOW_CATCH=""
+  for _pat in \
+    'try { $$$ } catch ($_) { return null }' \
+    'try { $$$ } catch ($_) { return undefined }' \
+    'try { $$$ } catch ($_) { return }' \
+    'try { $$$ } catch { return null }' \
+    'try { $$$ } catch { return undefined }' \
+    'try { $$$ } catch { return }'; do
+    _h=$(ast-grep --lang ts -p "$_pat" "$FILE_PATH" 2>/dev/null | head -2)
+    [[ -n "$_h" ]] && SWALLOW_CATCH="${SWALLOW_CATCH}${_h}\n"
+  done
+  if [[ -n "$SWALLOW_CATCH" ]]; then
+    add_error "Catch swallows the error by returning a nullish value in $FILE_PATH — handle, log, or rethrow it\n${SWALLOW_CATCH}"
   fi
 
   # throw new Error() with no message
@@ -333,6 +355,16 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
   fi
 fi
 
+# Handler-presence advisory (non-blocking): the file awaits but has no try/catch
+# and no .catch anywhere — rejections may be unhandled. Advisory, not a block,
+# because the handler can legitimately live in every caller.
+ERR_ADVISORY=""
+if grep -qE '\bawait[[:space:]]' "$FILE_PATH" 2>/dev/null \
+   && ! grep -qE '\btry\b' "$FILE_PATH" 2>/dev/null \
+   && ! grep -qE '\.catch\(' "$FILE_PATH" 2>/dev/null; then
+  ERR_ADVISORY="Async code in $FILE_PATH uses await with no try/catch or .catch in the file — ensure rejections are handled here or by every caller."
+fi
+
 # --- Output ---
 
 if [[ -n "$MESSAGES" ]]; then
@@ -382,6 +414,7 @@ else
   # a single additionalContext so the hook emits exactly one JSON object.
   ADVISORY="$DUPLICATION_WARNING"
   [[ -n "$DOC_ADVISORY" ]] && ADVISORY="${ADVISORY:+$ADVISORY\n}$DOC_ADVISORY"
+  [[ -n "$ERR_ADVISORY" ]] && ADVISORY="${ADVISORY:+$ADVISORY\n}$ERR_ADVISORY"
   if [[ -n "$ADVISORY" ]]; then
     jq -n --arg ctx "$ADVISORY" '{
       "hookSpecificOutput": {

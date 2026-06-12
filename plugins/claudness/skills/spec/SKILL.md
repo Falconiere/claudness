@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Use AFTER a design is agreed (brainstorm done) and BEFORE planning, when the work is big enough to deserve a written contract — a new system, a cross-cutting feature, anything multiple people or sessions will build against. Tells: "write the spec", "spec this out", "document the design", "what exactly are we building", "pin down the requirements". Produces a concise design spec (problem, non-goals, architecture, interfaces, acceptance criteria) saved under docs/claudness/specs/. Second phase of the claudness brainstorm → spec → plan → execute → test workflow. Skip for mechanical work and for anything already specced.
+description: Use AFTER a design is agreed (brainstorm done) and BEFORE planning, when the work is big enough to deserve a written contract — a new system, a cross-cutting feature, anything multiple people or sessions will build against. Tells: "write the spec", "spec this out", "document the design", "what exactly are we building", "pin down the requirements". Produces a concise design spec (problem, non-goals, architecture, interfaces, acceptance criteria) saved under docs/claudness/specs/. Second phase of the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow. Skip for mechanical work and for anything already specced.
 ---
 
 # Spec
@@ -27,7 +27,7 @@ Write to `docs/claudness/specs/<YYYY-MM-DD>-<slug>-design.md` (today's date from
 
 ## Non-Goals
 Numbered, explicit out-of-scope. The boundary is half the value of a spec —
-it's what stops scope creep in `plan` and `execute`.
+it's what stops scope creep in `plan` and `execution`.
 
 ## Architecture
 The chosen approach. Name the one trade-off that actually drove the decision
@@ -51,7 +51,7 @@ Unresolved decisions with an owner. An honest spec names what it doesn't know.
 - **Problem before solution** — if you can't state the pain in a few sentences, the solution is aimed at nothing.
 - **Non-goals** — the cheapest scope control there is; an unwritten boundary gets crossed.
 - **Architecture with the trade-off named** — a decision without its *why* gets re-argued the moment it's inconvenient.
-- **Concrete interfaces** — vagueness here becomes rework in `execute`; pin the contract now.
+- **Concrete interfaces** — vagueness here becomes rework in `execution`; pin the contract now.
 - **Real-data acceptance criteria** — they are the bridge to `test`; criteria you can't test on real inputs aren't criteria.
 
 ## Conventions carried forward

@@ -1,13 +1,13 @@
 ---
 name: brainstorm
-description: Use BEFORE writing code or entering plan mode for any build, feature, refactor, or behavior change whose shape isn't settled — even when the user states only WHAT they want ("add X", "fix Y"). Catch the tells in their own words: "where do I even start", "not sure how to structure it", "this feels big", "help me scope it", "think through the approach and tradeoffs", "before I start coding", "I don't want to just dive in", or wanting to redesign a messy component from scratch. Surfaces intent, constraints, reusable prior art, and design trade-offs, then records the decision so spec/plan/execute/test inherit a real design instead of guesses. First phase of the claudness brainstorm → spec → plan → execute → test workflow. Skip mechanical work with no design question (renames, dependency bumps, formatting, one-line fixes), explaining existing code, and features already scoped.
+description: Use BEFORE writing code or entering plan mode for any build, feature, refactor, or behavior change whose shape isn't settled — even when the user states only WHAT they want ("add X", "fix Y"). Catch the tells in their own words: "where do I even start", "not sure how to structure it", "this feels big", "help me scope it", "think through the approach and tradeoffs", "before I start coding", "I don't want to just dive in", or wanting to redesign a messy component from scratch. Surfaces intent, constraints, reusable prior art, and design trade-offs, then records the decision so the later phases inherit a real design instead of guesses. First phase of the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow. Skip mechanical work with no design question (renames, dependency bumps, formatting, one-line fixes), explaining existing code, and features already scoped.
 ---
 
 # Brainstorm
 
 First phase of the claudness workflow. It exists to kill the most expensive mistake in software: building the wrong thing well, or the right thing on the wrong foundation. A request names a WHAT; the cost lives in the HOW. Five minutes deciding the shape here saves a day of rework downstream.
 
-This is the claudness-native version: it carries the house conventions forward so `spec`, `plan`, `execute`, and `test` inherit a concrete, agreed design — not just a vibe.
+This is the claudness-native version: it carries the house conventions forward so `spec`, `plan`, `execution`, and `test` inherit a concrete, agreed design — not just a vibe.
 
 ## When this fires
 

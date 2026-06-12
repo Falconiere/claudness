@@ -1,11 +1,11 @@
 ---
 name: plan
-description: Use after the design is agreed (and specced, for larger work) and you need a concrete implementation plan before touching code. Produces a concise, scannable, executable plan. Native claudness workflow; third phase of brainstorm → spec → plan → execute → test.
+description: Use after the design is agreed (and specced, for larger work) and you need a concrete implementation plan before touching code. Produces a concise, scannable, executable plan. Native claudness workflow; the planning phase of brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test.
 ---
 
 # Plan
 
-Third phase of the claudness workflow. Turns an agreed design into a written plan another session (or subagent) can execute without re-deriving context.
+The planning phase of the claudness workflow — after `spec-review`, before `plan-review`. Turns an agreed design into a written plan another session (or subagent) can execute without re-deriving context.
 
 **Trigger phrases:** write a plan, plan this out, how do we implement, break this down.
 
@@ -31,4 +31,4 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 
 ## Output
 
-A plan file that is scannable in a minute and executable without guesswork. Hand off to `execute`.
+A plan file that is scannable in a minute and executable without guesswork. Hand off to `plan-review` to pressure-test it, then to `execution`.
