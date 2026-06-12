@@ -41,10 +41,11 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 
 cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-# Skip wrapper calls — the wrapper always scopes.
-if echo "$cmd_only" | grep -qE '(^|[[:space:]/])mod\.sh[[:space:]]+comemory\b'; then
-  exit 0
-fi
+# NOTE: wrapper calls (`mod.sh comemory …`) are skipped PER SEGMENT inside the
+# loop below — NOT here against the whole command. A whole-command skip let a
+# single `mod.sh comemory` token (even in an `echo`, a comment, or one arm of
+# `mod.sh comemory list && comemory search foo`) short-circuit enforcement for
+# every other statement, so an unscoped raw `comemory search` slipped past.
 
 # Split on shell statement separators (;, &&, ||) — but ONLY when they are
 # unquoted. A naive `tr ';&|' '\n'` would split `comemory save "title; body"`
@@ -114,6 +115,13 @@ while IFS= read -r segment; do
     segment="${BASH_REMATCH[2]:-}"
   done
   [[ -z "$segment" ]] && continue
+
+  # Wrapper call? `mod.sh comemory …` (optionally path-prefixed) auto-scopes —
+  # skip THIS segment only. Evaluated per-segment so a wrapper call in one arm
+  # of a chain never excuses a raw unscoped call in another.
+  if [[ "$segment" =~ ^([^[:space:]]*/)?mod\.sh[[:space:]]+comemory([[:space:]]|$) ]]; then
+    continue
+  fi
 
   # Only raw `comemory <subcmd>` (not a path containing the literal `comemory`).
   if [[ ! "$segment" =~ ^comemory[[:space:]]+([a-z][a-zA-Z0-9_-]*) ]]; then
