@@ -1,7 +1,7 @@
 {
   "name": "code-intel",
   "version": "0.1.0",
-  "description": "Structural code search (ast-grep) + persistent memory (engram): skills, wrappers, and PreToolUse enforcement modules registered into the claudness hook engine.",
+  "description": "Structural code search (ast-grep) + persistent memory (comemory): skills, wrappers, and PreToolUse enforcement modules registered into the claudness hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
@@ -9,7 +9,7 @@
   "homepage": "https://github.com/falconiere/claudness",
   "repository": "https://github.com/falconiere/claudness.git",
   "license": "MIT",
-  "keywords": ["claude-code", "ast-grep", "engram", "memory", "hooks"],
+  "keywords": ["claude-code", "ast-grep", "comemory", "memory", "hooks"],
   "dependencies": [
     { "name": "claudness", "marketplace": "falconiere" }
   ]

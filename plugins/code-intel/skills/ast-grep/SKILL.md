@@ -18,7 +18,7 @@ This protocol is **MANDATORY and ALWAYS ACTIVE**.
 ## Position in the Search Stack
 
 ```
-engram   → "what was decided / where is X" (memory)
+comemory → "what was decided / where is X" (memory)
 ast-grep → "find / rewrite this code shape" (AST structural)   ← here
 Grep     → "find exact literal `FOO_BAR`"                     (text)
 Glob     → "list paths matching `**/*.test.ts`"               (paths)
@@ -37,7 +37,7 @@ Read     → "open known file"                                   (verify)
 
 ## When NOT to Use ast-grep
 
-✗ Semantic intent ("how does auth work") → check engram memory, then Grep on keywords + Read on hits
+✗ Semantic intent ("how does auth work") → check comemory memory, then Grep on keywords + Read on hits
 ✗ Exact literal in config files (`*.toml`, `*.md`, `*.json`) → Grep
 ✗ Path/filename patterns → Glob
 ✗ Single-file targeted edit → Read + Edit
@@ -103,7 +103,7 @@ Examples:
 3. Read the diff. Confirm metavariables map correctly.
 4. Apply: same command with `-U`.
 5. Run your project's typecheck/lint (use the detected package manager — see `detect_node_pm` / `detect_rust` in `hooks/lib/detect.sh`) to verify zero regressions.
-6. Save the pattern to engram if reusable: `--topic pattern/ast-grep-<name>`.
+6. Save the pattern to comemory if reusable: `mod.sh comemory save "ast-grep <name> pattern" "<pattern + what it matches>" --kind pattern --tags "ast-grep"`.
 
 ## Self-Check Before Editing
 

@@ -1,103 +1,98 @@
 ---
 name: agent-memory
-description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to engram proactively. Do NOT wait for the user to ask."
+description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to comemory proactively. Do NOT wait for the user to ask."
 ---
 # Agent Memory-First Protocol
-You have Engram persistent memory (SQLite + FTS5) accessed through the **scoped wrapper** at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram …`.
+You have comemory persistent memory accessed through the **scoped wrapper** at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory …`.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints (Always)
 - Memory is required for recall and save.
-- **EVERY save/recall MUST be scoped to a project.** The wrapper auto-detects the current project via `detect_project_name` (git toplevel basename). Raw `engram` calls without `--project` are blocked by the `engram-scope` pre-tool hook.
-- Before ANY save or recall, the agent MUST state which project it is scoping (e.g. `Scope: claudness`). Wrong scope = wrong memories = wasted tokens or contaminated context.
+- **EVERY save/recall MUST be scoped to a repo.** The wrapper auto-detects the current repo via `detect_project_name` (git toplevel basename) and injects `--repo`. Raw `comemory` calls without `--repo` are blocked by the `comemory-scope` pre-tool hook.
+- Before ANY save or recall, the agent MUST state which repo it is scoping (e.g. `Scope: claudness`). Wrong scope = wrong memories = wasted tokens or contaminated context.
 - Global quality gate is blocking — do not switch tasks while any errors/warnings/tests fail (even unrelated).
 - Test policy — NO mock-data tests. Use real-world data/integration paths.
 - Keep memory entries compact, structured, and searchable.
 
-## Project Scope — How to Decide
+## Repo Scope — How to Decide
 
 | Situation | Scope |
 |---|---|
 | Working in CWD that is a git repo | basename of `git rev-parse --show-toplevel` (the wrapper handles this) |
-| Override needed (cross-repo work) | `MY_CLAUDE_ENGRAM_PROJECT=<name>` env var before the call |
-| Not in a git repo | Wrapper falls back to `unknown` — set `MY_CLAUDE_ENGRAM_PROJECT` explicitly |
+| Override needed (cross-repo work) | `MY_CLAUDE_COMEMORY_REPO=<name>` env var before the call |
+| Not in a git repo | Wrapper falls back to `unknown` — set `MY_CLAUDE_COMEMORY_REPO` explicitly |
 
 Announce the scope in user-facing text before performing the operation. Example:
-> Scoping engram to **claudness** for recall on "error handling rules".
+> Scoping comemory to **claudness** for recall on "error handling rules".
 
 ## CLI Reference — Use the Wrapper
 
-The wrapper at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram <subcmd>` auto-injects `--project <current-project>` and strict cross-project filtering. **Never use MCP tools for engram.** Raw `engram` invocations are denied by the `engram-scope` hook unless they include `--project`.
+The wrapper at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory <subcmd>` auto-injects `--repo <current-repo>`. **Never use MCP tools for comemory.** Raw `comemory` invocations are denied by the `comemory-scope` hook unless they include `--repo`.
 
 ### Save a memory
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic TOPIC_KEY --scope SCOPE
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "<title>" "<body>" --kind KIND --tags "a,b"
 ```
 - `<title>`: Short, searchable title (required)
-- `<content>`: Structured content (required)
-- `--type`: `bugfix` | `decision` | `architecture` | `discovery` | `pattern` | `config` | `learning` | `session_summary` | `prompt`
-- `--topic`: Topic key for upserts — same key updates existing observation
-- `--scope`: `project` (default) or `personal`
-- `--project` is auto-injected by the wrapper.
+- `<body>`: Structured content (required) — the wrapper folds title + body into one memory
+- `--kind`: `decision` | `bug` | `convention` | `discovery` | `pattern` | `note` (default `note`)
+- `--tags`: comma-separated tag list to categorize (e.g. `--tags "auth,middleware"`)
+- `--repo` is auto-injected by the wrapper.
+
+comemory **auto-warns on near-duplicates**: if a similar memory already exists, it prints a warning (and emits a `duplicate_of` id with `--json`) but the save still proceeds. To replace an outdated memory instead of duplicating it, pass `--supersedes <id>` — the older memory is demoted in ranking and annotated `superseded_by` in search results.
 
 ### Search memories
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram search "<query>" --type TYPE --limit N --scope SCOPE
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<query>" --kind KIND
 ```
-Returns compact results with observation IDs. Default limit: 10, max: 20. Results are strict-filtered to the current project.
+Query-driven recall — you must supply a natural-language `<query>`. Returns compact ranked results scoped to the current repo. The wrapper bakes in `--k 20`; add `--kind` to filter by memory kind.
 
-### Timeline (context around an observation)
+### Browse memories
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram timeline <observation_id> --before N --after N
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory list --kind KIND
 ```
-Observation IDs already belong to a single project — no extra scope flag needed.
+Lists the current repo's memories (optionally filtered by `--kind`). Use to browse what's stored when you don't have a specific query.
 
-### Recent context
+### Statistics / health
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory stats
 ```
-Loads recent sessions and observations for the current project. Use at session start.
-
-### Statistics (global by design)
-```bash
-engram stats
-```
-Stats are project-less by design; the wrapper still works (`mod.sh engram stats`) but raw `engram stats` is also allowed.
+Reports data-directory + index health (maps to `comemory doctor`).
 
 ## 1. Memory Before Files — Layered Recall
 
-Before exploring the codebase to *understand* something, search **engram first**, then fall back to **ast-grep** for structural patterns and **Grep** for exact literals. Never jump straight to Read/Grep/Glob for *understanding* (as opposed to known-file reads).
+Before exploring the codebase to *understand* something, search **comemory first**, then fall back to **ast-grep** for structural patterns and **Grep** for exact literals. Never jump straight to Read/Grep/Glob for *understanding* (as opposed to known-file reads).
 
-State the project scope before searching. All commands below use the auto-scoping wrapper.
+State the repo scope before searching. All commands below use the auto-scoping wrapper.
 
 ```
 Need to understand something?
 │
 ├─ Architecture/structure question
-│   ├─ mod.sh engram search "architecture <module>" → past decisions
+│   ├─ mod.sh comemory search "architecture <module>" → past decisions
 │   ├─ Hit  → use it
 │   └─ Miss → ast-grep on relevant declarations, then Grep on keywords.
-│              Save findings back via `mod.sh engram save` (--topic architecture/<module>).
+│              Save findings back via `mod.sh comemory save … --kind decision`.
 │
 ├─ Where is the code for X?
-│   ├─ mod.sh engram search "file-map <area>" → cached path
+│   ├─ mod.sh comemory search "file-map <area>" → cached path
 │   ├─ Hit  → go directly to likely files, verify
 │   └─ Miss → ast-grep for the call/def shape, or Grep for a literal name.
-│              Save mapping via `mod.sh engram save` (--topic file-map/<area>).
+│              Save mapping via `mod.sh comemory save … --kind discovery`.
 │
 ├─ How does pattern X work?
-│   ├─ mod.sh engram search "pattern <name>"
+│   ├─ mod.sh comemory search "pattern <name>"
 │   ├─ Hit  → use/validate
 │   └─ Miss → ast-grep for the pattern shape, Read the hits, then save
-│              (--topic pattern/<name>).
+│              (--kind pattern).
 │
 ├─ What calls / what does Y call?
 │   └─ ast-grep for the call shape (e.g. `$_.Y($$$)`) or Grep for the symbol.
 │
 └─ What was decided about X?
-    ├─ mod.sh engram search "decision <topic>"
+    ├─ mod.sh comemory search "decision <topic>"
     ├─ Hit  → reference and verify in docs/git if needed
-    └─ Miss → check docs/git, then save
+    └─ Miss → check docs/git, then save (--kind decision)
 ```
 
 **Skip memory + structural search** (go straight to files) when:
@@ -114,7 +109,7 @@ See also: `skills/ast-grep/SKILL.md` for structural search and rewrite.
 ## 2. Save What You Learn
 After any exploration that yields **reusable knowledge**, save (announce the scope first):
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "<title>" "<content>" --type TYPE --topic "category/key"
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "<title>" "<body>" --kind KIND --tags "category,key"
 ```
 ### When to save (mandatory)
 - Architecture or design decision made
@@ -130,18 +125,21 @@ ${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "<title>" "<c
 ### Self-check after EVERY task
 > "Did I just make a decision, fix a bug, learn something non-obvious, or establish a convention? If yes → save NOW."
 > "Did I just hit/fix a quality or e2e gate? If yes → save NOW."
-> "Did I name the project scope before calling engram?"
-### Topic key convention
-| Category | Key format | Example |
+> "Did I name the repo scope before calling comemory?"
+### Kind + tags convention
+Pick the `--kind` that matches the memory, and use `--tags` to add a searchable category:
+
+| Memory | `--kind` | Example tags |
 |---|---|---|
-| Architecture | `architecture/<module>` | `architecture/api-routing` |
-| File map | `file-map/<area>` | `file-map/pipeline-queries` |
-| Pattern | `pattern/<name>` | `pattern/query-hooks` |
-| Decision | `decision/<topic>` | `decision/state-management` |
-| Bug fix | `bugfix/<description>` | `bugfix/canvas-drag-offset` |
-| Convention | `convention/<name>` | `convention/import-aliases` |
-| Gotcha | `gotcha/<description>` | `gotcha/orpc-client-types` |
-Same `--topic` key = upsert (updates existing). New topic = new observation.
+| Architecture | `decision` | `architecture,api-routing` |
+| File map | `discovery` | `file-map,pipeline-queries` |
+| Pattern | `pattern` | `query-hooks` |
+| Decision | `decision` | `state-management` |
+| Bug fix | `bug` | `canvas-drag-offset` |
+| Convention | `convention` | `import-aliases` |
+| Gotcha | `note` | `gotcha,orpc-client-types` |
+
+If a memory updates an outdated one, pass `--supersedes <id>` to replace it (comemory also auto-warns when it detects a near-duplicate).
 ### Content format
 ```
 **What**: One sentence — what was done/learned
@@ -150,18 +148,18 @@ Same `--topic` key = upsert (updates existing). New topic = new observation.
 **Learned**: Gotchas, edge cases (omit if none)
 ```
 ### Example save (with explicit scope announcement)
-> Scoping engram to **claudness** for save: decision/auth-middleware.
+> Scoping comemory to **claudness** for save: decision / auth-middleware.
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --type decision --topic "decision/auth-middleware"
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
 ```
 
 ## 3. Search Protocol (Progressive Disclosure)
-Don't dump everything. Drill in layer by layer:
+Don't dump everything. Start narrow:
 ```
-1. mod.sh engram search "keywords"                       → keyword candidates (auto-scoped)
-2. mod.sh engram timeline <id> --before 5 --after 5      → surrounding context
+1. mod.sh comemory search "keywords"        → ranked candidates (auto-scoped)
+2. mod.sh comemory list --kind KIND         → browse a kind if the query came up short
 ```
-Start at layer 1. Only go deeper if the compact result isn't enough.
+Start at layer 1. Only go to `list` if a targeted query isn't enough.
 **When to search:**
 - User asks to recall anything ("remember", "what did we do", "acordate", "que hicimos")
 - Starting work on something that might overlap past sessions
@@ -170,25 +168,21 @@ Start at layer 1. Only go deeper if the compact result isn't enough.
 
 ## 4. Session Lifecycle
 ### Session start (recommended)
-At the start of a session, announce the project scope, then load context:
+At the start of a session, announce the repo scope, then recall with a query for whatever you're about to work on:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<what you're about to work on>"
 ```
 ### Realtime saves (mandatory)
 Save learnings immediately as they happen — after every decision, bugfix, discovery, or pattern. Do NOT defer to session end. Announce scope before each save.
 ### Post-compaction recovery
 If you see a compaction message or "FIRST ACTION REQUIRED":
-1. Announce the project scope.
-2. Call `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh engram context` to recover previous session context.
+1. Announce the repo scope.
+2. Call `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<current task / open thread>"` to recover relevant prior context.
 3. Only THEN continue working.
 
 ## 5. Raw CLI Fallback (rare)
-Only use raw `engram` directly when the wrapper is unavailable AND you can pass `--project` explicitly. The `engram-scope` pre-tool hook denies raw calls missing `--project`. Format:
+Only use raw `comemory` directly when the wrapper is unavailable AND you can pass `--repo` explicitly. The `comemory-scope` pre-tool hook denies raw `search`/`save` calls missing `--repo`. Format:
 ```bash
-engram <subcmd> … --project <project-name>
-```
-or
-```bash
-ENGRAM_PROJECT=<project-name> engram <subcmd> …
+comemory <subcmd> … --repo <repo-name>
 ```
 Prefer the wrapper.

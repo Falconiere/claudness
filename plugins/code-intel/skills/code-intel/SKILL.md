@@ -20,9 +20,9 @@ ${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh <tool> <subcommand> [args
 | You want to... | Tool | Command |
 |---|---|---|
 | Find structural patterns (fn, impl, trait) | ast-grep | `mod.sh ast-grep search 'fn $NAME($$$)' --lang rust` |
-| Recall past discoveries | engram | `mod.sh engram search "topic"` |
-| Save a discovery | engram | `mod.sh engram save "title" "content" --type <type>` |
-| Restore session context | engram | `mod.sh engram context` |
+| Recall past discoveries | comemory | `mod.sh comemory search "topic"` |
+| Save a discovery | comemory | `mod.sh comemory save "title" "content" --kind <kind>` |
+| Browse stored memories | comemory | `mod.sh comemory list` |
 | Exact literal string | Grep | After ast-grep returned nothing, or non-code files |
 | Find files by path/glob | Glob | File finding only |
 
@@ -34,22 +34,27 @@ ${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh <tool> <subcommand> [args
 
 **Glob** finds files by path pattern — irreplaceable for "where is file X".
 
-## Memory (engram)
+## Memory (comemory)
+
+The wrapper auto-injects `--repo <current-repo>` (git toplevel basename). Recall is query-driven — there is no argless context dump.
 
 | When | Command |
 |---|---|
-| Session start / after compaction | `mod.sh engram context` |
-| Before working on a topic | `mod.sh engram search "topic"` |
-| After bugfix/decision/discovery | `mod.sh engram save "title" "content" --type <type>` |
-| Context around an observation | `mod.sh engram timeline <id>` |
-| Full content of observation | `mod.sh engram get <id>` |
+| Session start / after compaction | `mod.sh comemory search "<current task>"` |
+| Before working on a topic | `mod.sh comemory search "topic"` |
+| After bugfix/decision/discovery | `mod.sh comemory save "title" "content" --kind <kind>` |
+| Browse stored memories | `mod.sh comemory list [--kind <kind>]` |
+| Save a session summary | `mod.sh comemory summary "<recap>"` |
+| Data-dir / index health | `mod.sh comemory stats` |
+
+`--kind` enum: `decision` | `bug` | `convention` | `discovery` | `pattern` | `note` (default `note`). Add `--tags "a,b"` to categorize. comemory auto-warns on near-duplicates; pass `--supersedes <id>` to replace an outdated memory.
 
 ### Save template
 
 ```bash
-mod.sh engram save "verb what in file-or-module" \
+mod.sh comemory save "verb what in file-or-module" \
   "## What\n<changed>\n## Why\n<rationale>\n## Where\n<file:function>\n## Watch Out\n<gotchas>" \
-  --type bugfix --topic "area/subtopic"
+  --kind bug --tags "area,subtopic"
 ```
 
 ## Token Discipline

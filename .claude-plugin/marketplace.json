@@ -26,13 +26,13 @@
     {
       "name": "code-intel",
       "source": "./plugins/code-intel",
-      "description": "ast-grep + engram skills with registry-driven enforcement hooks.",
+      "description": "ast-grep + comemory skills with registry-driven enforcement hooks.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
       },
       "category": "productivity",
-      "keywords": ["ast-grep", "engram", "memory", "hooks"],
+      "keywords": ["ast-grep", "comemory", "memory", "hooks"],
       "license": "MIT",
       "dependencies": [
         { "name": "claudness", "marketplace": "falconiere" }

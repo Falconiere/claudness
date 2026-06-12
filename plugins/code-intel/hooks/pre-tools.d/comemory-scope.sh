@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Pre-tool check: enforce --project scope on raw `engram` CLI invocations.
+# Pre-tool check: enforce --repo scope on raw `comemory` CLI invocations.
 #
-# Without --project, `engram search` / `save` / `context` mix results across
-# every project in the local engram DB — wasted tokens at best, wrong-project
-# answers at worst. The `skills/code-intel/scripts/mod.sh engram <subcmd>`
+# Without --repo, `comemory search` / `save` / `context` mix results across
+# every repo in the local comemory store — wasted tokens at best, wrong-repo
+# answers at worst. The `skills/code-intel/scripts/mod.sh comemory <subcmd>`
 # wrapper (resolved relative to this module — skills/ is a sibling of hooks/
 # inside the plugin root, in-repo and installed alike) auto-scopes; this
 # module pushes the agent toward that path by denying unscoped raw calls.
 #
-# Subcommands that require scoping: search, save, context, summary, and
-# `conflicts list` / `conflicts stats`. Anything else (stats, tui, serve, mcp,
-# timeline, get, delete, --help, --version) is intentionally global.
+# Subcommands that require scoping: search, save, context. Anything else
+# (list, doctor, stats, tui, serve, --help, --version) is intentionally global.
 #
-# Always allowed: wrapper calls (`mod.sh engram …` adds --project itself),
-# and raw calls that already include --project, -p, or ENGRAM_PROJECT=.
+# Always allowed: wrapper calls (`mod.sh comemory …` adds --repo itself), and
+# raw calls that already include --repo. comemory has no `-p` short flag and no
+# repo env var, so --repo is the only scope signal.
 #
 # Inputs (from parent dispatcher pre-tools/mod.sh, via `export`):
 #   $tool_name - name of the tool being invoked
@@ -39,12 +39,12 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
 # Skip wrapper calls — the wrapper always scopes.
-if echo "$cmd_only" | grep -qE '(^|[[:space:]/])mod\.sh[[:space:]]+engram\b'; then
+if echo "$cmd_only" | grep -qE '(^|[[:space:]/])mod\.sh[[:space:]]+comemory\b'; then
   exit 0
 fi
 
 # Split on shell statement separators (;, &&, ||) — but ONLY when they are
-# unquoted. A naive `tr ';&|' '\n'` would split `engram save "title; body"`
+# unquoted. A naive `tr ';&|' '\n'` would split `comemory save "title; body"`
 # inside the quoted argument, falsely denying a legitimate call. Use python3
 # to walk the command character-by-character respecting single/double quotes
 # and backslash escapes; fall back to the naive split if python3 is missing.
@@ -86,7 +86,7 @@ PY
   printf '%s\n' "$1" | tr ';&|' '\n' | sed '/^$/d'
 }
 
-# Then inspect each segment for a raw `engram <subcmd>` invocation.
+# Then inspect each segment for a raw `comemory <subcmd>` invocation.
 violation=""
 while IFS= read -r segment; do
   # Trim leading whitespace + strip leading env-var assignments.
@@ -94,44 +94,34 @@ while IFS= read -r segment; do
   # The value may be a single/double-quoted string (which can contain
   # whitespace) OR a run of non-space chars. Matching only the latter would
   # stop at the first space inside a quoted value (MY_VAR="foo bar"), leaving
-  # the tail (bar" engram save) as the segment and letting an unscoped raw
-  # engram call slip past the ^engram check below. The value alternation is
+  # the tail (bar" comemory save) as the segment and letting an unscoped raw
+  # comemory call slip past the ^comemory check below. The value alternation is
   # capture group 1, so the trailing REST is group 2.
+  #
+  # comemory has no repo env var, so an env prefix is never scope — it is just
+  # stripped so the bare `comemory <subcmd>` underneath is inspected.
   #
   # The regex is built in a variable (with \047 = single quote) so the literal
   # single-quote of the quoted-value alternation never sits inside [[ ]] — an
   # embedded ' there desyncs shellcheck's parser.
   _env_re=$'^[A-Za-z_][A-Za-z0-9_]*=("[^"]*"|\047[^\047]*\047|[^[:space:]]+)[[:space:]]+(.*)$'
   while [[ "$segment" =~ $_env_re ]]; do
-    env_prefix="${segment%%=*}"
-    # ENGRAM_PROJECT=... acts as scope.
-    if [[ "$env_prefix" == "ENGRAM_PROJECT" ]]; then
-      segment=""
-      break
-    fi
     # :- guard: defensive — if the capture group is somehow unset (regex
     # engine quirk), drop the segment instead of erroring under `set -u`.
     segment="${BASH_REMATCH[2]:-}"
   done
   [[ -z "$segment" ]] && continue
 
-  # Only raw `engram <subcmd>` (not a path containing the literal `engram`).
-  if [[ ! "$segment" =~ ^engram[[:space:]]+([a-z][a-zA-Z0-9_-]*) ]]; then
+  # Only raw `comemory <subcmd>` (not a path containing the literal `comemory`).
+  if [[ ! "$segment" =~ ^comemory[[:space:]]+([a-z][a-zA-Z0-9_-]*) ]]; then
     continue
   fi
   subcmd="${BASH_REMATCH[1]:-}"
   [[ -z "$subcmd" ]] && continue
 
   case "$subcmd" in
-    search|save|context|summary)
+    search|save|context)
       requires_scope=1
-      ;;
-    conflicts)
-      if [[ "$segment" =~ ^engram[[:space:]]+conflicts[[:space:]]+(list|stats)([[:space:]]|$) ]]; then
-        requires_scope=1
-      else
-        requires_scope=0
-      fi
       ;;
     *)
       requires_scope=0
@@ -140,8 +130,8 @@ while IFS= read -r segment; do
 
   [[ "$requires_scope" -eq 0 ]] && continue
 
-  # Already scoped via --project / -p?
-  if [[ "$segment" =~ (^|[[:space:]])(--project|-p)([[:space:]]|=) ]]; then
+  # Already scoped via --repo? (comemory has no -p short flag and no repo env.)
+  if [[ "$segment" =~ (^|[[:space:]])--repo([[:space:]]|=) ]]; then
     continue
   fi
 
@@ -163,14 +153,13 @@ if [[ -n "$violation" ]]; then
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": (
-        "engram call missing --project scope:\n  " + $cmd + "\n\n" +
-        "Engram stores memories across multiple projects. Without --project, search/save/context leak across projects.\n\n" +
+        "comemory call missing --repo scope:\n  " + $cmd + "\n\n" +
+        "comemory stores memories across multiple repos. Without --repo, search/save/context leak across repos.\n\n" +
         "Fix one of:\n" +
         "  1. Prefer the wrapper (auto-scopes):\n" +
-        "       " + $wrapper + " engram <subcmd> …\n" +
-        "  2. Add --project <name> to the raw call:\n" +
-        "       engram <subcmd> … --project <project-name>\n" +
-        "  3. Set ENGRAM_PROJECT=<name> in the env."
+        "       " + $wrapper + " comemory <subcmd> …\n" +
+        "  2. Add --repo <name> to the raw call:\n" +
+        "       comemory <subcmd> … --repo <name>"
       )
     }
   }'

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "skills": {
-    "engram": false,
+    "comemory": false,
     "ast-grep": true
   },
   "hooks": {
@@ -12,7 +12,7 @@
     "pre-compact": true,
     "session-end": true
   },
-  "mcp": { "engram": false },
+  "mcp": {},
   "lang": {
     "ts": { "maxFileLines": 300, "maxFnLines": 60 },
     "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 }

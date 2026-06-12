@@ -61,7 +61,7 @@ Three plugins, one marketplace. Install the core alone, or add the domain plugin
 |--------|:-------:|--------------|
 | **`claudness`** | `1.4.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, the `deep-explore` agent, and a gate-aware statusline. |
 | **`lang-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** and **TypeScript** — size limits, error-handling rules, test placement, and more, registered into the core engine. |
-| **`code-intel`** | `0.1.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (engram), with `PreToolUse` enforcement modules. |
+| **`code-intel`** | `0.1.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (comemory), with `PreToolUse` enforcement modules. |
 
 ## The quality gate
 
@@ -163,7 +163,7 @@ At `SessionStart`, each domain plugin's `register.sh` mirrors its `hooks/<event>
     │   ├── statusline.sh       # gate-aware statusline
     │   ├── tooling/            # helper CLIs (context7, exa-search) + bats tests
     │   └── settings/           # reusable settings fragments
-    ├── code-intel/             # ast-grep + engram skills, registry PreToolUse modules
+    ├── code-intel/             # ast-grep + comemory skills, registry PreToolUse modules
     └── lang-quality/           # Rust + TypeScript PostToolUse quality modules
 ```
 
@@ -176,8 +176,7 @@ Toggle individual skills, hooks, or MCP servers without uninstalling anything. D
 ```json
 {
   "version": 1,
-  "skills": { "engram": false },
-  "mcp": { "engram": false }
+  "skills": { "comemory": false }
 }
 ```
 

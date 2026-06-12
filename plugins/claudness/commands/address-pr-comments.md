@@ -56,7 +56,7 @@ Agent owns exactly one slot; behave as if no other slot exists. Violations = bug
 
 - **Single-slot scope.** Read/write only `/tmp/address-pr-comments-${SLOT}.json`. Never glob `*.json`, never `ls` tmp dir, never read another slot's state.
 - **Cron isolation.** Touch only cron `address-pr-comments:${SLOT}`. Never grep/list/modify/delete any other-named cron (even 1 char diff). Only `CronList` use = name-exact check in 0.3.
-- **No cross-talk.** Don't reference/count/summarize other sessions in output, engram, or reports.
+- **No cross-talk.** Don't reference/count/summarize other sessions in output, comemory, or reports.
 - **No leakage in tick prompt.** Exactly `/claudness:address-pr-comments --tick <OWNER>/<REPO>#<NUMBER>`. No `slot=`/`branch=`/state paths/metadata appended — agent recomputes; prose risks confusion with reviewer instructions.
 - **Worktree isolation.** Every code-change tick uses own `EnterWorktree`. Don't reuse/assume another slot's worktree.
 - **Stop is local.** `stop` deletes only this slot's cron + state. Never enumerates/affects others.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# session-end.sh is the Stop hook. The engram reminder is OPT-IN (default off):
+# session-end.sh is the Stop hook. The comemory reminder is OPT-IN (default off):
 # it emits only when hooks.session-end is explicitly true.
 
 SCRIPT="${BATS_TEST_DIRNAME}/../session-end.sh"

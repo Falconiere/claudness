@@ -8,7 +8,7 @@ HOOK_DIR="$(dirname "$0")"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
 
-# OPT-IN: the end-of-session engram reminder is OFF by default. The agent-memory
+# OPT-IN: the end-of-session comemory reminder is OFF by default. The agent-memory
 # protocol is always-active and saves proactively during the session, so a
 # Stop-time nag is redundant noise for most users. It emits only when explicitly
 # enabled with `hooks.session-end: true` in claudness.config.json. (This is the
@@ -21,17 +21,17 @@ fi
 # Consume stdin (Claude Code sends hook input via stdin)
 cat > /dev/null 2>&1 || true
 
-case "$(claudness_engram_state)" in
+case "$(claudness_comemory_state)" in
   available)
     save_doc="$HOOK_DIR/docs/vector-helper-save.md"
     # The wrapper ships in the code-intel plugin (Plan 3 extraction); its
     # install path differs per machine, so reference the skill, not a path.
     mod_sh="the code-intel plugin's mod.sh"
-    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh engram save.")
+    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh comemory save.")
     ctx="Session ending. $save_hint"
     ;;
   missing)
-    ctx="Session ending. WARN: engram CLI not installed — session save skipped. Install engram to persist learnings across sessions."
+    ctx="Session ending. WARN: comemory CLI not installed — session save skipped. Install comemory to persist learnings across sessions."
     ;;
   disabled|*)
     ctx="Session ending."

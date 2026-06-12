@@ -83,13 +83,13 @@ fi
 # 1. Memory recall hint — only when prompt explicitly invites recall.
 # (WB/WE word-boundary helpers are defined above the quality-gate block.)
 recall=""
-if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|engram|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
-  case "$(claudness_engram_state)" in
+if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
+  case "$(claudness_comemory_state)" in
     available)
-      recall="Recall first: \`mod.sh engram search\` before reading files."
+      recall="Recall first: \`mod.sh comemory search \"<topic>\"\` before reading files."
       ;;
     missing)
-      recall="WARN: engram CLI not installed — persistent memory recall disabled."
+      recall="WARN: comemory CLI not installed — persistent memory recall disabled."
       ;;
   esac
 fi
