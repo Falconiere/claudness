@@ -449,3 +449,45 @@ EOF
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "Forbidden 'as' type assertion"
 }
+
+@test "ts-quality: export const x = foo as Bar IS flagged (not exempted as an export)" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+export const x = foo as Bar;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden 'as' type assertion"
+}
+
+@test "ts-quality: long exported arrow const is subject to the fn-length limit" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/a.ts <<'EOF'
+export const fn = () => {
+  const a = 1;
+  const b = 2;
+  const c = 3;
+  return a + b + c;
+};
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+@test "ts-quality: camelCase exported arrow API without JSDoc gets a docs advisory" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+export const myApi = () => {
+  return 1;
+};
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "missing a JSDoc"
+}

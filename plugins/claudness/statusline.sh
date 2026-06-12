@@ -48,11 +48,14 @@ command -v jq >/dev/null 2>&1 || { printf 'claudness'; exit 0; }
 
 format_tokens() {
   local n="$1"
-  if [ "$n" -ge 1000 ] 2>/dev/null; then printf '%dk' "$(( n / 1000 ))"; else printf '%d' "$n"; fi
+  # Guard non-numeric input (a future schema change could emit a string) so the
+  # arithmetic and printf below stay safe on the per-render hot path.
+  [[ "$n" =~ ^[0-9]+$ ]] || { printf '0'; return; }
+  if [ "$n" -ge 1000 ]; then printf '%dk' "$(( n / 1000 ))"; else printf '%d' "$n"; fi
 }
 ctx_used_fmt=$(format_tokens "$ctx_used")
 ctx_size_fmt=$(format_tokens "$ctx_size")
-if [ -n "$ctx_pct" ] && [ "$ctx_pct" != "null" ]; then
+if [[ "$ctx_pct" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt} ($(printf '%.0f%%' "$ctx_pct"))"
 else
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt}"
