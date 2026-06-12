@@ -126,6 +126,7 @@ else
   TS_MAX_FILE=$(ts_max_file_lines)
 fi
 [ -n "$TS_MAX_FILE" ] || TS_MAX_FILE="${DEFAULT_TS_MAX_FILE_LINES:-300}"
+[ -n "$TS_MAX_SRC" ] || TS_MAX_SRC="default"   # empty read -> case must still pick a branch
 TS_LINE_COUNT=$(count_code_lines "$FILE_PATH")
 if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
   _split_hint="split into smaller modules"
@@ -441,10 +442,10 @@ if [[ -n "$MESSAGES" ]]; then
       updatedAt: $updatedAt
     }' > "$GATE_FILE"
 
-  jq -n --arg ctx "QUALITY VIOLATION — fix before proceeding:\n$MESSAGES" '{
+  jq -n --arg ctx "$MESSAGES" '{
     "hookSpecificOutput": {
       "hookEventName": "PostToolUse",
-      "additionalContext": $ctx
+      "additionalContext": ("QUALITY VIOLATION — fix before proceeding:\n" + $ctx)
     }
   }'
 else

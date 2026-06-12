@@ -63,6 +63,10 @@ _qc_project_override() {
 
 # _qc_native_ts_max_lines  ->  echoes a positive int or "".
 # eslint legacy JSON first, then oxlint. Read at the git root only.
+# Limitation: only JSON config forms are parsed — `.eslintrc.yaml/.yml`, flat
+# `eslint.config.*`, and `package.json#eslintConfig` fall through to the default.
+# detect_ts_linter still reports "eslint" for those, so the over-limit advisory
+# stays honest ("limit didn't come from its config").
 # Limitation: only the top-level `.rules["max-lines"]` is read. A per-glob
 # `overrides[].rules["max-lines"]` is intentionally NOT traversed — picking a
 # value without matching the override's `files` glob to the edited file could
