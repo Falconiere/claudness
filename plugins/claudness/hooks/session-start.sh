@@ -20,8 +20,12 @@ shopt -u patsub_replacement 2>/dev/null || true
 # without hardcoding the version-specific plugin cache path (plugins cannot
 # declare statusLine in their manifest). Done before the enabled gate so the
 # statusline stays wired even when session-start context injection is disabled.
-statusline_src="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)/statusline.sh"
-if [ -f "$statusline_src" ]; then
+# Resolve the plugin dir first: if the cd fails, the old one-liner degraded to
+# the literal path "/statusline.sh" — harmless only as long as no such root
+# file exists. Skip explicitly instead.
+statusline_dir="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)"
+statusline_src="${statusline_dir:+$statusline_dir/statusline.sh}"
+if [ -n "$statusline_src" ] && [ -f "$statusline_src" ]; then
   reg_root="$(claudness_registry_root)"
   mkdir -p "$reg_root" 2>/dev/null || true
   ln -sf "$statusline_src" "$reg_root/statusline.sh" 2>/dev/null || true

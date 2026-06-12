@@ -103,8 +103,11 @@ _is_rust_test=0
 case "$(basename "$FILE_PATH")" in
   *_test.rs|*_tests.rs) _is_rust_test=1 ;;
 esac
+# #[bench] and #[wasm_bindgen_test] are deliberately NOT in the alternation:
+# benches belong in benches/ (cargo convention) and wasm-bindgen tests have no
+# single canonical home — "move to tests/" would be a false positive for both.
 if [[ "$_is_rust_test" -eq 0 ]] \
-   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b|^[[:space:]]*#\[(rstest|bench|wasm_bindgen_test)\b' "$FILE_PATH" 2>/dev/null; then
+   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b|^[[:space:]]*#\[rstest\b' "$FILE_PATH" 2>/dev/null; then
   _is_rust_test=1
 fi
 if [[ "$_is_rust_test" -eq 1 && "$_has_inline_cfg_test" -eq 0 ]]; then
@@ -151,17 +154,27 @@ fi
 RUST_MAX_FN=$(rust_max_fn_lines)
 # Match fn with any leading visibility/qualifier combo: pub, pub(crate)/pub(super),
 # async, const, unsafe, extern "C", and combinations thereof.
-# The fn-end marker is a close brace at COLUMN 0 (rustfmt convention for a
-# top-level fn) — an indented /^[[:space:]]*\}/ would match the close of the
-# first inner if/match/loop block and measure every fn with control flow as
-# tiny. Known limitation (shared with the TS sibling): fns nested inside
-# mod/impl blocks are only approximated — the impl-size check below covers those.
+# The fn end is found with a brace-depth counter from the fn's own line, so a
+# method inside an impl/mod is measured to ITS close (not the impl's), and an
+# inner if/match/loop close can't end the range early. Body-less trait decls
+# (`fn f();`) are released on the `;`. Known limitation: an UNBALANCED brace
+# inside a string literal skews the count — balanced pairs (format strings
+# like "{}", "{:?}") cancel out and are fine.
 LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" '
-  /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / { start=NR; name=$0 }
-  start && /^\}/ {
-    len=NR-start
-    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
-    start=0
+  !infn && /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / {
+    infn=1; start=NR; name=$0; depth=0; opened=0
+  }
+  infn {
+    line=$0
+    no=gsub(/\{/, "{", line); nc=gsub(/\}/, "}", line)
+    depth += no - nc
+    if (no > 0) opened=1
+    if (opened && depth <= 0) {
+      len=NR-start
+      if (len > max) printf "%s:%d (%d lines)\n", name, start, len
+      infn=0
+    }
+    if (!opened && $0 ~ /;[[:space:]]*$/) infn=0
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_RS_FUNCS" ]]; then

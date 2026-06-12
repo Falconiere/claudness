@@ -379,6 +379,87 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: with the col-0 fn-end marker, the LAST method in an impl was
+# measured to the impl's close — trailing non-fn items inflated its length and
+# the report named the wrong fn. The brace-depth counter measures each method
+# to its own close.
+@test "rust-quality: short impl method followed by other items is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+pub struct Foo;
+impl Foo {
+    fn short(&self) -> u8 {
+        1
+    }
+    const A: u8 = 1;
+    const B: u8 = 2;
+    const C: u8 = 3;
+    const D: u8 = 4;
+    const E: u8 = 5;
+    const F: u8 = 6;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: long method inside an impl IS flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+pub struct Foo;
+impl Foo {
+    fn long_method(&self, x: u8) -> u8 {
+        let mut acc = 0;
+        if x > 0 {
+            acc += 1;
+        } else {
+            acc += 2;
+        }
+        acc += 3;
+        acc
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: #[bench] and #[wasm_bindgen_test] do not trigger tests/ placement" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p benches
+  cat > benches/speed.rs <<'EOF'
+#[bench]
+fn bench_it(b: &mut Bencher) {
+    b.iter(|| 1 + 1);
+}
+EOF
+  cat > src/wasm_checks.rs <<'EOF'
+#[wasm_bindgen_test]
+fn browser_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/benches/speed.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "test file outside"
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/wasm_checks.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "test file outside"
+}
+
 @test "rust-quality: clearing one file does not clobber another file's failure" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
