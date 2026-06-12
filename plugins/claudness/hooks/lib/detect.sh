@@ -238,6 +238,9 @@ count_code_lines() {
     # likely) a string literal containing /* flipped block mode on and swallowed
     # the rest of the file. Undercounting there would let an oversized file slip
     # the size gate, so fall back to the raw line count — fail toward flagging.
+    # Intentional: the raw NR over-counts (it includes the blanks/comments we
+    # normally exclude). That is the fail-toward-flagging choice — better to
+    # over-count and flag than under-count and let an oversized file pass.
     END { if (inblock) print NR; else print n }
   ' "$1" 2>/dev/null
 }
