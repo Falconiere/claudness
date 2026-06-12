@@ -80,11 +80,51 @@ _write_gate() {
 }
 
 @test "gate-status: failing gate-status-hook gate flips to passing when quality command passes" {
-  _write_gate "gate-status-hook" "failing"
+  # Drive the round-trip through the hook so the failing slot is created the same
+  # way production does (gate_record_failure), then cleared by a passing command.
+  failing=$(_payload "bun test" 1)
+  tool_name=Bash input="$failing" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  jq -e '.status == "failing"' "$GATE_FILE"
+  passing=$(_payload "cargo test" 0)
+  tool_name=Bash input="$passing" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE_FILE"
+}
+
+# --- Silent-failure window (round-10 should-fix) ----------------------------
+# A failing quality command must be recorded as its OWN slot even while a
+# file-level hook owns the gate, so fixing the file later cannot flip the gate
+# to passing while the command is still broken. A passing command, conversely,
+# clears only its own slot and leaves the file failure intact.
+
+# Seed an entries-format ts-quality-hook failure, the way the real hook writes it.
+_seed_ts_entry() {
+  mkdir -p "$TMP/.claude/tmp"
+  jq -n '{status:"failing", reason:"bad ts", source:"ts-quality-hook",
+          file:"/p/a.ts", violations:"viol\n",
+          entries:{"/p/a.ts":{source:"ts-quality-hook", reason:"bad ts",
+                              violations:"viol\n", updatedAt:"2026-01-01T00:00:00Z"}},
+          updatedAt:"2026-01-01T00:00:00Z"}' > "$GATE_FILE"
+}
+
+@test "gate-status: failing quality command is recorded even while a file hook owns the gate" {
+  _seed_ts_entry
+  payload=$(_payload "bun test" 1)
+  tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE_FILE"
+  jq -e '.entries["/p/a.ts"].source == "ts-quality-hook"' "$GATE_FILE"
+  jq -e '.entries["__global__"].source == "gate-status-hook"' "$GATE_FILE"
+}
+
+@test "gate-status: passing quality command clears only its slot, leaving a file-hook failure intact" {
+  _seed_ts_entry
   payload=$(_payload "cargo test" 0)
   tool_name=Bash input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  jq -e '.status == "passing"' "$GATE_FILE"
+  jq -e '.status == "failing"' "$GATE_FILE"
+  jq -e '.entries["/p/a.ts"].source == "ts-quality-hook"' "$GATE_FILE"
+  jq -e '.entries | has("__global__") | not' "$GATE_FILE"
 }
 
 @test "gate-status: passing quality-hook gate can be overwritten by failing quality command" {

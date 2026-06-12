@@ -92,6 +92,11 @@ gate_record_failure() {
     if [ -n "$_dropped" ] && [ "$_dropped" -gt 0 ] 2>/dev/null; then
       printf 'gate-file: primary write failed at %s; single-slot fallback dropped %s other entry(ies)\n' \
         "$gate_file" "$_dropped" >&2
+      # stderr is easily lost in a hook-driven pipeline; also append a durable
+      # breadcrumb beside the gate file so a vanished-state investigation has
+      # something to read. Best-effort: never let a logging failure abort the write.
+      printf '%s primary write failed; single-slot fallback dropped %s entry(ies)\n' \
+        "$now" "$_dropped" >> "${gate_file}.dropped.log" 2>/dev/null || true
     fi
     jq -n --arg reason "$reason" --arg source "$source" --arg file "$file" \
       --arg violations "$violations" --arg updatedAt "$now" \

@@ -352,6 +352,10 @@ if command -v ast-grep >/dev/null 2>&1; then
     printf '%s\n' "$out" | head -n "$2"
   }
   ts_record_ast_fail() {
+    # Keep the FIRST failing probe's detail; later probes don't overwrite it, so
+    # the surfaced diagnostic is deterministic instead of naming only whichever
+    # probe happened to fail last.
+    [ -n "$ts_ast_fail_detail" ] && return 0
     local rc stderr_first
     rc=$(cat "$ts_ast_rc_file" 2>/dev/null)
     stderr_first=$(head -n 1 "$ts_ast_err_file" 2>/dev/null | cut -c1-200)

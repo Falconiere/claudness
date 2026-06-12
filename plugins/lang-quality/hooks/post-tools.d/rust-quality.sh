@@ -275,7 +275,10 @@ if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
   # Snapshot the exit code + trimmed stderr of a failing scan into
   # ast_grep_fail_detail so the surfaced message tells the agent WHAT broke,
   # not just THAT it broke. Cap stderr at ~200 chars to avoid leaking output.
+  # Keep the FIRST failing probe's detail — later probes don't overwrite it, so
+  # the surfaced diagnostic is deterministic instead of naming only the last.
   record_ast_fail() {
+    [ -n "$ast_grep_fail_detail" ] && return 0
     local rc stderr_first
     rc=$(cat "$ast_rc_file" 2>/dev/null)
     stderr_first=$(head -n 1 "$ast_err_file" 2>/dev/null | cut -c1-200)
