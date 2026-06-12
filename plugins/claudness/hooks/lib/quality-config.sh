@@ -61,8 +61,23 @@ _qc_project_override() {
   ' <<< "$CLAUDNESS_CFG_JSON" 2>/dev/null
 }
 
+# Memoize the git toplevel for this process. detect_project_root shells out to
+# `git rev-parse` every call; the root can't change mid-hook, so cache it once
+# (mirrors claudness_load_config's caching). Tests reset _QC_PROJECT_ROOT="".
+_QC_PROJECT_ROOT=""
+_qc_project_root() {
+  [ -n "$_QC_PROJECT_ROOT" ] && { printf '%s' "$_QC_PROJECT_ROOT"; return 0; }
+  command -v detect_project_root >/dev/null 2>&1 || return 0
+  _QC_PROJECT_ROOT=$(detect_project_root)
+  printf '%s' "$_QC_PROJECT_ROOT"
+}
+
 # _qc_native_ts_max_lines  ->  echoes a positive int or "".
-# eslint legacy JSON first, then oxlint. Read at the git root only.
+# Reads the config of the linter detect_ts_linter reports as ACTIVE, so a repo
+# carrying BOTH .eslintrc.json and .oxlintrc.json (e.g. mid-migration) gets the
+# limit from the one it actually runs — not whichever file is listed first.
+# detect_ts_linter precedence is biome > oxc > eslint; biome's max-lines isn't
+# parsed here (no machine-readable rule), so it falls through to the default.
 # Limitation: only JSON config forms are parsed — `.eslintrc.yaml/.yml`, flat
 # `eslint.config.*`, and `package.json#eslintConfig` fall through to the default.
 # detect_ts_linter still reports "eslint" for those, so the over-limit advisory
@@ -74,14 +89,20 @@ _qc_project_override() {
 # to the (stricter-or-equal) default instead; the over-limit advisory says so.
 _qc_native_ts_max_lines() {
   command -v jq >/dev/null 2>&1 || return 0
-  local root f v
-  root=$(detect_project_root)
+  local root linter f v
+  root=$(_qc_project_root)
   [ -n "$root" ] || return 0
-  for f in "$root/.eslintrc.json" "$root/.oxlintrc.json"; do
-    [ -f "$f" ] || continue
-    v=$(jq -r "$_QC_ESLINT_MAXLINES_FILTER" "$f" 2>/dev/null)
-    [ -n "$v" ] && { printf '%s' "$v"; return 0; }
-  done
+  # Map the active linter to its machine-readable config file.
+  linter=""
+  command -v detect_ts_linter >/dev/null 2>&1 && linter=$(detect_ts_linter)
+  case "$linter" in
+    oxc)    f="$root/.oxlintrc.json" ;;
+    eslint) f="$root/.eslintrc.json" ;;
+    *)      return 0 ;;   # biome / none / unparseable form -> default
+  esac
+  [ -f "$f" ] || return 0
+  v=$(jq -r "$_QC_ESLINT_MAXLINES_FILTER" "$f" 2>/dev/null)
+  [ -n "$v" ] && printf '%s' "$v"
 }
 
 # quality_threshold LANG KEY DEFAULT  ->  always echoes a positive integer.

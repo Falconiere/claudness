@@ -108,7 +108,7 @@ if grep -q 'from ["'"'"']\.\./' "$FILE_PATH" 2>/dev/null; then
   add_error "Forbidden ../ import in $FILE_PATH — use @/ alias"
 fi
 
-AS_LINES=$(grep -nE '\)[[:space:]]+as[[:space:]]+[a-zA-Z]|\bas[[:space:]]+any\b|\bas[[:space:]]+unknown\b|[a-zA-Z>][[:space:]]+as[[:space:]]+[A-Z]|[a-zA-Z>][[:space:]]+as[[:space:]]+(string|number|boolean|object|symbol|bigint|never|undefined)\b' "$FILE_PATH" 2>/dev/null \
+AS_LINES=$(grep -nE '\)[[:space:]]+as[[:space:]]+[a-zA-Z]|\bas[[:space:]]+any\b|\bas[[:space:]]+unknown\b|[a-zA-Z>][[:space:]]+as[[:space:]]+[A-Z]|[a-zA-Z>][[:space:]]+as[[:space:]]+(string|number|boolean|object|symbol|bigint|never|undefined|null|void)\b' "$FILE_PATH" 2>/dev/null \
   | grep -vE '^[0-9]+:[[:space:]]*//' \
   | grep -vE '\bas[[:space:]]+const\b' \
   | grep -vE '\bimport\b|^[0-9]+:[[:space:]]*export[[:space:]]*(type[[:space:]]+)?\{' \
@@ -139,7 +139,10 @@ if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
 fi
 
 # Resolve the limit AND where it came from in one pass (avoids running the
-# override/native lookups twice).
+# override/native lookups twice). Contract: ts_max_file_lines_resolved prints
+# exactly "<int> <source>" where <source> is ONE token (override|native|default)
+# — the two-field `read` below relies on it; a multi-word source would spill
+# into TS_MAX_SRC and break the case arms.
 TS_MAX_FILE=""; TS_MAX_SRC="default"
 if command -v ts_max_file_lines_resolved >/dev/null 2>&1; then
   read -r TS_MAX_FILE TS_MAX_SRC <<<"$(ts_max_file_lines_resolved)"

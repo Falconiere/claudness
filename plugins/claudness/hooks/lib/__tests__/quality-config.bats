@@ -27,6 +27,7 @@ load_libs() {
   CLAUDNESS_CFG_JSON='{}'
   CLAUDNESS_CFG_LOADED=0
   _CLAUDNESS_HAS_JQ=""
+  _QC_PROJECT_ROOT=""
 }
 
 _project_cfg() { printf '%s' "$1" > "$CLAUDE_PROJECT_DIR/.claude/claudness.config.json"; }
@@ -104,12 +105,24 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/claudness.config.json"; }
   [ "$output" = "333" ]
 }
 
-@test "eslint takes precedence over oxlint" {
+@test "both configs present: the active linter (detect_ts_linter=oxc) wins" {
+  # .oxlintrc.json makes detect_ts_linter report oxc, so the gate reads the
+  # oxlint limit — not whichever config file happens to be listed first.
   printf '%s' '{"rules":{"max-lines":250}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
   printf '%s' '{"rules":{"max-lines":333}}' > "$CLAUDE_PROJECT_DIR/.oxlintrc.json"
   load_libs
   run ts_max_file_lines
-  [ "$output" = "250" ]
+  [ "$output" = "333" ]
+}
+
+@test "biome active: native max-lines is not parsed, falls through to default" {
+  # biome outranks eslint in detect_ts_linter and has no machine-readable
+  # max-lines rule here, so an .eslintrc.json limit must NOT be picked up.
+  printf '%s' '{}' > "$CLAUDE_PROJECT_DIR/biome.json"
+  printf '%s' '{"rules":{"max-lines":250}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
+  load_libs
+  run ts_max_file_lines
+  [ "$output" = "300" ]
 }
 
 @test "flat eslint config (JS) is skipped gracefully -> default" {

@@ -459,6 +459,66 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: pub(in path) restricted visibility was rejected by the old
+# pub(\([a-z]+\))? prefix, so a long pub(in …) fn slipped the length gate.
+@test "rust-quality: pub(in path) fn is subject to the fn-length limit" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+pub(in crate::foo) fn big() -> u8 {
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    a + b + c
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: oversized impl block is flagged (brace-depth)" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxImplLines":6}}}' > "$TMP/.claude/claudness.config.json"
+  : > src/m.rs
+  echo 'pub struct Foo;' >> src/m.rs
+  echo 'impl Foo {' >> src/m.rs
+  for i in $(seq 1 8); do echo "    pub const V$i: u8 = $i;" >> src/m.rs; done
+  echo '}' >> src/m.rs
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Impl block too large"
+}
+
+@test "rust-quality: small impl with an inner-control-flow method is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxImplLines":20}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+pub struct Foo;
+impl Foo {
+    fn pick(&self, x: u8) -> u8 {
+        if x > 0 {
+            1
+        } else {
+            2
+        }
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Impl block too large"
+}
+
 @test "rust-quality: #[bench] and #[wasm_bindgen_test] do not trigger tests/ placement" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
