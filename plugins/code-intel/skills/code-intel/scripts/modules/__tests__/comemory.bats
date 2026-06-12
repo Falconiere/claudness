@@ -59,10 +59,20 @@ teardown() {
 }
 
 @test "comemory: summary yields to a caller-supplied --tags without flag collision" {
-  # When the caller passes --tags, the wrapper must NOT also inject its own.
+  # A non-zero exit here is the collision signature: had the wrapper ALSO
+  # injected its own --tags session-summary, comemory/clap would reject the
+  # duplicate single-value flag and the save would fail. status 0 proves the
+  # wrapper suppressed its default tag in favour of the caller's.
   run bash "$MOD" comemory summary "custom tagged summary" --tags "release,notes" --json
   [ "$status" -eq 0 ]
-  [ -n "$output" ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ]
+  [ "$id" != "null" ]
+  # The memory really persisted (the save was not silently partial).
+  run bash "$MOD" comemory list --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$id"* ]]
 }
 
 @test "comemory: wrapper injects --repo into the comemory invocation" {
