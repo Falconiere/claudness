@@ -293,13 +293,13 @@ EOF
   echo 'module.exports = { rules: {} };' > .eslintrc.cjs
   git add .eslintrc.cjs; git -c user.email=t@t -c user.name=t commit -q -m eslint
   # No project override, no JSON config -> falls to the 300 default while a
-  # linter is detected; message must say the config isn't machine-readable.
+  # linter is detected; message must say the limit didn't come from its config.
   : > src/huge.ts
   for i in $(seq 1 301); do echo "export const v$i = $i;" >> src/huge.ts; done
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/huge.ts"}}'
   tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "isn't machine-readable"
+  echo "$output" | grep -q "didn't come from its config"
 }
 
 @test "ts-quality: documented export produces no docs advisory" {
@@ -424,4 +424,28 @@ EOF
   echo "$output" | grep -q "ast-grep failed"
   echo "$output" | grep -q "boom"
   echo "$output" | grep -q "exit 2"
+}
+
+@test "ts-quality: @ts-ignore inside a /** */ block comment is flagged" {
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+/** @ts-ignore */
+export const a = thing();
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden suppression comment"
+}
+
+@test "ts-quality: export { foo as Bar } re-export is not flagged as an as-assertion" {
+  _ts_project
+  cat > src/reexport.ts <<'EOF'
+import { foo } from "@/foo";
+export { foo as Bar };
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/reexport.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Forbidden 'as' type assertion"
 }

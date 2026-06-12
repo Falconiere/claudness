@@ -234,7 +234,11 @@ count_code_lines() {
       gsub(/^[ \t]+|[ \t]+$/, "", line)
       if (length(line)>0) n++
     }
-    END { print n }
+    # If we ended still inside a /* block, an unterminated comment OR (more
+    # likely) a string literal containing /* flipped block mode on and swallowed
+    # the rest of the file. Undercounting there would let an oversized file slip
+    # the size gate, so fall back to the raw line count — fail toward flagging.
+    END { if (inblock) print NR; else print n }
   ' "$1" 2>/dev/null
 }
 
