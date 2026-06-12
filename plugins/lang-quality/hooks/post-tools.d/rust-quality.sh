@@ -28,6 +28,11 @@ command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "
 command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
+# Load the merged config ONCE so CLAUDNESS_CFG_LOADED sticks for the threshold
+# lookups below — each runs in a $(...) subshell that inherits it and skips
+# re-merging (otherwise every wrapper re-spawns the jq merge).
+command -v claudness_load_config >/dev/null 2>&1 && claudness_load_config 2>/dev/null || true
+
 [ "$(detect_rust)" = "rust" ] || exit 0
 command -v cargo >/dev/null 2>&1 || exit 0
 command -v jq    >/dev/null 2>&1 || exit 0
@@ -56,7 +61,9 @@ LINE_COUNT=$(count_code_lines "$FILE_PATH")
 if [[ "$LINE_COUNT" -gt "$RUST_MAX_FILE" ]]; then
   _split_hint="split into submodules"
   [ -n "$(detect_clippy)" ] && _split_hint="$_split_hint (clippy enforces complexity here)"
-  add_error "File exceeds ${RUST_MAX_FILE}-line limit: $FILE_PATH ($LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
+  _approx=""
+  has_unterminated_block "$FILE_PATH" && _approx=" (size approximated — an unterminated /* or a string containing /* may be affecting the count)"
+  add_error "File exceeds ${RUST_MAX_FILE}-line limit: $FILE_PATH ($LINE_COUNT code lines, blanks/comments excluded)${_approx} — $_split_hint"
 fi
 
 _has_inline_cfg_test=0
@@ -95,6 +102,9 @@ fi
 
 # Forbidden lint suppression: #[allow(...)] / #![allow(...)] / #[expect(...)]
 # and the #[cfg_attr(..., allow(...))] / cfg_attr(..., expect(...)) back door.
+# Known limitation: grep is line-based, so an attribute split across multiple
+# lines (e.g. `#[cfg_attr(\n  test,\n  allow(...))]`) escapes detection. Rare;
+# multi-line attribute parsing isn't worth a full tokenizer here.
 if grep -qE '^[[:space:]]*#!?\[(allow|expect)\(|^[[:space:]]*#!?\[cfg_attr\([^]]*\b(allow|expect)\b' "$FILE_PATH" 2>/dev/null; then
   add_error "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in $FILE_PATH — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]."
 fi

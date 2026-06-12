@@ -59,9 +59,13 @@ else
 fi
 
 # --- Quality gate (claudness): red marker only when failing ---
+# Resolve the gate file at the git root (where the lang-quality hooks write it
+# via $PROJECT_ROOT), not at $cwd — a subdir-launched session or worktree has
+# cwd != project root, which would silently miss the marker.
 gate_seg=""
 if [ -n "$cwd" ]; then
-  gate_file="$cwd/.claude/tmp/quality-gate-status.json"
+  _gate_root=$(git -C "$cwd" --no-optional-locks rev-parse --show-toplevel 2>/dev/null)
+  gate_file="${_gate_root:-$cwd}/.claude/tmp/quality-gate-status.json"
   if [ -f "$gate_file" ]; then
     gate_status=$(jq -r '.status // ""' "$gate_file" 2>/dev/null)
     [ "$gate_status" = "failing" ] && gate_seg="${BOLD}${RED}✗ gate:failing${RESET}"

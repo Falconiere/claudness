@@ -64,3 +64,12 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   # default branch name (main or master) appears
   [[ "$plain" == *"$(git -C "$TMP" symbolic-ref --short HEAD)"* ]]
 }
+
+@test "statusline: gate marker resolves via git root when cwd is a subdir" {
+  ( cd "$TMP" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init )
+  mkdir -p "$TMP/.claude/tmp" "$TMP/packages/app/src"
+  printf '%s' '{"status":"failing","reason":"x"}' > "$TMP/.claude/tmp/quality-gate-status.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'/packages/app/src"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"gate:failing"* ]]
+}

@@ -370,3 +370,18 @@ EOF
   # ...and placement enforcement must still fire on the real #[tokio::test].
   echo "$output" | grep -q "Rust test file outside tests/"
 }
+
+@test "rust-quality: over-limit message flags approximate size on unterminated /*" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFileLines":2}}}' > "$TMP/.claude/claudness.config.json"
+  # A string containing /* flips count_code_lines into the raw-count fallback;
+  # has_unterminated_block detects the unbalanced /* and the message says so.
+  printf '%s\n' 'let s = "/*";' 'let a = 1;' 'let b = 2;' 'let c = 3;' > src/m.rs
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "exceeds 2-line limit"
+  echo "$output" | grep -q "size approximated"
+}

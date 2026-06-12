@@ -242,6 +242,18 @@ count_code_lines() {
   ' "$1" 2>/dev/null
 }
 
+# Return 0 if the file has more `/*` openers than `*/` closers — i.e. an
+# unterminated block comment, or (more often) a string literal containing `/*`
+# that confuses count_code_lines into the raw-line-count fallback. Lets the lang
+# modules tell the user the size figure is approximate, not exact.
+has_unterminated_block() {
+  [ -f "$1" ] || return 1
+  local open close
+  open=$(grep -o '/\*' "$1" 2>/dev/null | wc -l | tr -d ' ')
+  close=$(grep -o '\*/' "$1" 2>/dev/null | wc -l | tr -d ' ')
+  [ "${open:-0}" -gt "${close:-0}" ]
+}
+
 # Echo a repo-relative path for the given (potentially absolute) file_path.
 # Falls back to the input unchanged if it cannot determine the project root
 # or if the path is not under that root.

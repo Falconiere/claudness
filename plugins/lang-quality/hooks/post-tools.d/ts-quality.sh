@@ -27,6 +27,11 @@ command -v ts_max_fn_lines          >/dev/null 2>&1 || ts_max_fn_lines()        
 command -v ts_max_file_lines_source >/dev/null 2>&1 || ts_max_file_lines_source() { printf 'default'; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
+# Load the merged config ONCE in this shell so CLAUDNESS_CFG_LOADED sticks for
+# the threshold lookups below — each runs in a $(...) subshell that inherits it
+# and skips re-merging (otherwise every wrapper re-spawns the jq merge).
+command -v claudness_load_config >/dev/null 2>&1 && claudness_load_config 2>/dev/null || true
+
 # Exit early if this isn't a TypeScript project.
 [ "$(detect_ts)" = "ts" ] || exit 0
 
@@ -59,8 +64,12 @@ FILE_PATH="${CLAUDE_FILE_PATHS:-$fp_from_input}"
 [[ ! "$FILE_PATH" =~ \.(ts|tsx)$ ]] && exit 0
 
 # Skip files inside git linked worktrees — quality state is for the main checkout only.
-_file_git_dir="$(git -C "$(dirname "$FILE_PATH")" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"
-_file_common_dir="$(git -C "$(dirname "$FILE_PATH")" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+# One git call, one dirname: --git-dir + --git-common-dir come back on two lines.
+_file_dir="$(dirname "$FILE_PATH")"
+_file_git_dir=""; _file_common_dir=""
+{ IFS= read -r _file_git_dir; IFS= read -r _file_common_dir; } < <(
+  git -C "$_file_dir" rev-parse --path-format=absolute --git-dir --git-common-dir 2>/dev/null
+)
 _file_git_dir="${_file_git_dir%/}"
 _file_common_dir="${_file_common_dir%/}"
 if [[ -n "$_file_git_dir" && -n "$_file_common_dir" && "$_file_git_dir" != "$_file_common_dir" ]]; then
@@ -108,7 +117,15 @@ if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
   fi
 fi
 
-TS_MAX_FILE=$(ts_max_file_lines)
+# Resolve the limit AND where it came from in one pass (avoids running the
+# override/native lookups twice).
+TS_MAX_FILE=""; TS_MAX_SRC="default"
+if command -v ts_max_file_lines_resolved >/dev/null 2>&1; then
+  read -r TS_MAX_FILE TS_MAX_SRC <<<"$(ts_max_file_lines_resolved)"
+else
+  TS_MAX_FILE=$(ts_max_file_lines)
+fi
+[ -n "$TS_MAX_FILE" ] || TS_MAX_FILE="${DEFAULT_TS_MAX_FILE_LINES:-300}"
 TS_LINE_COUNT=$(count_code_lines "$FILE_PATH")
 if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
   _split_hint="split into smaller modules"
@@ -117,12 +134,14 @@ if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
     # Only claim the linter owns the limit when the limit truly came from its
     # config; if a linter is present but its config isn't machine-readable
     # (e.g. .eslintrc.cjs / eslint.config.js), say so instead of contradicting.
-    case "$(ts_max_file_lines_source)" in
+    case "$TS_MAX_SRC" in
       native)  _split_hint="$_split_hint ($_linter enforces this max-lines limit)" ;;
       default) _split_hint="$_split_hint ($_linter is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
     esac
   fi
-  add_error "TS file exceeds ${TS_MAX_FILE}-line limit: $FILE_PATH ($TS_LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
+  _approx=""
+  has_unterminated_block "$FILE_PATH" && _approx=" (size approximated — an unterminated /* or a string containing /* may be affecting the count)"
+  add_error "TS file exceeds ${TS_MAX_FILE}-line limit: $FILE_PATH ($TS_LINE_COUNT code lines, blanks/comments excluded)${_approx} — $_split_hint"
 fi
 
 TS_MAX_FN=$(ts_max_fn_lines)
@@ -179,9 +198,9 @@ fi
 
 # --- New checks ---
 
-# Check: console.log
-if grep -nE '^\s*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | head -1 | grep -q .; then
-  CONSOLE_LINES=$(grep -nE '^\s*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | head -3)
+# Check: console.log — capture once, then test (not grep-twice).
+CONSOLE_LINES=$(grep -nE '^\s*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | head -3)
+if [[ -n "$CONSOLE_LINES" ]]; then
   add_error "Forbidden console.log in $FILE_PATH — use console.error/warn/info\n${CONSOLE_LINES}"
 fi
 
