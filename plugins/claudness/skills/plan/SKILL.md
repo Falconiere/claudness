@@ -1,17 +1,17 @@
 ---
 name: plan
-description: Use after brainstorming, when you have an agreed design and need a concrete implementation plan before touching code. Produces a concise, scannable, executable plan. Native claudness workflow; second phase of brainstorm → plan → execute → test.
+description: Use after the design is agreed (and specced, for larger work) and you need a concrete implementation plan before touching code. Produces a concise, scannable, executable plan. Native claudness workflow; third phase of brainstorm → spec → plan → execute → test.
 ---
 
 # Plan
 
-Second phase of the claudness workflow. Turns an agreed design into a written plan another session (or subagent) can execute without re-deriving context.
+Third phase of the claudness workflow. Turns an agreed design into a written plan another session (or subagent) can execute without re-deriving context.
 
-**Trigger phrases:** write a plan, plan this out, how do we implement, break this down, spec it.
+**Trigger phrases:** write a plan, plan this out, how do we implement, break this down.
 
 ## Precondition
 
-A design exists (`brainstorm` ran, or the user supplied requirements). If intent or constraints are still fuzzy, go back to `brainstorm` first.
+A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larger work), or at least an agreed brainstorm decision. If intent or constraints are still fuzzy, go back to `brainstorm`; if the work is big and the contract isn't written down, go to `spec` first.
 
 ## Plan shape (keep it tight)
 

@@ -1,11 +1,11 @@
 ---
 name: execute
-description: Use when you have a written plan to implement. Drives the plan step by step with verification checkpoints, respects the quality gate, and delegates heavy work to subagents to keep context compact. Native claudness workflow; third phase of brainstorm → plan → execute → test.
+description: Use when you have a written plan to implement. Drives the plan step by step with verification checkpoints, respects the quality gate, and delegates heavy work to subagents to keep context compact. Native claudness workflow; fourth phase of brainstorm → spec → plan → execute → test.
 ---
 
 # Execute
 
-Third phase of the claudness workflow. Carries out a written plan with discipline: small steps, evidence before claims, never skip the gate.
+Fourth phase of the claudness workflow. Carries out a written plan with discipline: small steps, evidence before claims, never skip the gate.
 
 **Trigger phrases:** execute the plan, implement this, start building, work through the plan.
 
