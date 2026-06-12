@@ -279,3 +279,33 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "unreachable!"
 }
+
+@test "rust-quality: bare #[rstest] test attribute outside tests/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+#[rstest]
+fn it_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Rust test file outside tests/"
+}
+
+@test "rust-quality: #[allow] mentioned in a line comment is NOT flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/ok.rs <<'EOF'
+// historically this used #[allow(dead_code)] elsewhere; removed now.
+fn helper() -> u8 {
+    1
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/ok.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Forbidden lint suppression"
+}

@@ -2,7 +2,8 @@
 
 Design specs for claudness work, authored by the `spec` skill and audited by `spec-review`.
 They sit between brainstorm (decide the shape) and plan (implementation steps) in the
-`brainstorm → spec → plan → execute → test` workflow.
+`brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test`
+workflow.
 
 ## Conventions
 

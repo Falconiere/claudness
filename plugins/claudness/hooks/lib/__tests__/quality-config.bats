@@ -83,6 +83,20 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/claudness.config.json"; }
   [ "$output" = "300" ]
 }
 
+@test "eslint max-lines [off, N] severity falls through to default" {
+  printf '%s' '{"rules":{"max-lines":["off",250]}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
+  load_libs
+  run ts_max_file_lines
+  [ "$output" = "300" ]
+}
+
+@test "eslint max-lines [0, N] severity falls through to default" {
+  printf '%s' '{"rules":{"max-lines":[0,250]}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
+  load_libs
+  run ts_max_file_lines
+  [ "$output" = "300" ]
+}
+
 @test "oxlint config used when no eslint config" {
   printf '%s' '{"rules":{"max-lines":["error",333]}}' > "$CLAUDE_PROJECT_DIR/.oxlintrc.json"
   load_libs

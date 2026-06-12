@@ -36,10 +36,13 @@ _QC_LIB_DIR="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}}"
 _QC_ESLINT_MAXLINES_FILTER='
   .rules?["max-lines"]?
   | if   type=="number" then .
-    elif type=="array"  then ( .[1]
-          | if   type=="number" then .
-            elif type=="object" then .max
-            else empty end )
+    elif type=="array"  then (
+          if (.[0] == "off" or .[0] == 0) then empty   # rule disabled by severity
+          else ( .[1]
+                 | if   type=="number" then .
+                   elif type=="object" then .max
+                   else empty end )
+          end )
     else empty end
   | if type=="number" and . > 0 then (.|floor|tostring) else empty end
 '

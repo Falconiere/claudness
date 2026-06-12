@@ -405,3 +405,23 @@ EOF
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "uses await with no try/catch"
 }
+
+@test "ts-quality: ast-grep crash is surfaced as a violation, not silent pass" {
+  _ts_project
+  # Stub ast-grep that crashes (exit > 1 with stderr noise).
+  mkdir -p "$TMP/bin"
+  printf '#!/bin/sh\necho boom >&2\nexit 2\n' > "$TMP/bin/ast-grep"
+  chmod +x "$TMP/bin/ast-grep"
+  cat > src/good.ts <<'EOF'
+/** clean */
+export function good() {
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/good.ts"}}'
+  PATH="$TMP/bin:$PATH" tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "ast-grep failed"
+  echo "$output" | grep -q "boom"
+  echo "$output" | grep -q "exit 2"
+}

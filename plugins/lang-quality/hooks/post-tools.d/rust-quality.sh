@@ -71,7 +71,7 @@ case "$(basename "$FILE_PATH")" in
   *_test.rs|*_tests.rs) _is_rust_test=1 ;;
 esac
 if [[ "$_is_rust_test" -eq 0 ]] \
-   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b' "$FILE_PATH" 2>/dev/null; then
+   && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b|^[[:space:]]*#\[(rstest|bench|wasm_bindgen_test)\b' "$FILE_PATH" 2>/dev/null; then
   _is_rust_test=1
 fi
 if [[ "$_is_rust_test" -eq 1 ]]; then
@@ -90,7 +90,7 @@ fi
 
 # Forbidden lint suppression: #[allow(...)] / #![allow(...)] / #[expect(...)]
 # and the #[cfg_attr(..., allow(...))] / cfg_attr(..., expect(...)) back door.
-if grep -qE '#!?\[(allow|expect)\(|#!?\[cfg_attr\([^]]*\b(allow|expect)\b' "$FILE_PATH" 2>/dev/null; then
+if grep -qE '^[[:space:]]*#!?\[(allow|expect)\(|^[[:space:]]*#!?\[cfg_attr\([^]]*\b(allow|expect)\b' "$FILE_PATH" 2>/dev/null; then
   add_error "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in $FILE_PATH — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]."
 fi
 
