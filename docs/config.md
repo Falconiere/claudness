@@ -79,6 +79,11 @@ Unknown names are silently ignored (forward compatible).
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained
     first so Claude Code's IPC does not stall.
+  - **Exception — `session-end` is opt-IN**: the end-of-session engram
+    "save your learnings" reminder is OFF by default (the agent-memory
+    protocol already saves proactively, so the Stop-time nag is redundant
+    noise). It emits only when you set `hooks.session-end: true`. Every other
+    hook is opt-out (on unless set to `false`).
 
 - `mcp.<name> = false`
   - Any `mcp__<name>__*` tool invocation is blocked at `PreToolUse` with
