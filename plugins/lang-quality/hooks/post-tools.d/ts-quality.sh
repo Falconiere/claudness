@@ -112,7 +112,15 @@ TS_LINE_COUNT=$(count_code_lines "$FILE_PATH")
 if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
   _split_hint="split into smaller modules"
   _linter="$(detect_ts_linter)"
-  [ -n "$_linter" ] && _split_hint="$_split_hint ($_linter owns max-lines here)"
+  if [ -n "$_linter" ]; then
+    # Only claim the linter owns the limit when the limit truly came from its
+    # config; if a linter is present but its config isn't machine-readable
+    # (e.g. .eslintrc.cjs / eslint.config.js), say so instead of contradicting.
+    case "$(command -v ts_max_file_lines_source >/dev/null 2>&1 && ts_max_file_lines_source)" in
+      native)  _split_hint="$_split_hint ($_linter enforces this max-lines limit)" ;;
+      default) _split_hint="$_split_hint ($_linter is present but its config isn't machine-readable here — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
+    esac
+  fi
   add_error "TS file exceeds ${TS_MAX_FILE}-line limit: $FILE_PATH ($TS_LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
 fi
 
@@ -301,7 +309,8 @@ _ts_base="$(basename "$FILE_PATH")"
 if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
       && "$_ts_base" != "index.ts" && "$_ts_base" != "index.tsx" ]]; then
   _undoc=$(awk '
-    /^[[:space:]]*$/ { next }
+    /^[[:space:]]*$/   { next }   # blanks do not reset the doc context
+    /^[[:space:]]*\/\// { next }  # line comments / pragmas sit between doc and export
     {
       if ($0 ~ /^export (async )?function / || $0 ~ /^export (abstract )?class / \
           || $0 ~ /^export default / || $0 ~ /^export (const|interface|type|enum) [A-Z]/) {

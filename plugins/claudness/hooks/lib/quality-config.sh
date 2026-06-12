@@ -88,6 +88,16 @@ quality_threshold() {
 # count_code_lines lives in detect.sh (sourced above) — both lang modules
 # hard-require detect.sh, so it needs no per-module fallback.
 
+# Echo where ts maxFileLines actually resolved from: override | native | default.
+# Lets the lang module word its advisory honestly — claiming "eslint enforces
+# this" only when the limit really came from a parsed eslint/oxlint config, not
+# when a linter is merely present with a config we can't read (e.g. .eslintrc.cjs).
+ts_max_file_lines_source() {
+  [ -n "$(_qc_project_override ts maxFileLines)" ] && { printf 'override'; return; }
+  [ -n "$(_qc_native_ts_max_lines)" ]             && { printf 'native';   return; }
+  printf 'default'
+}
+
 # Convenience wrappers the quality modules call.
 ts_max_file_lines()   { quality_threshold ts   maxFileLines "$DEFAULT_TS_MAX_FILE_LINES"; }
 ts_max_fn_lines()     { quality_threshold ts   maxFnLines   "$DEFAULT_TS_MAX_FN_LINES"; }

@@ -261,6 +261,47 @@ EOF
   ! echo "$output" | grep -q "QUALITY VIOLATION"
 }
 
+@test "ts-quality: docs advisory respects a pragma between JSDoc and export" {
+  _ts_project
+  cat > src/api.ts <<'EOF'
+/** Does the thing. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function doThing() {
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "missing a JSDoc"
+}
+
+@test "ts-quality: over-limit message credits eslint when its JSON config sets the limit" {
+  _ts_project
+  echo '{"rules":{"max-lines":10}}' > .eslintrc.json
+  git add .eslintrc.json; git -c user.email=t@t -c user.name=t commit -q -m eslint
+  : > src/big.ts
+  for i in $(seq 1 15); do echo "export const v$i = $i;" >> src/big.ts; done
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/big.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "eslint enforces this max-lines limit"
+}
+
+@test "ts-quality: over-limit message flags a non-machine-readable linter config (.eslintrc.cjs)" {
+  _ts_project
+  echo 'module.exports = { rules: {} };' > .eslintrc.cjs
+  git add .eslintrc.cjs; git -c user.email=t@t -c user.name=t commit -q -m eslint
+  # No project override, no JSON config -> falls to the 300 default while a
+  # linter is detected; message must say the config isn't machine-readable.
+  : > src/huge.ts
+  for i in $(seq 1 301); do echo "export const v$i = $i;" >> src/huge.ts; done
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/huge.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "isn't machine-readable"
+}
+
 @test "ts-quality: documented export produces no docs advisory" {
   _ts_project
   cat > src/api.ts <<'EOF'

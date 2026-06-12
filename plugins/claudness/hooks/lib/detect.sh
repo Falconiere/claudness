@@ -211,9 +211,11 @@ read_list() {
 # excluded). Handles // line comments and /* ... */ blocks (incl. multi-line and
 # inline), for both TS and Rust (/// and //! reduce to // and are dropped).
 # Heuristic: does not track // or /* inside string literals — consistent with
-# the other comment-stripping passes in the quality modules. Lives here (not in
-# quality-config.sh) so the lang modules get one honest definition with no
-# fallback — they already hard-require detect.sh.
+# the other comment-stripping passes in the quality modules. Known edge: a
+# string like `let s = "/* x";` flips block mode on and under-counts following
+# code until a `*/` appears. Rare in practice; full literal-aware parsing isn't
+# worth it here. Lives in detect.sh (not quality-config.sh) so the lang modules
+# get one honest definition with no fallback — they already hard-require detect.sh.
 count_code_lines() {
   awk '
     BEGIN { inblock=0; n=0 }
