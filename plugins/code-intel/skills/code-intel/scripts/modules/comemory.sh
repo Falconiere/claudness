@@ -124,8 +124,12 @@ case "$subcmd" in
     shift
     # Stamp the title with a UTC timestamp so repeated summaries are not
     # title-identical (a fixed "Session summary" title makes comemory's
-    # near-duplicate auto-warn fire on every save).
-    body="$(printf 'Session summary %s\n\n%s' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null)" "$content")"
+    # near-duplicate auto-warn fire on every save). Fall back to epoch seconds
+    # if formatted `date` yields nothing, so the de-dup stamp is never empty.
+    stamp="$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null)"
+    [ -n "$stamp" ] || stamp="$(date +%s 2>/dev/null)"
+    [ -n "$stamp" ] || stamp="${EPOCHSECONDS:-0}"
+    body="$(printf 'Session summary %s\n\n%s' "$stamp" "$content")"
     repo_flag "$@"
     # Default the session-summary tag, but yield to a caller-supplied --tags:
     # comemory/clap rejects a duplicate single-value flag. --kind is left to
@@ -178,12 +182,17 @@ case "$subcmd" in
     # failure in one never blocks the others. Each is bounded by timeout/gtimeout
     # when available (matching session-end.sh) so a hung step can't block a
     # manual `mod.sh comemory maintain`; bare on hosts with neither.
+    # This verb is hand-run only — the session-end hook runs its own detached
+    # mine/prune/gc sequence and never dispatches here. So keep stderr VISIBLE
+    # (a real failure like a non-writable data dir must surface to the operator);
+    # only stdout is silenced, and each step stays non-fatal so one failure never
+    # blocks the others.
     _cm_to=""
     if command -v timeout >/dev/null 2>&1; then _cm_to="timeout 30"
     elif command -v gtimeout >/dev/null 2>&1; then _cm_to="gtimeout 30"; fi
-    $_cm_to comemory mine --apply >/dev/null 2>&1 || true
-    $_cm_to comemory prune --apply >/dev/null 2>&1 || true
-    $_cm_to comemory gc >/dev/null 2>&1 || true
+    $_cm_to comemory mine --apply >/dev/null || true
+    $_cm_to comemory prune --apply >/dev/null || true
+    $_cm_to comemory gc >/dev/null || true
     ;;
 
   *)
