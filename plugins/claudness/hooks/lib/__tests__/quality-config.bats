@@ -18,13 +18,13 @@ teardown() {
   [ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"
 }
 
-# Source the libs in-process and point the config cache at a per-test file.
+# Source the libs in-process and reset the loader state per test.
 load_libs() {
   CLAUDNESS_LIB_DIR="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   export CLAUDNESS_LIB_DIR
   # shellcheck disable=SC1091
   . "$CLAUDNESS_LIB_DIR/quality-config.sh"
-  CLAUDNESS_CFG_CACHE="$TMP/cfg-cache.json"
+  CLAUDNESS_CFG_JSON='{}'
   CLAUDNESS_CFG_LOADED=0
   _CLAUDNESS_HAS_JQ=""
 }

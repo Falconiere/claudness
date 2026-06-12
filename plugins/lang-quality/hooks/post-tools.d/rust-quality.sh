@@ -23,6 +23,27 @@
 # Threshold resolver (defaults + project/native overrides). Soft if absent.
 # shellcheck source=../../../claudness/hooks/lib/quality-config.sh
 [ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
+# Multi-slot gate writer (entries keyed by file — one hook's failure no longer
+# clobbers another's). Soft if absent: fallbacks below keep the legacy
+# single-slot behavior when the claudness lib predates gate-file.sh.
+# shellcheck source=../../../claudness/hooks/lib/gate-file.sh
+[ -f "$CLAUDNESS_LIB_DIR/gate-file.sh" ] && . "$CLAUDNESS_LIB_DIR/gate-file.sh"
+command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {
+  jq -n --arg reason "$4" --arg source "$3" --arg file "$2" --arg violations "$5" \
+    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{status: "failing", reason: $reason, source: $source, file: $file,
+      violations: $violations, updatedAt: $updatedAt}' > "$1"
+}
+command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
+  [ -f "$1" ] || return 0
+  local _src _file
+  _src=$(jq -r '.source // ""' "$1" 2>/dev/null || echo "")
+  _file=$(jq -r '.file // ""' "$1" 2>/dev/null || echo "")
+  if [ "$_src" = "$3" ] && [ "$_file" = "$2" ]; then
+    jq -n --arg source "$3" --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{status: "passing", source: $source, updatedAt: $updatedAt}' > "$1"
+  fi
+}
 command -v rust_max_file_lines >/dev/null 2>&1 || rust_max_file_lines() { echo "${DEFAULT_RUST_MAX_FILE_LINES:-500}"; }
 command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "${DEFAULT_RUST_MAX_FN_LINES:-50}"; }
 command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
@@ -122,7 +143,7 @@ if [ -f "$EXEMPTIONS_FILE" ]; then
   done <<< "$(read_list "$EXEMPTIONS_FILE")"
 fi
 if [ "$exempt" -eq 0 ]; then
-  if grep -qE '\bunsafe\b\s*(\{|fn )' "$FILE_PATH" 2>/dev/null; then
+  if grep -qE '\bunsafe\b[[:space:]]*(\{|fn )' "$FILE_PATH" 2>/dev/null; then
     add_error "Forbidden unsafe code in $FILE_PATH — refactor to safe alternative. Add crate to settings/rust-unsafe-exemptions.txt if it legitimately needs unsafe (FFI, sandboxing)."
   fi
 fi
@@ -130,9 +151,14 @@ fi
 RUST_MAX_FN=$(rust_max_fn_lines)
 # Match fn with any leading visibility/qualifier combo: pub, pub(crate)/pub(super),
 # async, const, unsafe, extern "C", and combinations thereof.
+# The fn-end marker is a close brace at COLUMN 0 (rustfmt convention for a
+# top-level fn) — an indented /^[[:space:]]*\}/ would match the close of the
+# first inner if/match/loop block and measure every fn with control flow as
+# tiny. Known limitation (shared with the TS sibling): fns nested inside
+# mod/impl blocks are only approximated — the impl-size check below covers those.
 LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" '
   /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / { start=NR; name=$0 }
-  start && /^[[:space:]]*\}/ {
+  start && /^\}/ {
     len=NR-start
     if (len > max) printf "%s:%d (%d lines)\n", name, start, len
     start=0
@@ -246,25 +272,13 @@ fi
 # --- Output ---
 
 if [[ -n "$MESSAGES" ]]; then
-  # Write violation to gate status file for pre-tool blocking (zero tolerance).
+  # Record this file's violation in the gate status file (entry keyed by file
+  # path — does not clobber failures recorded for other files or hooks).
   GATE_DIR="$PROJECT_ROOT/.claude/tmp"
   GATE_FILE="$GATE_DIR/quality-gate-status.json"
   mkdir -p "$GATE_DIR"
-
-  jq -n \
-    --arg status "failing" \
-    --arg reason "Post-edit Rust quality violation(s) detected" \
-    --arg file "$FILE_PATH" \
-    --arg violations "$MESSAGES" \
-    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{
-      status: $status,
-      reason: $reason,
-      source: "rust-quality-hook",
-      file: $file,
-      violations: $violations,
-      updatedAt: $updatedAt
-    }' > "$GATE_FILE"
+  gate_record_failure "$GATE_FILE" "$FILE_PATH" "rust-quality-hook" \
+    "Post-edit Rust quality violation(s) detected" "$MESSAGES"
 
   jq -n --arg ctx "$MESSAGES" '{
     "hookSpecificOutput": {
@@ -273,20 +287,11 @@ if [[ -n "$MESSAGES" ]]; then
     }
   }'
 else
-  # Clear gate if this file now passes (only if this hook set it).
-  GATE_DIR="$PROJECT_ROOT/.claude/tmp"
-  GATE_FILE="$GATE_DIR/quality-gate-status.json"
-  if [[ -f "$GATE_FILE" ]]; then
-    GATE_SOURCE=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
-    GATE_FILE_PATH=$(jq -r '.file // ""' "$GATE_FILE" 2>/dev/null || echo "")
-    if [[ "$GATE_SOURCE" == "rust-quality-hook" && "$GATE_FILE_PATH" == "$FILE_PATH" ]]; then
-      jq -n \
-        --arg status "passing" \
-        --arg source "rust-quality-hook" \
-        --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        '{status: $status, source: $source, updatedAt: $updatedAt}' > "$GATE_FILE"
-    fi
-  fi
+  # Clear this file's entry now that it passes (only if this hook set it).
+  # Other files' failures stay recorded; the gate only flips to passing when
+  # no entry remains.
+  GATE_FILE="$PROJECT_ROOT/.claude/tmp/quality-gate-status.json"
+  gate_clear_file "$GATE_FILE" "$FILE_PATH" "rust-quality-hook"
 
   # Docs advisory (non-blocking — no gate write).
   if [[ -n "$DOC_ADVISORY" ]]; then
