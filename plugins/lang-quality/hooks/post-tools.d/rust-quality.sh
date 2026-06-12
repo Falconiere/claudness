@@ -163,7 +163,7 @@ RUST_MAX_FN=$(rust_max_fn_lines)
 # string (incl. raw strings) still leaks into the count — an unbalanced one
 # leaves the fn unmeasured (fail-open), never falsely flagged short.
 LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" -v q="'" '
-  !infn && /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / {
+  !infn && /^[[:space:]]*(pub(\([^)]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / {
     infn=1; start=NR; name=$0; depth=0; opened=0
   }
   infn {
@@ -187,12 +187,26 @@ if [[ -n "$LONG_RS_FUNCS" ]]; then
 fi
 
 RUST_MAX_IMPL=$(rust_max_impl_lines)
-LONG_IMPL=$(awk -v max="$RUST_MAX_IMPL" '
-  /^[[:space:]]*(unsafe[[:space:]]+)?impl[[:space:]<]/ { start=NR; name=$0 }
-  start && /^\}/ {
-    len=NR-start
-    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
-    start=0
+# Brace-depth counter (same technique + string/char strip as the fn check):
+# a bare `^\}` close-marker would be tripped early by a column-0 `}` from
+# macro-generated or wide-rustfmt code inside the impl, undercounting it.
+LONG_IMPL=$(awk -v max="$RUST_MAX_IMPL" -v q="'" '
+  !inimpl && /^[[:space:]]*(unsafe[[:space:]]+)?impl[[:space:]<]/ {
+    inimpl=1; start=NR; name=$0; depth=0; opened=0
+  }
+  inimpl {
+    line=$0
+    gsub(/\\"/, "", line)
+    gsub(/"[^"]*"/, "", line)
+    gsub(q "[{}]" q, "", line)
+    no=gsub(/\{/, "{", line); nc=gsub(/\}/, "}", line)
+    depth += no - nc
+    if (no > 0) opened=1
+    if (opened && depth <= 0) {
+      len=NR-start
+      if (len > max) printf "%s:%d (%d lines)\n", name, start, len
+      inimpl=0
+    }
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_IMPL" ]]; then

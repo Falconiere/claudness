@@ -580,6 +580,18 @@ EOF
   echo "$output" | grep -q "Forbidden 'as' type assertion"
 }
 
+@test "ts-quality: as null / as void primitive casts are flagged" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+const a = something as null;
+const b = other as void;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden 'as' type assertion"
+}
+
 @test "ts-quality: long exported arrow const is subject to the fn-length limit" {
   _ts_project
   mkdir -p "$TMP/.claude"

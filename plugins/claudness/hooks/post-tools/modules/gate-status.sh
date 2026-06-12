@@ -32,6 +32,13 @@ fi
 # (ts-quality-hook, rust-quality-hook, ...): those hooks manage their own
 # lifecycle and only clear the gate when the offending file is re-edited
 # clean. A passing quality command here must not mask their failures.
+#
+# Ordering note: gate-file.sh mirrors the MOST RECENT failure into the
+# top-level `source`. So while any *-quality-hook file entry is the latest
+# failure, this guard holds even if a gate-status-hook command failure is
+# also seeded in `entries.__global__` — a passing `bun test` won't clear the
+# gate until every file-level failure is fixed first. Intended; see the
+# single-slot passing write below (it depends on this guard).
 if [[ -f "$GATE_FILE" ]]; then
   current_source=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
   current_status=$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null || echo "")
@@ -85,6 +92,11 @@ if [[ "$exit_code" =~ ^[0-9]+$ && "$exit_code" -ne 0 ]]; then
 fi
 
 if [[ "$exit_code" == "0" ]]; then
+  # Single-slot passing write — deliberately drops any `entries` map from
+  # gate-file.sh. SAFE ONLY because the early-exit above bails whenever a
+  # *-quality-hook owns a failing gate, so we never reach here while
+  # file-level entries are live. If that guard is ever loosened, this write
+  # must merge/clear entries instead of replacing the whole object.
   jq -n \
     --arg status "passing" \
     --arg source "$command" \

@@ -70,6 +70,13 @@ gate_clear_file() {
   local existing now owns tmp
   [ -f "$gate_file" ] || return 0
   existing=$(cat "$gate_file" 2>/dev/null) || return 0
+  # A malformed gate file can't be parsed, so a clear silently no-ops and the
+  # gate stays stuck failing until the next gate_record_failure rewrites it.
+  # Emit a breadcrumb so that stuck state is debuggable, not invisible.
+  if ! jq -e . <<< "$existing" >/dev/null 2>&1; then
+    printf 'gate-file: malformed JSON at %s; ignoring clear (gate stays failing until next write)\n' "$gate_file" >&2
+    return 0
+  fi
   [ "$(jq -r '.status // ""' <<< "$existing" 2>/dev/null)" = "failing" ] || return 0
   owns=$(jq -r --arg f "$file" --arg s "$source" '
     if (.entries? | type) == "object"
