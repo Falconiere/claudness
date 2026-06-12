@@ -8,10 +8,8 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
 2. Hook computes `git diff <base>...HEAD | git hash-object --stdin`, where `<base>` is resolved dynamically via `detect_base_branch` (origin/HEAD, falling back to `main`; `$PUSH_REVIEW_BASE` overrides for tests).
 3. Hook reads `.claude/tmp/push-review/<branch-slug>.json`.
 4. If the state file is missing, has a stale `diff_sha`, or has `findings_count > 0` → DENY with instructions.
-5. Agent runs two reviewers against the diff **sequentially** (code-simplifier first):
-   1. `code-simplifier` (subagent from the `code-simplifier@claude-plugins-official` plugin — declared in `plugin.json` `dependencies`). Spawn via the Agent tool, apply its rewrites to the working tree, and commit.
-   2. `caveman:cavecrew-reviewer` (subagent from the `caveman@caveman` plugin — declared in `plugin.json` `dependencies`). Review the post-simplification diff and apply findings.
-6. Re-run both reviewers on the new diff and loop until both return zero findings.
+5. Agent runs a reviewer against the diff and applies its findings. The gate is **reviewer-agnostic** — it accepts at least one of: `caveman:cavecrew-reviewer`, `code-review`, `code-review:xhigh`, `review`, `security-review`. Prefer `caveman:cavecrew-reviewer` when the caveman plugin is installed; otherwise use the built-in `/code-review xhigh --fix` skill (always available, no plugin required). Running extra reviewers (e.g. `code-simplifier` first) is allowed — the check is membership, not equality.
+6. Re-run the reviewer on the new diff and loop until it returns zero findings.
 7. Agent writes state file atomically (`<file>.tmp` then `mv`) with `findings_count: 0` and the new SHA.
 8. Agent retries `git push` → hook allows.
 
@@ -24,7 +22,7 @@ PreToolUse hook on `Bash(git push)`. Blocks pushes until a clean code review is 
   "diff_sha": "<git-hash-object output>",
   "base_branch": "main",
   "reviewed_at": "<iso8601>",
-  "reviewers": ["code-simplifier", "caveman:cavecrew-reviewer"],
+  "reviewers": ["code-review"],
   "findings_count": 0,
   "findings": [],
   "review_round": 1
@@ -38,7 +36,7 @@ round exceeds 3 (`MAX_ROUNDS`), so the loop cannot run unbounded.
 
 ## Security posture
 
-`security-review` is **no longer enforced** by this gate (dropped in v1.2.0 per project decision). For diffs that touch authentication, secret handling, request parsing, or other security-sensitive code, run `/security-review` manually before push. The gate's two required reviewers (`code-simplifier`, `caveman:cavecrew-reviewer`) catch correctness and clarity bugs but make no security guarantees.
+`security-review` is **not separately enforced** by this gate (dropped in v1.2.0 per project decision) — though it is one of the accepted reviewers, so running it satisfies the gate. For diffs that touch authentication, secret handling, request parsing, or other security-sensitive code, run `/security-review` before push. The gate's reviewer catches correctness and clarity bugs but makes no security guarantees on its own.
 
 ## Failure modes the hook denies
 
@@ -46,7 +44,7 @@ round exceeds 3 (`MAX_ROUNDS`), so the loop cannot run unbounded.
 - State file SHA != current diff SHA (diff changed).
 - `findings_count > 0`.
 - Corrupted JSON or schema drift (wrong `version`, missing `diff_sha`/`findings_count`).
-- `reviewers` missing any required entry.
+- `reviewers` contains no accepted reviewer.
 - `review_round` exceeds the max (3) — escalation deny.
 - Detected base branch not present locally.
 - Detached HEAD.

@@ -10,21 +10,24 @@ Run AFTER all tasks are completed. Reviews changes on the current branch, fixes 
 - Group changed files by package/crate.
 
 ## 2. Launch review subagents
-Required plugin dependencies (declared in `plugins/claudness/.claude-plugin/plugin.json` `dependencies`; SessionStart warns when missing):
-- `code-simplifier@claude-plugins-official` → `code-simplifier`
-- `caveman@caveman` → `caveman:cavecrew-reviewer`
+The reviewer is **agnostic** and matches the `push-review` gate. Prefer
+`caveman:cavecrew-reviewer` when the caveman plugin is installed; otherwise use
+the built-in **`/code-review xhigh --fix`** skill (always available — no plugin
+required). An optional clarity pass with `code-simplifier`
+(`code-simplifier@claude-plugins-official`) may run first when installed.
+SessionStart warns when an optional plugin is missing.
 
-**Across packages: concurrent.** Each package's pair runs in its own subagent stream (if the `superpowers:dispatching-parallel-agents` skill is available, use it to fan out one pair per package; otherwise launch one subagent per package directly). **Within a package: strictly sequential** — `code-simplifier` first, then `caveman:cavecrew-reviewer` reviews the post-simplification diff. Never invoke the two in parallel within the same package: cavecrew must see the simplified code, not the pre-simplification noise.
+**Across packages: concurrent.** Each package runs in its own subagent stream (if the `superpowers:dispatching-parallel-agents` skill is available, use it to fan out one per package; otherwise launch one subagent per package directly). **Within a package: strictly sequential** — the optional `code-simplifier` clarity pass first, then the reviewer sees the simplified diff. Never invoke the two in parallel within a package: the reviewer must see the simplified code, not the pre-simplification noise.
 
 Per package:
 
-1. **`code-simplifier`** — point it at the recently modified files in the package. It rewrites for clarity/consistency without changing behavior (duplicated logic collapsed, verbose constructs simplified, unnecessary abstractions removed). Apply its rewrites directly to the working tree, run the package's relevant tests, then commit before invoking the reviewer.
-2. **`caveman:cavecrew-reviewer`** — point it at the (now simplified) changed files in the package's scope. It returns one-line, severity-tagged findings (caveman-compressed) covering gaps, missing error handling at boundaries, untested paths, dead code, over-engineering, unclear naming, and tests that mock instead of using real data.
+1. **(optional) `code-simplifier`** — if installed, point it at the recently modified files in the package. It rewrites for clarity/consistency without changing behavior (duplicated logic collapsed, verbose constructs simplified, unnecessary abstractions removed). Apply its rewrites directly to the working tree, run the package's relevant tests, then commit before invoking the reviewer.
+2. **Reviewer** — `caveman:cavecrew-reviewer` when the caveman plugin is installed (one-line, severity-tagged, caveman-compressed findings); otherwise the built-in `/code-review xhigh --fix` skill. Point it at the (now simplified) changed files in the package's scope. It covers gaps, missing error handling at boundaries, untested paths, dead code, over-engineering, unclear naming, and tests that mock instead of using real data.
 
 Every finding must include file path and line number — no vague feedback accepted. If a package has no changed files, skip its review.
 
 ## 3. Fix all reported issues
-- Apply every cavecrew finding. Re-run the relevant tests after each batch.
+- Apply every reviewer finding. Re-run the relevant tests after each batch.
 - Fix any pre-existing errors or warnings in touched files (zero tolerance).
 - Same approach failed twice? STOP — change hypothesis, don't retry harder.
 

@@ -236,7 +236,7 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: state file missing required reviewers is denied" {
+@test "push-review: state file with no accepted reviewer is denied" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
@@ -254,10 +254,10 @@ EOF
   run_hook "Bash" "$payload"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("required reviewers")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("no accepted reviewer")'
 }
 
-@test "push-review: state file with both required reviewers is allowed" {
+@test "push-review: the built-in code-review reviewer alone is allowed (agnostic baseline)" {
   sha=$(current_diff_sha)
   write_state "$sha" 0
   payload=$(build_input "git push")
@@ -266,7 +266,50 @@ EOF
   [ -z "$output" ]
 }
 
-@test "push-review: security-review is no longer required (code-simplifier+caveman set passes)" {
+@test "push-review: caveman reviewer alone satisfies the accepted set" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 1,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["caveman:cavecrew-reviewer"],
+    findings_count: 0,
+    review_round: 1,
+    findings: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "push-review: code-simplifier alone (not an accepted reviewer) is denied" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 1,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-simplifier"],
+    findings_count: 0,
+    review_round: 1,
+    findings: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("no accepted reviewer")'
+}
+
+@test "push-review: extra reviewers beyond the accepted set still pass (superset)" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
   slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
