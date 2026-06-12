@@ -90,7 +90,7 @@ fi
 AS_LINES=$(grep -nE '\)\s+as\s+[a-zA-Z]|\bas\s+any\b|\bas\s+unknown\b|[a-zA-Z>]\s+as\s+[A-Z]|[a-zA-Z>]\s+as\s+(string|number|boolean|object|symbol|bigint|never|undefined)\b' "$FILE_PATH" 2>/dev/null \
   | grep -vE '^\d+:\s*//' \
   | grep -vE '\bas\s+const\b' \
-  | grep -vE '\b(import|export)\b' \
+  | grep -vE '\bimport\b|^[0-9]+:[[:space:]]*export[[:space:]]*(type[[:space:]]+)?\{' \
   | head -5)
 if [[ -n "$AS_LINES" ]]; then
   add_error "Forbidden 'as' type assertion in $FILE_PATH — use type guards or Zod\n${AS_LINES}"
@@ -147,7 +147,7 @@ fi
 
 TS_MAX_FN=$(ts_max_fn_lines)
 LONG_FUNCS=$(awk -v max="$TS_MAX_FN" '
-  /^(export )?(async )?function / || /^const [a-zA-Z_]+ = (async )?\(/ {
+  /^(export )?(async )?function / || /^(export )?const [a-zA-Z_]+ = (async )?\(/ {
     start=NR; name=$0
   }
   start && /^}/ {
@@ -391,7 +391,8 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
     /^[[:space:]]*\/\// { next }  # line comments / pragmas sit between doc and export
     {
       if ($0 ~ /^export (async )?function / || $0 ~ /^export (abstract )?class / \
-          || $0 ~ /^export default / || $0 ~ /^export (const|interface|type|enum) [A-Z]/) {
+          || $0 ~ /^export default / || $0 ~ /^export (const|interface|type|enum) [A-Z]/ \
+          || $0 ~ /^export const [a-z_][A-Za-z0-9_]* = (async )?(\(|function)/) {
         if (prev !~ /\*\/[[:space:]]*$/ && prev !~ /^[[:space:]]*\/\*\*/) printf "%d: %s\n", NR, $0
       }
       prev=$0
