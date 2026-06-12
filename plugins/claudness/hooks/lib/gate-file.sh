@@ -88,13 +88,13 @@ gate_clear_file() {
       else {} end) | del(.[$file])) as $left
     | if ($left | length) == 0
       then { status: "passing", source: $source, updatedAt: $now }
-      else (($left | to_entries | sort_by(.value.updatedAt // "", .key) | last) as $latest
+      else (($left | to_entries | sort_by(.value.updatedAt // "", .key)) as $sorted
+        | ($sorted | last) as $latest
         | { status: "failing",
             reason: ($latest.value.reason // "Quality gate failing"),
             source: ($latest.value.source // ""),
             file: $latest.key,
-            violations: ([$left | to_entries | sort_by(.value.updatedAt // "", .key)[]
-                          | (.value.violations // "")] | join("")),
+            violations: ([$sorted[] | (.value.violations // "")] | join("")),
             entries: $left, updatedAt: $now })
       end
   ' <<< "$existing" > "$tmp" 2>/dev/null; then
