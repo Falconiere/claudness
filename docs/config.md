@@ -92,11 +92,16 @@ Unknown names are silently ignored (forward compatible).
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained
     first so Claude Code's IPC does not stall.
-  - **Exception — `session-end` is opt-IN**: the end-of-session comemory
-    "save your learnings" reminder is OFF by default (the agent-memory
+  - **Exception — `session-end` reminder is opt-IN**: the end-of-session
+    comemory "save your learnings" reminder is OFF by default (the agent-memory
     protocol already saves proactively, so the Stop-time nag is redundant
     noise). It emits only when you set `hooks.session-end: true`. Every other
     hook is opt-out (on unless set to `false`).
+  - **`session-end` also drives autonomous comemory maintenance** (a once-per-day
+    `mine`/`prune`/`gc` pass, local and token-free) — this is opt-OUT, ON by
+    default, independent of the opt-IN reminder. Setting `hooks.session-end: false`
+    disables BOTH the reminder and the maintenance, keeping the "exits early,
+    mutates nothing" contract. (`skills.comemory: false` also disables it.)
 
 - `mcp.<name> = false`
   - Any `mcp__<name>__*` tool invocation is blocked at `PreToolUse` with
