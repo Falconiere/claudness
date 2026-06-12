@@ -309,3 +309,64 @@ EOF
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "Forbidden lint suppression"
 }
+
+@test "rust-quality: canonical inline #[cfg(test)] mod produces one violation, not two" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/lib.rs <<'EOF'
+pub fn add(a: u8, b: u8) -> u8 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_adds() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/lib.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Inline #\[cfg(test)\]"
+  ! echo "$output" | grep -q "Rust test file outside tests/"
+}
+
+@test "rust-quality: pub(crate) const fn is subject to the fn-length limit" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/m.rs <<'EOF'
+pub(crate) const fn big() -> u8 {
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    a + b + c
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/m.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+/// Example usage: annotate with #[cfg(test)] in your own crate.
+#[tokio::test]
+async fn it_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  # The doc-comment mention must not trip the inline-cfg(test) rule...
+  ! echo "$output" | grep -q "Inline #\[cfg(test)\]"
+  # ...and placement enforcement must still fire on the real #[tokio::test].
+  echo "$output" | grep -q "Rust test file outside tests/"
+}

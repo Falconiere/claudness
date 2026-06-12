@@ -81,7 +81,7 @@ fi
 AS_LINES=$(grep -nE '\)\s+as\s+[a-zA-Z]|\bas\s+any\b|\bas\s+unknown\b|[a-zA-Z>]\s+as\s+[A-Z]|[a-zA-Z>]\s+as\s+(string|number|boolean|object|symbol|bigint|never|undefined)\b' "$FILE_PATH" 2>/dev/null \
   | grep -vE '^\d+:\s*//' \
   | grep -vE '\bas\s+const\b' \
-  | grep -vE '\bimport\b' \
+  | grep -vE '\b(import|export)\b' \
   | head -5)
 if [[ -n "$AS_LINES" ]]; then
   add_error "Forbidden 'as' type assertion in $FILE_PATH — use type guards or Zod\n${AS_LINES}"
@@ -119,7 +119,7 @@ if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
     # (e.g. .eslintrc.cjs / eslint.config.js), say so instead of contradicting.
     case "$(ts_max_file_lines_source)" in
       native)  _split_hint="$_split_hint ($_linter enforces this max-lines limit)" ;;
-      default) _split_hint="$_split_hint ($_linter is present but its config isn't machine-readable here — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
+      default) _split_hint="$_split_hint ($_linter is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
     esac
   fi
   add_error "TS file exceeds ${TS_MAX_FILE}-line limit: $FILE_PATH ($TS_LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
@@ -192,7 +192,7 @@ SUPPRESS_TOKENS='@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore'
 if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
   SUPPRESS_TOKENS="${SUPPRESS_TOKENS}|@ts-expect-error"
 fi
-DISABLE_LINES=$(grep -nE "(//|/\*)[[:space:]]*(${SUPPRESS_TOKENS})" "$FILE_PATH" 2>/dev/null | head -3)
+DISABLE_LINES=$(grep -nE "(//|/\*+)[[:space:]]*(${SUPPRESS_TOKENS})" "$FILE_PATH" 2>/dev/null | head -3)
 if [[ -n "$DISABLE_LINES" ]]; then
   add_error "Forbidden suppression comment in $FILE_PATH — fix the underlying issue in code, never silence it\n${DISABLE_LINES}"
 fi

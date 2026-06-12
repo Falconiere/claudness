@@ -336,3 +336,10 @@ source_lib() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "count_code_lines: unterminated /* falls back to raw line count" {
+  printf '%s\n' 'let a = 1;' 'let s = "/*";' 'let b = 2;' 'let c = 3;' > f.ts
+  source_lib
+  run count_code_lines f.ts
+  [ "$output" = "4" ]
+}

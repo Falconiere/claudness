@@ -59,13 +59,18 @@ if [[ "$LINE_COUNT" -gt "$RUST_MAX_FILE" ]]; then
   add_error "File exceeds ${RUST_MAX_FILE}-line limit: $FILE_PATH ($LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
 fi
 
-if [[ "$FILE_PATH" == */src/* ]] && grep -qE '#\[cfg\(test\)\]' "$FILE_PATH" 2>/dev/null; then
+_has_inline_cfg_test=0
+if [[ "$FILE_PATH" == */src/* ]] && grep -qE '^[[:space:]]*#\[cfg\(test\)\]' "$FILE_PATH" 2>/dev/null; then
   add_error "Inline #[cfg(test)] in $FILE_PATH — tests must live in tests/ directory"
+  _has_inline_cfg_test=1
 fi
 
 # Test placement: a test-bearing .rs file must live under a tests/ dir, kept
 # flat (only fixtures/helpers/common subdirs allowed — common/mod.rs is the
-# cargo idiom for shared test helpers).
+# cargo idiom for shared test helpers). Skip when the inline-#[cfg(test)] rule
+# already fired: that's the canonical `src/lib.rs` with `#[cfg(test)] mod tests`
+# pattern, where "move the file to tests/" is wrong (it would orphan the pub
+# items) — the cfg(test) message already says to extract the tests.
 _is_rust_test=0
 case "$(basename "$FILE_PATH")" in
   *_test.rs|*_tests.rs) _is_rust_test=1 ;;
@@ -74,7 +79,7 @@ if [[ "$_is_rust_test" -eq 0 ]] \
    && grep -qE '^[[:space:]]*#\[(tokio::|async_std::|actix_rt::|rstest::)?test\b|^[[:space:]]*#\[(rstest|bench|wasm_bindgen_test)\b' "$FILE_PATH" 2>/dev/null; then
   _is_rust_test=1
 fi
-if [[ "$_is_rust_test" -eq 1 ]]; then
+if [[ "$_is_rust_test" -eq 1 && "$_has_inline_cfg_test" -eq 0 ]]; then
   if [[ "$FILE_PATH" != */tests/* ]]; then
     add_error "Rust test file outside tests/: $FILE_PATH — move to a sibling tests/ directory"
   else
@@ -113,8 +118,10 @@ if [ "$exempt" -eq 0 ]; then
 fi
 
 RUST_MAX_FN=$(rust_max_fn_lines)
+# Match fn with any leading visibility/qualifier combo: pub, pub(crate)/pub(super),
+# async, const, unsafe, extern "C", and combinations thereof.
 LONG_RS_FUNCS=$(awk -v max="$RUST_MAX_FN" '
-  /^[[:space:]]*(pub )?(async )?fn / { start=NR; name=$0 }
+  /^[[:space:]]*(pub(\([a-z]+\))?[[:space:]]+)?((async|const|unsafe|extern)([[:space:]]+"[^"]*")?[[:space:]]+)*fn / { start=NR; name=$0 }
   start && /^[[:space:]]*\}/ {
     len=NR-start
     if (len > max) printf "%s:%d (%d lines)\n", name, start, len
@@ -127,7 +134,7 @@ fi
 
 RUST_MAX_IMPL=$(rust_max_impl_lines)
 LONG_IMPL=$(awk -v max="$RUST_MAX_IMPL" '
-  /^impl / { start=NR; name=$0 }
+  /^[[:space:]]*(unsafe[[:space:]]+)?impl[[:space:]<]/ { start=NR; name=$0 }
   start && /^\}/ {
     len=NR-start
     if (len > max) printf "%s:%d (%d lines)\n", name, start, len

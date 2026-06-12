@@ -64,6 +64,11 @@ _qc_project_override() {
 
 # _qc_native_ts_max_lines  ->  echoes a positive int or "".
 # eslint legacy JSON first, then oxlint. Read at the git root only.
+# Limitation: only the top-level `.rules["max-lines"]` is read. A per-glob
+# `overrides[].rules["max-lines"]` is intentionally NOT traversed — picking a
+# value without matching the override's `files` glob to the edited file could
+# enforce a limit that doesn't apply and wrongly BLOCK an edit. We fall through
+# to the (stricter-or-equal) default instead; the over-limit advisory says so.
 _qc_native_ts_max_lines() {
   command -v jq >/dev/null 2>&1 || return 0
   local root f v
