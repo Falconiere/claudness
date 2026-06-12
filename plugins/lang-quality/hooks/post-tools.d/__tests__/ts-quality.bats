@@ -610,6 +610,147 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: the old detector keyed the fn end on a column-0 `}` and only
+# recognised top-level `function`/`const = (` forms, so a long method inside a
+# class was never measured. The brace-depth counter measures each method to its
+# own (indented) close.
+@test "ts-quality: long method inside a class IS flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/svc.ts <<'EOF'
+export class Service {
+  process(x: number): number {
+    const a = x + 1;
+    const b = a + 1;
+    const c = b + 1;
+    const d = c + 1;
+    return d;
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/svc.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+# Regression: a short method followed by other class members must be measured to
+# ITS OWN close, not the class close — the brace-depth counter resets per method.
+@test "ts-quality: short class method followed by other members is NOT flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/svc.ts <<'EOF'
+export class Service {
+  ping(): number {
+    return 1;
+  }
+  a = 1;
+  b = 2;
+  c = 3;
+  d = 4;
+  e = 5;
+  f = 6;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/svc.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Function too long"
+}
+
+# Regression: an arrow with a multi-line parameter list is measured from the
+# `const NAME = (` line through the brace-balanced close.
+@test "ts-quality: arrow const with a multi-line param list IS flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/a.ts <<'EOF'
+export const compute = (
+  a: number,
+  b: number,
+  c: number,
+) => {
+  const sum = a + b + c;
+  return sum * 2;
+};
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+# Regression: a column-0 `}` inside a (brace-balanced) multi-line template
+# literal must not end the measured range early. The old `^}` marker cut the
+# function at the template's close brace and under-counted a genuinely long fn.
+@test "ts-quality: column-0 } inside a template literal does not end the fn early (regression)" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/tmpl.ts <<'EOF'
+export function render(): string {
+  const css = `
+.foo {
+  color: red;
+}
+`;
+  const a = 1;
+  const b = 2;
+  const c = 3;
+  return css + a + b + c;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/tmpl.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+# Regression: a `const NAME = function() {` expression (no space before the
+# paren) must be detected, not just the `= (` arrow form.
+@test "ts-quality: long const function-expression is flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/a.ts <<'EOF'
+export const fn = function() {
+  const a = 1;
+  const b = 2;
+  const c = 3;
+  return a + b + c;
+};
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+# Regression: a method with a defaulted generic param (`<T = U>`) must still be
+# measured — the `=` inside the type args must not break start detection.
+@test "ts-quality: long class method with a defaulted generic is flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/svc.ts <<'EOF'
+export class Service {
+  process<T = number>(x: T): T {
+    const a = x;
+    const b = a;
+    const c = b;
+    const d = c;
+    return d;
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/svc.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
 @test "ts-quality: camelCase exported arrow API without JSDoc gets a docs advisory" {
   _ts_project
   cat > src/a.ts <<'EOF'

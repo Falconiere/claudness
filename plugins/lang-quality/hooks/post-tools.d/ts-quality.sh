@@ -161,7 +161,16 @@ if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
     # (e.g. .eslintrc.cjs / eslint.config.js), say so instead of contradicting.
     case "$TS_MAX_SRC" in
       native)  _split_hint="$_split_hint ($_linter enforces this max-lines limit)" ;;
-      default) _split_hint="$_split_hint ($_linter is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the ${TS_MAX_FILE}-line default; align them)" ;;
+      default)
+        # Biome has no max-lines rule at all, so "unparsed config form" would be
+        # misleading for it — say so plainly. ESLint/oxc do have max-lines, so
+        # there the limit genuinely could have come from an unreadable config.
+        if [ "$_linter" = "biome" ]; then
+          _split_hint="$_split_hint (biome has no max-lines equivalent — gate uses the ${TS_MAX_FILE}-line default)"
+        else
+          _split_hint="$_split_hint ($_linter is present but the gate's limit didn't come from its config (unparsed config form or a per-glob override) — gate uses the ${TS_MAX_FILE}-line default; align them)"
+        fi
+        ;;
     esac
   fi
   _approx=""
@@ -170,14 +179,47 @@ if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
 fi
 
 TS_MAX_FN=$(ts_max_fn_lines)
-LONG_FUNCS=$(awk -v max="$TS_MAX_FN" '
-  /^(export )?(async )?function / || /^(export )?const [a-zA-Z_]+ = (async )?\(/ {
-    start=NR; name=$0
+# Brace-depth fn-length counter — mirrors rust-quality.sh so TS and Rust measure
+# the same way. The end of a function is found by counting brace depth from the
+# fn's own line (single-line "..."/'...'/`...` string and quote char-literal
+# contents stripped first), so a method inside a class/object is measured to ITS
+# own indented close, an inner if/for/switch close can't end the range early, and
+# a column-0 `}` inside a template literal no longer cuts the range short — the
+# bugs the old `^}` col-0 marker had. Three start forms: `function` declarations,
+# `const NAME = (…) =>` / `= function` expressions (params may span lines), and
+# class/object methods `name(…) {` (control-flow keywords excluded so their
+# blocks aren't mistaken for methods). Known limitation (same as Rust): a brace
+# inside a MULTI-LINE template/string still leaks into the count — an unbalanced
+# one leaves the fn unmeasured (fail-open), never falsely flagged short.
+LONG_FUNCS=$(awk -v max="$TS_MAX_FN" -v q="'" '
+  function strip(l) {
+    gsub(/\\"/, "", l)            # escaped double quotes
+    gsub(/"[^"]*"/, "", l)        # double-quoted string contents
+    gsub(q "[^" q "]*" q, "", l)  # single-quoted string / char-literal contents
+    gsub(/`[^`]*`/, "", l)        # single-line template-literal contents
+    return l
   }
-  start && /^}/ {
-    len=NR-start
-    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
-    start=0
+  function fnstart() { infn=1; start=NR; name=$0; depth=0; opened=0 }
+  !infn {
+    s=strip($0)
+    if (s ~ /^[[:space:]]*(export[[:space:]]+)?(default[[:space:]]+)?(async[[:space:]]+)?function[ \t*]/) { fnstart() }
+    else if (s ~ /^[[:space:]]*(export[[:space:]]+)?(default[[:space:]]+)?const[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*(async[[:space:]]+)?(\(|function[ \t(*])/) { fnstart() }
+    else if (s ~ /^[[:space:]]+(public[[:space:]]+|private[[:space:]]+|protected[[:space:]]+|static[[:space:]]+|async[[:space:]]+|override[[:space:]]+|readonly[[:space:]]+|get[[:space:]]+|set[[:space:]]+|\*[[:space:]]*)*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*(<[^(){}]*>)?[[:space:]]*\(/ \
+         && s !~ /^[[:space:]]*(if|for|while|switch|catch|return|do|else|function|await|with|yield|throw|new|typeof|delete|void|in|of|case)[^A-Za-z0-9_$]/ \
+         && s !~ /=>/ \
+         && s !~ /;[[:space:]]*$/ \
+         && s ~ /\)([[:space:]]*:[^={]*)?[[:space:]]*\{[[:space:]]*$/) { fnstart() }
+  }
+  infn {
+    line=strip($0)
+    no=gsub(/\{/, "{", line); nc=gsub(/\}/, "}", line)
+    depth += no - nc
+    if (no > 0) opened=1
+    if (opened && depth <= 0) {
+      len=NR-start
+      if (len > max) printf "%s:%d (%d lines)\n", name, start, len
+      infn=0
+    }
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_FUNCS" ]]; then
