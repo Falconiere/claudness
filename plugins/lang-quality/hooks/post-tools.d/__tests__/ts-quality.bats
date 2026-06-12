@@ -636,6 +636,51 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: a brace-less single-line arrow (`const x = () => expr;`) set
+# infn=1 but never released it (no `{`, no `;` fallback), so the NEXT function
+# was misattributed to the arrow's start line and falsely flagged "too long".
+@test "ts-quality: one-line arrow consts before a function do not cause a false positive" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/a.ts <<'EOF'
+export const noop = () => undefined;
+export const square = (x: number) => x * x;
+export const upper = (s: string) => s.trim();
+export function foo(): number {
+  const a = 1;
+  const b = 2;
+  return a + b;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Function too long"
+}
+
+# Guard the inverse: a genuinely long function after one-line arrows is still
+# flagged (the release must not suppress real detection).
+@test "ts-quality: long function after one-line arrows is still flagged" {
+  _ts_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/a.ts <<'EOF'
+export const noop = () => undefined;
+export function foo(): number {
+  const a = 1;
+  const b = 2;
+  const c = 3;
+  const d = 4;
+  return a + b + c + d;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
 # Regression: the old detector keyed the fn end on a column-0 `}` and only
 # recognised top-level `function`/`const = (` forms, so a long method inside a
 # class was never measured. The brace-depth counter measures each method to its

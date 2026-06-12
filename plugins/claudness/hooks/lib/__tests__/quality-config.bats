@@ -28,6 +28,7 @@ load_libs() {
   CLAUDNESS_CFG_LOADED=0
   _CLAUDNESS_HAS_JQ=""
   _QC_PROJECT_ROOT=""
+  _QC_PROJECT_ROOT_CACHED=0
 }
 
 _project_cfg() { printf '%s' "$1" > "$CLAUDE_PROJECT_DIR/.claude/claudness.config.json"; }
