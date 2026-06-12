@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-SCRIPT="${BATS_TEST_DIRNAME}/pre-compact.sh"
+SCRIPT="${BATS_TEST_DIRNAME}/../pre-compact.sh"
 
 @test "pre-compact exits 0 with empty stdin" {
   run bash -c "'$SCRIPT' < /dev/null"
