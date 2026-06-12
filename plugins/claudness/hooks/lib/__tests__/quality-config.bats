@@ -158,3 +158,24 @@ _user_cfg()    { printf '%s' "$1" > "$HOME/.claude/claudness.config.json"; }
   run rust_max_fn_lines;   [ "$output" = "30" ]
   run rust_max_impl_lines; [ "$output" = "150" ]
 }
+
+@test "project override accepts a stringified positive int" {
+  _project_cfg '{"lang":{"ts":{"maxFileLines":"120"}}}'
+  load_libs
+  run ts_max_file_lines
+  [ "$output" = "120" ]
+}
+
+@test "eslint max-lines accepts a stringified number in the array" {
+  printf '%s' '{"rules":{"max-lines":["error","250"]}}' > "$CLAUDE_PROJECT_DIR/.eslintrc.json"
+  load_libs
+  run ts_max_file_lines
+  [ "$output" = "250" ]
+}
+
+@test "ts_max_file_lines_resolved returns value and source together" {
+  _project_cfg '{"lang":{"ts":{"maxFileLines":120}}}'
+  load_libs
+  run ts_max_file_lines_resolved
+  [ "$output" = "120 override" ]
+}

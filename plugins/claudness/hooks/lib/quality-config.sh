@@ -35,15 +35,13 @@ _QC_LIB_DIR="${CLAUDNESS_LIB_DIR:-${BASH_SOURCE%/*}}"
 # "off" / 0 / negatives / missing all yield empty -> the layer is skipped.
 _QC_ESLINT_MAXLINES_FILTER='
   .rules?["max-lines"]?
-  | if   type=="number" then .
-    elif type=="array"  then (
+  | if type=="array" then (
           if (.[0] == "off" or .[0] == 0) then empty   # rule disabled by severity
-          else ( .[1]
-                 | if   type=="number" then .
-                   elif type=="object" then .max
-                   else empty end )
+          else ( .[1] | if type=="object" then .max else . end )
           end )
+    elif (type=="number" or type=="string") then .
     else empty end
+  | (if type=="string" then (tonumber? // empty) else . end)   # accept "120"
   | if type=="number" and . > 0 then (.|floor|tostring) else empty end
 '
 
@@ -58,6 +56,7 @@ _qc_project_override() {
   [ -f "$CLAUDNESS_CFG_CACHE" ] || return 0
   jq -r --arg l "$lang" --arg k "$key" '
     ((.lang? // {})[$l]? // {})[$k]?
+    | (if type=="string" then (tonumber? // empty) else . end)   # accept "120"
     | if type=="number" and . > 0 then (.|floor|tostring) else empty end
   ' "$CLAUDNESS_CFG_CACHE" 2>/dev/null
 }
@@ -104,6 +103,19 @@ ts_max_file_lines_source() {
   [ -n "$(_qc_project_override ts maxFileLines)" ] && { printf 'override'; return; }
   [ -n "$(_qc_native_ts_max_lines)" ]             && { printf 'native';   return; }
   printf 'default'
+}
+
+# Resolve the ts maxFileLines value AND its source in a single pass — prints
+# "<value> <source>". The lang module needs both, and resolving them via two
+# separate calls (ts_max_file_lines + ts_max_file_lines_source) repeats the
+# override/native lookups; this does each lookup once.
+ts_max_file_lines_resolved() {
+  local v
+  v=$(_qc_project_override ts maxFileLines)
+  [ -n "$v" ] && { printf '%s override' "$v"; return; }
+  v=$(_qc_native_ts_max_lines)
+  [ -n "$v" ] && { printf '%s native' "$v"; return; }
+  printf '%s default' "$DEFAULT_TS_MAX_FILE_LINES"
 }
 
 # Convenience wrappers the quality modules call.

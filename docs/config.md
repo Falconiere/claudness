@@ -46,7 +46,9 @@ with this precedence (first hit wins, always a positive integer):
    `maxFileLines` 500 / `maxFnLines` 50 / `maxImplLines` 200.
 
 A value of `0`, a negative, or `"off"` is treated as "no override" and falls
-through to the next layer — it does not mean a limit of zero. The gate never
+through to the next layer — it does not mean a limit of zero. A stringified
+positive integer (`"maxFileLines": "120"`) is accepted and coerced to a number,
+so configs copy-pasted from sources that quote numbers still work. The gate never
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
 advisory wording. Resolver: `plugins/claudness/hooks/lib/quality-config.sh`.
 
