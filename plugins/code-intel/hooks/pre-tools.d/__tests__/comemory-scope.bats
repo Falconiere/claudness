@@ -90,6 +90,34 @@ _decision() {
   [ "$(_decision "$output")" = "allow" ]
 }
 
+@test "comemory-scope: bare comemory index-code is denied" {
+  payload=$(_mk 'comemory index-code --path /tmp/x')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
+@test "comemory-scope: comemory index-code with --repo is allowed" {
+  payload=$(_mk 'comemory index-code --path /tmp/x --repo claudness')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
+@test "comemory-scope: bare comemory graph is denied" {
+  payload=$(_mk 'comemory graph --rel all')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
+@test "comemory-scope: comemory graph with --repo is allowed" {
+  payload=$(_mk 'comemory graph --rel all --repo claudness')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
 @test "comemory-scope: retrieval-loop verb (mine) is allowed (global by design)" {
   payload=$(_mk 'comemory mine --apply')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"

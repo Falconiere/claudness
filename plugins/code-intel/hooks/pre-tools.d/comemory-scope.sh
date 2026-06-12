@@ -9,10 +9,12 @@
 # auto-scopes; this module pushes the agent toward that path by denying
 # unscoped raw calls.
 #
-# Subcommands that require scoping: search, save, context, search-code.
-# `context` is a real comemory verb (a repo-scoped headline lookup) and so is
-# guarded here even though the mod.sh wrapper does not dispatch it — a raw
-# `comemory context` without --repo would still leak across repos.
+# Subcommands that require scoping: search, save, context, search-code,
+# index-code, graph. `context` is a real comemory verb (a repo-scoped headline
+# lookup) and so is guarded here even though the mod.sh wrapper does not
+# dispatch it — a raw `comemory context` without --repo would still leak across
+# repos. index-code/graph accept --repo (the wrapper auto-injects it), so a raw
+# unscoped call carries the same leak hazard.
 # The retrieval-loop verbs (mine, tune, eval, prune, gc, rebuild, feedback)
 # and list/doctor/stats/serve/--help/--version are intentionally global —
 # comemory accepts no --repo on them.
@@ -133,10 +135,12 @@ while IFS= read -r segment; do
   subcmd="${BASH_REMATCH[1]:-}"
   [[ -z "$subcmd" ]] && continue
 
-  # Only search/save/context/search-code require scoping; everything else
-  # is global (comemory accepts no --repo on the retrieval-loop verbs).
+  # Only the repo-scoped verbs require --repo; everything else is global
+  # (comemory accepts no --repo on the retrieval-loop verbs). index-code and
+  # graph accept --repo and the mod.sh wrapper auto-injects it for them, so a
+  # raw unscoped call carries the same cross-repo-leak hazard and is guarded.
   case "$subcmd" in
-    search|save|context|search-code) ;;
+    search|save|context|search-code|index-code|graph) ;;
     *) continue ;;
   esac
 
@@ -164,7 +168,7 @@ if [[ -n "$violation" ]]; then
       "permissionDecision": "deny",
       "permissionDecisionReason": (
         "comemory call missing --repo scope:\n  " + $cmd + "\n\n" +
-        "comemory stores memories across multiple repos. Without --repo, search/save/context/search-code leak across repos.\n\n" +
+        "comemory stores memories across multiple repos. Without --repo, search/save/context/search-code/index-code/graph leak across repos.\n\n" +
         "Fix one of:\n" +
         "  1. Prefer the wrapper (auto-scopes):\n" +
         "       " + $wrapper + " comemory <subcmd> …\n" +
