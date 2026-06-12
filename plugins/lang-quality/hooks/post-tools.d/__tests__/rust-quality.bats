@@ -352,6 +352,86 @@ EOF
   echo "$output" | grep -q "Function too long"
 }
 
+# Regression: the fn-end marker used /^[[:space:]]*\}/, so the close of the
+# FIRST inner if/else/match block ended the measured range — any long fn with
+# control flow was measured as a few lines and never flagged.
+@test "rust-quality: long fn with inner if/else is measured to its real close (regression)" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  cat > src/long.rs <<'EOF'
+fn long_with_branches(x: u8) -> u8 {
+    let mut acc = 0;
+    if x > 0 {
+        acc += 1;
+    } else {
+        acc += 2;
+    }
+    acc += 3;
+    acc += 4;
+    acc
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/long.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Function too long"
+}
+
+@test "rust-quality: clearing one file does not clobber another file's failure" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  printf '#[allow(dead_code)]\nfn a() {}\n' > src/a.rs
+  printf '#[allow(dead_code)]\nfn b() {}\n' > src/b.rs
+  payload_a='{"tool_input":{"file_path":"'"$TMP"'/src/a.rs"}}'
+  payload_b='{"tool_input":{"file_path":"'"$TMP"'/src/b.rs"}}'
+  GATE="$TMP/.claude/tmp/quality-gate-status.json"
+
+  tool_name=Edit input="$payload_a" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  tool_name=Edit input="$payload_b" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+
+  # b.rs goes clean — a.rs's violation must survive and keep the gate failing.
+  printf 'fn b() {}\n' > src/b.rs
+  tool_name=Edit input="$payload_b" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+  jq -e --arg f "$TMP/src/a.rs" '.entries[$f]' "$GATE"
+
+  # a.rs goes clean too — now the gate may pass.
+  printf 'fn a() {}\n' > src/a.rs
+  tool_name=Edit input="$payload_a" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE"
+}
+
+@test "rust-quality: failing gate owned by another hook survives a rust fail->clear cycle" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude/tmp"
+  GATE="$TMP/.claude/tmp/quality-gate-status.json"
+  jq -n '{status: "failing", reason: "TS violation", source: "ts-quality-hook",
+          file: "/p/x.ts", violations: "bad ts\n", updatedAt: "2026-01-01T00:00:00Z"}' > "$GATE"
+
+  printf '#[allow(dead_code)]\nfn a() {}\n' > src/a.rs
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.rs"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+  jq -e '.source == "rust-quality-hook"' "$GATE"
+
+  # Rust file goes clean — the TS failure must be promoted back, not erased.
+  printf 'fn a() {}\n' > src/a.rs
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+  jq -e '.source == "ts-quality-hook"' "$GATE"
+  jq -e '.reason == "TS violation"' "$GATE"
+}
+
 @test "rust-quality: #[cfg(test)] only in a doc comment does NOT suppress placement enforcement" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project

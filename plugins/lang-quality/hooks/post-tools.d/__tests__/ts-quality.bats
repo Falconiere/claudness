@@ -211,6 +211,54 @@ EOF
   jq -e '.source == "ts-quality-hook"' "$TMP/.claude/tmp/quality-gate-status.json"
 }
 
+@test "ts-quality: clearing one file does not clobber another file's failure" {
+  _ts_project
+  printf 'console.log("a");\n' > src/a.ts
+  printf 'console.log("b");\n' > src/b.ts
+  payload_a='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  payload_b='{"tool_input":{"file_path":"'"$TMP"'/src/b.ts"}}'
+  GATE="$TMP/.claude/tmp/quality-gate-status.json"
+
+  tool_name=Edit input="$payload_a" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  tool_name=Edit input="$payload_b" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+
+  # b.ts goes clean — a.ts's violation must survive and keep the gate failing.
+  printf 'console.info("b");\n' > src/b.ts
+  tool_name=Edit input="$payload_b" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "failing"' "$GATE"
+  jq -e --arg f "$TMP/src/a.ts" '.entries[$f]' "$GATE"
+
+  # a.ts goes clean too — now the gate may pass.
+  printf 'console.info("a");\n' > src/a.ts
+  tool_name=Edit input="$payload_a" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  jq -e '.status == "passing"' "$GATE"
+}
+
+# Regression: the catch+toast awk used /catch\s*\(/ — BSD awk (macOS) has no \s,
+# so `catch (` (with a space) never matched and the rule was silently dead.
+@test "ts-quality: try/catch+toast in a component is flagged" {
+  _ts_project
+  mkdir -p src/components
+  cat > src/components/save-button.tsx <<'EOF'
+export function SaveButton() {
+  try {
+    save();
+  } catch (error) {
+    toast("save failed");
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/components/save-button.tsx"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Manual try/catch+toast"
+}
+
 @test "ts-quality: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/index.ts"}}'
   run env -u CLAUDNESS_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP" bash "$HOOK"

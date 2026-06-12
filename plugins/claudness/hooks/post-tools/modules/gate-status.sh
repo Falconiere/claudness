@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Post-tool check: Quality gate state tracking
 # Persists global gate state to .claude/tmp/quality-gate-status.json based on
 # the exit code of recognized quality/test commands.

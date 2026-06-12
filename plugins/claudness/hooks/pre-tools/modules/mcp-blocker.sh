@@ -54,7 +54,7 @@ claudness_load_config
 # `objects` guards against a malformed `.mcp` (string/array) — to_entries
 # would error on a non-object; with the guard it is simply a no-op.
 disabled_from_cfg=$(jq -r '.mcp // {} | objects | to_entries[] | select(.value == false) | .key' \
-  "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+  <<< "${CLAUDNESS_CFG_JSON:-}" 2>/dev/null)
 
 file_list="$(read_list "$LIST_FILE")"
 

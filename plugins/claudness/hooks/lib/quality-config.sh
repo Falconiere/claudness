@@ -53,12 +53,12 @@ _qc_project_override() {
   command -v claudness_load_config >/dev/null 2>&1 || return 0
   claudness_load_config
   [ "${_CLAUDNESS_HAS_JQ:-0}" = "1" ] || return 0
-  [ -f "$CLAUDNESS_CFG_CACHE" ] || return 0
+  [ -n "${CLAUDNESS_CFG_JSON:-}" ] || return 0
   jq -r --arg l "$lang" --arg k "$key" '
     ((.lang? // {})[$l]? // {})[$k]?
     | (if type=="string" then (tonumber? // empty) else . end)   # accept "120"
     | if type=="number" and . > 0 then (.|floor|tostring) else empty end
-  ' "$CLAUDNESS_CFG_CACHE" 2>/dev/null
+  ' <<< "$CLAUDNESS_CFG_JSON" 2>/dev/null
 }
 
 # _qc_native_ts_max_lines  ->  echoes a positive int or "".

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Stop hook — prompt to save session learnings before exiting.
 
 HOOK_DIR="$(dirname "$0")"

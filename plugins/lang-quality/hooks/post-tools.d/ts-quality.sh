@@ -22,6 +22,27 @@
 # Threshold resolver (defaults + project/native overrides). Soft if absent.
 # shellcheck source=../../../claudness/hooks/lib/quality-config.sh
 [ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
+# Multi-slot gate writer (entries keyed by file — one hook's failure no longer
+# clobbers another's). Soft if absent: fallbacks below keep the legacy
+# single-slot behavior when the claudness lib predates gate-file.sh.
+# shellcheck source=../../../claudness/hooks/lib/gate-file.sh
+[ -f "$CLAUDNESS_LIB_DIR/gate-file.sh" ] && . "$CLAUDNESS_LIB_DIR/gate-file.sh"
+command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {
+  jq -n --arg reason "$4" --arg source "$3" --arg file "$2" --arg violations "$5" \
+    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{status: "failing", reason: $reason, source: $source, file: $file,
+      violations: $violations, updatedAt: $updatedAt}' > "$1"
+}
+command -v gate_clear_file >/dev/null 2>&1 || gate_clear_file() {
+  [ -f "$1" ] || return 0
+  local _src _file
+  _src=$(jq -r '.source // ""' "$1" 2>/dev/null || echo "")
+  _file=$(jq -r '.file // ""' "$1" 2>/dev/null || echo "")
+  if [ "$_src" = "$3" ] && [ "$_file" = "$2" ]; then
+    jq -n --arg source "$3" --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      '{status: "passing", source: $source, updatedAt: $updatedAt}' > "$1"
+  fi
+}
 command -v ts_max_file_lines        >/dev/null 2>&1 || ts_max_file_lines()        { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
 command -v ts_max_fn_lines          >/dev/null 2>&1 || ts_max_fn_lines()          { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
 command -v ts_max_file_lines_source >/dev/null 2>&1 || ts_max_file_lines_source() { printf 'default'; }
@@ -87,9 +108,9 @@ if grep -q 'from ["'"'"']\.\./' "$FILE_PATH" 2>/dev/null; then
   add_error "Forbidden ../ import in $FILE_PATH — use @/ alias"
 fi
 
-AS_LINES=$(grep -nE '\)\s+as\s+[a-zA-Z]|\bas\s+any\b|\bas\s+unknown\b|[a-zA-Z>]\s+as\s+[A-Z]|[a-zA-Z>]\s+as\s+(string|number|boolean|object|symbol|bigint|never|undefined)\b' "$FILE_PATH" 2>/dev/null \
-  | grep -vE '^\d+:\s*//' \
-  | grep -vE '\bas\s+const\b' \
+AS_LINES=$(grep -nE '\)[[:space:]]+as[[:space:]]+[a-zA-Z]|\bas[[:space:]]+any\b|\bas[[:space:]]+unknown\b|[a-zA-Z>][[:space:]]+as[[:space:]]+[A-Z]|[a-zA-Z>][[:space:]]+as[[:space:]]+(string|number|boolean|object|symbol|bigint|never|undefined)\b' "$FILE_PATH" 2>/dev/null \
+  | grep -vE '^[0-9]+:[[:space:]]*//' \
+  | grep -vE '\bas[[:space:]]+const\b' \
   | grep -vE '\bimport\b|^[0-9]+:[[:space:]]*export[[:space:]]*(type[[:space:]]+)?\{' \
   | head -5)
 if [[ -n "$AS_LINES" ]]; then
@@ -161,7 +182,7 @@ if [[ -n "$LONG_FUNCS" ]]; then
 fi
 
 if [[ "$FILE_PATH" =~ use-.*\.ts$ || "$FILE_PATH" =~ use[A-Z].*\.ts$ ]]; then
-  HOOK_COUNT=$(grep -cE '^\s*(const \[|useRef\(|useEffect\()' "$FILE_PATH" 2>/dev/null || true)
+  HOOK_COUNT=$(grep -cE '^[[:space:]]*(const \[|useRef\(|useEffect\()' "$FILE_PATH" 2>/dev/null || true)
   if [[ "$HOOK_COUNT" -gt 3 ]]; then
     add_error "Hook does too many things in $FILE_PATH ($HOOK_COUNT useState/useRef/useEffect) — split into focused hooks"
   fi
@@ -200,7 +221,7 @@ fi
 # --- New checks ---
 
 # Check: console.log — capture once, then test (not grep-twice).
-CONSOLE_LINES=$(grep -nE '^\s*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | head -3)
+CONSOLE_LINES=$(grep -nE '^[[:space:]]*console\.log\(' "$FILE_PATH" 2>/dev/null | grep -vE '^[0-9]+:[[:space:]]*//' | head -3)
 if [[ -n "$CONSOLE_LINES" ]]; then
   add_error "Forbidden console.log in $FILE_PATH — use console.error/warn/info\n${CONSOLE_LINES}"
 fi
@@ -219,7 +240,7 @@ fi
 
 # Check: confirm()/alert() in frontend files
 if [[ "$FILE_PATH" == */components/* || "$FILE_PATH" == */routes/* ]]; then
-  CONFIRM_LINES=$(grep -nE '\b(confirm|alert)\s*\(' "$FILE_PATH" 2>/dev/null | grep -vE '^\s*//' | grep -vE '(ConfirmDeleteAlert|AlertDialog|customAlert|customConfirm)' | head -3)
+  CONFIRM_LINES=$(grep -nE '\b(confirm|alert)[[:space:]]*\(' "$FILE_PATH" 2>/dev/null | grep -vE '^[0-9]+:[[:space:]]*//' | grep -vE '(ConfirmDeleteAlert|AlertDialog|customAlert|customConfirm)' | head -3)
   if [[ -n "$CONFIRM_LINES" ]]; then
     add_error "Forbidden confirm()/alert() in $FILE_PATH — use AlertDialog component\n${CONFIRM_LINES}"
   fi
@@ -233,14 +254,16 @@ if grep -qE "from ['\"]@radix-ui/react-(alert-dialog|dialog)['\"]" "$FILE_PATH" 
 fi
 
 # Check: mutable props (Props type param without Readonly)
-PROPS_LINES=$(grep -nE '\((props|[a-z]+Props):\s+[A-Z][a-zA-Z]+Props\)' "$FILE_PATH" 2>/dev/null | grep -v 'Readonly' | head -3)
+PROPS_LINES=$(grep -nE '\((props|[a-z]+Props):[[:space:]]+[A-Z][a-zA-Z]+Props\)' "$FILE_PATH" 2>/dev/null | grep -v 'Readonly' | head -3)
 if [[ -n "$PROPS_LINES" ]]; then
   add_error "Mutable props in $FILE_PATH — wrap in Readonly<Props>\n${PROPS_LINES}"
 fi
 
 # Check: manual try/catch+toast pattern in components
 if [[ "$FILE_PATH" == */components/* || "$FILE_PATH" == */routes/* ]]; then
-  CATCH_TOAST=$(awk '/catch\s*\(/{found=1} found && /toast\(/{print NR": "$0; found=0}' "$FILE_PATH" 2>/dev/null | head -3)
+  # [[:space:]] not \s: BSD awk (macOS) has no \s and reads it as a literal `s`,
+  # which silently killed this rule for the universal `catch (` spelling.
+  CATCH_TOAST=$(awk '/catch[[:space:]]*\(/{found=1} found && /toast\(/{print NR": "$0; found=0}' "$FILE_PATH" 2>/dev/null | head -3)
   if [[ -n "$CATCH_TOAST" ]]; then
     add_error "Manual try/catch+toast in $FILE_PATH — use shared error handling\n${CATCH_TOAST}"
   fi
@@ -423,25 +446,13 @@ fi
 # --- Output ---
 
 if [[ -n "$MESSAGES" ]]; then
-  # Write violation to gate status file for pre-tool blocking
+  # Record this file's violation in the gate status file (entry keyed by file
+  # path — does not clobber failures recorded for other files or hooks).
   GATE_DIR="$PROJECT_ROOT/.claude/tmp"
   GATE_FILE="$GATE_DIR/quality-gate-status.json"
   mkdir -p "$GATE_DIR"
-
-  jq -n \
-    --arg status "failing" \
-    --arg reason "Post-edit quality violation(s) detected" \
-    --arg file "$FILE_PATH" \
-    --arg violations "$MESSAGES" \
-    --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{
-      status: $status,
-      reason: $reason,
-      source: "ts-quality-hook",
-      file: $file,
-      violations: $violations,
-      updatedAt: $updatedAt
-    }' > "$GATE_FILE"
+  gate_record_failure "$GATE_FILE" "$FILE_PATH" "ts-quality-hook" \
+    "Post-edit quality violation(s) detected" "$MESSAGES"
 
   jq -n --arg ctx "$MESSAGES" '{
     "hookSpecificOutput": {
@@ -450,20 +461,11 @@ if [[ -n "$MESSAGES" ]]; then
     }
   }'
 else
-  # Clear gate if this file now passes (only if this hook set it)
-  GATE_DIR="$PROJECT_ROOT/.claude/tmp"
-  GATE_FILE="$GATE_DIR/quality-gate-status.json"
-  if [[ -f "$GATE_FILE" ]]; then
-    GATE_SOURCE=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
-    GATE_FILE_PATH=$(jq -r '.file // ""' "$GATE_FILE" 2>/dev/null || echo "")
-    if [[ "$GATE_SOURCE" == "ts-quality-hook" && "$GATE_FILE_PATH" == "$FILE_PATH" ]]; then
-      jq -n \
-        --arg status "passing" \
-        --arg source "ts-quality-hook" \
-        --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        '{status: $status, source: $source, updatedAt: $updatedAt}' > "$GATE_FILE"
-    fi
-  fi
+  # Clear this file's entry now that it passes (only if this hook set it).
+  # Other files' failures stay recorded; the gate only flips to passing when
+  # no entry remains.
+  GATE_FILE="$PROJECT_ROOT/.claude/tmp/quality-gate-status.json"
+  gate_clear_file "$GATE_FILE" "$FILE_PATH" "ts-quality-hook"
 
   # Advisories (non-blocking — no gate write). Duplication + docs combined into
   # a single additionalContext so the hook emits exactly one JSON object.
