@@ -245,19 +245,23 @@ if command -v ast-grep >/dev/null 2>&1; then
   fi
 
   # Swallow via a catch that just returns a nullish value — error vanishes.
-  SWALLOW_CATCH=""
-  for _pat in \
-    'try { $$$ } catch ($_) { return null }' \
-    'try { $$$ } catch ($_) { return undefined }' \
-    'try { $$$ } catch ($_) { return }' \
-    'try { $$$ } catch { return null }' \
-    'try { $$$ } catch { return undefined }' \
-    'try { $$$ } catch { return }'; do
-    _h=$(ast-grep --lang ts -p "$_pat" "$FILE_PATH" 2>/dev/null | head -2)
-    [[ -n "$_h" ]] && SWALLOW_CATCH="${SWALLOW_CATCH}${_h}\n"
-  done
-  if [[ -n "$SWALLOW_CATCH" ]]; then
-    add_error "Catch swallows the error by returning a nullish value in $FILE_PATH — handle, log, or rethrow it\n${SWALLOW_CATCH}"
+  # Skip the pattern scans entirely on files with no catch (avoids 6 ast-grep
+  # spawns on the common case, since this runs on every edit).
+  if grep -qE '\bcatch\b' "$FILE_PATH" 2>/dev/null; then
+    SWALLOW_CATCH=""
+    for _pat in \
+      'try { $$$ } catch ($_) { return null }' \
+      'try { $$$ } catch ($_) { return undefined }' \
+      'try { $$$ } catch ($_) { return }' \
+      'try { $$$ } catch { return null }' \
+      'try { $$$ } catch { return undefined }' \
+      'try { $$$ } catch { return }'; do
+      _h=$(ast-grep --lang ts -p "$_pat" "$FILE_PATH" 2>/dev/null | head -2)
+      [[ -n "$_h" ]] && SWALLOW_CATCH="${SWALLOW_CATCH}${_h}\n"
+    done
+    if [[ -n "$SWALLOW_CATCH" ]]; then
+      add_error "Catch swallows the error by returning a nullish value in $FILE_PATH — handle, log, or rethrow it\n${SWALLOW_CATCH}"
+    fi
   fi
 
   # throw new Error() with no message
@@ -360,8 +364,7 @@ fi
 # because the handler can legitimately live in every caller.
 ERR_ADVISORY=""
 if grep -qE '\bawait[[:space:]]' "$FILE_PATH" 2>/dev/null \
-   && ! grep -qE '\btry\b' "$FILE_PATH" 2>/dev/null \
-   && ! grep -qE '\.catch\(' "$FILE_PATH" 2>/dev/null; then
+   && ! grep -qE '\btry\b|\.catch\(' "$FILE_PATH" 2>/dev/null; then
   ERR_ADVISORY="Async code in $FILE_PATH uses await with no try/catch or .catch in the file — ensure rejections are handled here or by every caller."
 fi
 
