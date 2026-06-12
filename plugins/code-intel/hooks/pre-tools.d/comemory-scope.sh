@@ -95,8 +95,8 @@ while IFS= read -r segment; do
   # whitespace) OR a run of non-space chars. Matching only the latter would
   # stop at the first space inside a quoted value (MY_VAR="foo bar"), leaving
   # the tail (bar" comemory save) as the segment and letting an unscoped raw
-  # comemory call slip past the ^comemory check below. The value alternation is
-  # capture group 1, so the trailing REST is group 2.
+  # comemory call slip past the ^comemory check below. The value alternation
+  # is wrapped in a group, so the trailing REST is BASH_REMATCH[2].
   #
   # comemory has no repo env var, so an env prefix is never scope — it is just
   # stripped so the bare `comemory <subcmd>` underneath is inspected.
@@ -119,16 +119,11 @@ while IFS= read -r segment; do
   subcmd="${BASH_REMATCH[1]:-}"
   [[ -z "$subcmd" ]] && continue
 
+  # Only search/save/context require scoping; everything else is global.
   case "$subcmd" in
-    search|save|context)
-      requires_scope=1
-      ;;
-    *)
-      requires_scope=0
-      ;;
+    search|save|context) ;;
+    *) continue ;;
   esac
-
-  [[ "$requires_scope" -eq 0 ]] && continue
 
   # Already scoped via --repo? (comemory has no -p short flag and no repo env.)
   if [[ "$segment" =~ (^|[[:space:]])--repo([[:space:]]|=) ]]; then
