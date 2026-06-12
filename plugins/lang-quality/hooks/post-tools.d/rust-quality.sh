@@ -88,7 +88,14 @@ if [[ "$LINE_COUNT" -gt "$RUST_MAX_FILE" ]]; then
 fi
 
 _has_inline_cfg_test=0
-if [[ "$FILE_PATH" == */src/* ]] && grep -qE '^[[:space:]]*#\[cfg\(test\)\]' "$FILE_PATH" 2>/dev/null; then
+# Match bare `#[cfg(test)]` and `test` as the FIRST predicate of an all()/any()
+# combinator (`#[cfg(all(test, feature = "x"))]`, `#[cfg(any(test, ...))]`).
+# Deliberately NOT a loose `cfg(.*\btest\b`: that would false-positive on
+# `#[cfg(not(test))]` (the opposite gate) and `#[cfg(feature = "test-utils")]`
+# (test inside a string). A non-leading `test` predicate (`all(feature, test)`)
+# is the rare miss we accept to keep zero false positives.
+if [[ "$FILE_PATH" == */src/* ]] \
+   && grep -qE '^[[:space:]]*#\[cfg\((test\)|all\(test\b|any\(test\b)' "$FILE_PATH" 2>/dev/null; then
   add_error "Inline #[cfg(test)] in $FILE_PATH — tests must live in tests/ directory"
   _has_inline_cfg_test=1
 fi

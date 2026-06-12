@@ -21,7 +21,8 @@
 # `existing` blob would each rewrite it and the last `mv` would drop the other's
 # entry. This is safe today because PostToolUse hooks fire serially per tool
 # call (one writer at a time). If a parallel-edit flow is ever added, guard both
-# functions with `flock` against a `${gate_file}.lock` sentinel.
+# functions — AND the single-slot fallback write below — with `flock` against a
+# `${gate_file}.lock` sentinel; the fallback path races identically.
 #
 # Public API:
 #   gate_record_failure GATE_FILE FILE SOURCE REASON VIOLATIONS
@@ -58,6 +59,12 @@ gate_record_failure() {
     # files in a session (each clears on the next passing edit), so it stays
     # small in practice. If a long session ever shows this string bloating
     # hot-path reads, add a per-entry cap here rather than dropping entries.
+    # sort_by updatedAt then key: the timestamp is second-resolution (BSD `date`
+    # on macOS has no %N sub-second granularity), so two failures in the SAME
+    # second tiebreak by filename — the top-level .file/.reason mirror may then
+    # not be the truly-latest. Cosmetic and self-correcting on the next edit;
+    # readers see every failure via `entries` regardless. Accepted over a
+    # non-portable %N or a cross-call monotonic counter.
     | { status: "failing", reason: $reason, source: $source, file: $file,
         violations: ([$entries | to_entries | sort_by(.value.updatedAt // "", .key)[]
                       | (.value.violations // "")] | join("")),
@@ -70,10 +77,16 @@ gate_record_failure() {
     # THIS failure is never lost. That collapses any pre-existing multi-slot
     # `entries` to one record — emit a stderr breadcrumb naming the dropped
     # count so a vanished-state debugging session can see it happened, rather
-    # than the entries disappearing silently.
+    # than the entries disappearing silently. The count uses the SAME seed step
+    # both merge programs do (a legacy single-slot failing record becomes one
+    # `entries` slot under its file/__global__), so a clobbered legacy global
+    # record is counted too — not reported as 0.
     local _dropped
-    _dropped=$(jq -r '((.entries? // {}) | keys | map(select(. != $f)) | length)' \
-      --arg f "$file" <<< "$existing" 2>/dev/null || echo "")
+    _dropped=$(jq -r --arg f "$file" '
+      (if (.entries? | type) == "object" then .entries
+       elif (.status // "") == "failing" then { (.file // "__global__"): {} }
+       else {} end)
+      | keys | map(select(. != $f)) | length' <<< "$existing" 2>/dev/null || echo "")
     if [ -n "$_dropped" ] && [ "$_dropped" -gt 0 ] 2>/dev/null; then
       printf 'gate-file: primary write failed at %s; single-slot fallback dropped %s other entry(ies)\n' \
         "$gate_file" "$_dropped" >&2
