@@ -101,6 +101,10 @@ if [[ "$exit_code" == "0" ]]; then
   # *-quality-hook owns a failing gate, so we never reach here while
   # file-level entries are live. If that guard is ever loosened, this write
   # must merge/clear entries instead of replacing the whole object.
+  # CONCURRENCY: this is the third writer of $GATE_FILE, alongside
+  # gate-file.sh's gate_record_failure / gate_clear_file and their single-slot
+  # fallback. It shares their single-writer assumption and the same fix if a
+  # parallel-edit flow is ever added — see the CONCURRENCY note in gate-file.sh.
   jq -n \
     --arg status "passing" \
     --arg source "$command" \
