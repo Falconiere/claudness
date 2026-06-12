@@ -201,10 +201,16 @@ fi
 
 NEW_TYPES=$(grep -oE '^export (interface|type) [A-Z][a-zA-Z]+' "$FILE_PATH" 2>/dev/null | awk '{print $NF}')
 if [[ -n "$NEW_TYPES" ]]; then
+  # git grep instead of grep -r: uses the index, skips .gitignore'd trees
+  # (node_modules, dist) — the recursive walk was a per-edit hot-path cost on
+  # large monorepos. --untracked keeps brand-new files visible.
+  _ts_rel_fp="${FILE_PATH#"$PROJECT_ROOT"/}"
   for TYPE_NAME in $NEW_TYPES; do
-    DUPE_COUNT=$(grep -rl "^export \(interface\|type\) ${TYPE_NAME}[ <{]" "$PROJECT_ROOT/packages" "$PROJECT_ROOT/apps" --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "$FILE_PATH" | head -1)
-    if [[ -n "$DUPE_COUNT" ]]; then
-      add_error "Type '$TYPE_NAME' in $FILE_PATH already defined in $DUPE_COUNT — import instead of redefining"
+    DUPE_FILE=$(git -C "$PROJECT_ROOT" grep -l --untracked -E \
+      "^export (interface|type) ${TYPE_NAME}[ <{]" -- 'packages/*.ts' 'packages/*.tsx' 'apps/*.ts' 'apps/*.tsx' 2>/dev/null \
+      | grep -vFx "$_ts_rel_fp" | head -1)
+    if [[ -n "$DUPE_FILE" ]]; then
+      add_error "Type '$TYPE_NAME' in $FILE_PATH already defined in $DUPE_FILE — import instead of redefining"
     fi
   done
 fi
@@ -425,7 +431,7 @@ if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
     DOC_ADVISORY="Exported API missing a JSDoc in $FILE_PATH — add a concise /** */ doc:\n${_undoc}"
   fi
   _verbose_doc=$(awk '
-    /\/\*\*/ { inb=1; start=NR; cnt=0 }
+    !inb && /\/\*\*/ { inb=1; start=NR; cnt=0 }   # !inb: a /** in prose must not reset the count mid-block
     inb { cnt++ }
     inb && /\*\// { if (cnt>12) printf "%d: JSDoc block is %d lines — trim to the essentials\n", start, cnt; inb=0 }
   ' "$FILE_PATH" 2>/dev/null | head -2)
@@ -438,8 +444,12 @@ fi
 # and no .catch anywhere — rejections may be unhandled. Advisory, not a block,
 # because the handler can legitimately live in every caller.
 ERR_ADVISORY=""
-if grep -qE '\bawait[[:space:]]' "$FILE_PATH" 2>/dev/null \
-   && ! grep -qE '\btry\b|\.catch\(' "$FILE_PATH" 2>/dev/null; then
+# Comment-only lines are stripped first: a commented-out `await` must not raise
+# the advisory, and a `try`/`.catch` that only appears in a comment must not
+# suppress it. (`*`-prefixed lines are JSDoc/block-comment continuations.)
+_ts_noncomment=$(grep -vE '^[[:space:]]*(//|/\*|\*)' "$FILE_PATH" 2>/dev/null)
+if printf '%s\n' "$_ts_noncomment" | grep -qE '\bawait[[:space:]]' \
+   && ! printf '%s\n' "$_ts_noncomment" | grep -qE '\btry\b|\.catch\('; then
   ERR_ADVISORY="Async code in $FILE_PATH uses await with no try/catch or .catch in the file — ensure rejections are handled here or by every caller."
 fi
 

@@ -259,6 +259,77 @@ EOF
   echo "$output" | grep -q "Manual try/catch+toast"
 }
 
+# Regression: the await-without-handler advisory matched commented-out code
+# both ways — `// await x()` raised it, `// try` suppressed it.
+@test "ts-quality: commented-out await does not raise the handler advisory" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+// await legacyCall() — kept for reference
+export const flag = true;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "uses await with no try/catch"
+}
+
+@test "ts-quality: try only in a comment does not suppress the handler advisory" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+// callers should try to handle this
+export async function fetchIt(): Promise<number> {
+  const r = await doFetch();
+  return r;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "uses await with no try/catch"
+}
+
+# Regression: the verbose-JSDoc awk reset its counter when `/**` appeared in
+# prose inside a block, so a long block with that substring escaped the nag.
+@test "ts-quality: verbose JSDoc with /** in prose mid-block is still flagged" {
+  _ts_project
+  cat > src/api.ts <<'EOF'
+/**
+ * Does the thing.
+ * line 3
+ * line 4
+ * use a /** block for docs, they said
+ * line 6
+ * line 7
+ * line 8
+ * line 9
+ * line 10
+ * line 11
+ * line 12
+ * line 13
+ */
+export function doThing() {
+  return 1;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "JSDoc block is"
+}
+
+@test "ts-quality: duplicate exported type across packages is flagged (git grep)" {
+  _ts_project
+  mkdir -p packages/a/src packages/b/src
+  printf 'export interface Widget { id: string }\n' > packages/a/src/widget.ts
+  git add packages/a/src/widget.ts
+  git -c user.email=t@t -c user.name=t commit -q -m widget
+  printf 'export interface Widget { id: string }\n' > packages/b/src/widget2.ts
+  payload='{"tool_input":{"file_path":"'"$TMP"'/packages/b/src/widget2.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "already defined in packages/a/src/widget.ts"
+}
+
 @test "ts-quality: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/index.ts"}}'
   run env -u CLAUDNESS_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP" bash "$HOOK"

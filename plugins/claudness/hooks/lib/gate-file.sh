@@ -46,7 +46,8 @@ gate_record_failure() {
     | ($prev + { ($file): {source: $source, reason: $reason,
                            violations: $violations, updatedAt: $now} }) as $entries
     | { status: "failing", reason: $reason, source: $source, file: $file,
-        violations: ([$entries | to_entries[] | (.value.violations // "")] | join("")),
+        violations: ([$entries | to_entries | sort_by(.value.updatedAt // "", .key)[]
+                      | (.value.violations // "")] | join("")),
         entries: $entries, updatedAt: $now }
   ' <<< "$existing" > "$tmp" 2>/dev/null; then
     mv -f "$tmp" "$gate_file"
@@ -87,12 +88,13 @@ gate_clear_file() {
       else {} end) | del(.[$file])) as $left
     | if ($left | length) == 0
       then { status: "passing", source: $source, updatedAt: $now }
-      else (($left | to_entries | max_by(.value.updatedAt // "")) as $latest
+      else (($left | to_entries | sort_by(.value.updatedAt // "", .key) | last) as $latest
         | { status: "failing",
             reason: ($latest.value.reason // "Quality gate failing"),
             source: ($latest.value.source // ""),
             file: $latest.key,
-            violations: ([$left | to_entries[] | (.value.violations // "")] | join("")),
+            violations: ([$left | to_entries | sort_by(.value.updatedAt // "", .key)[]
+                          | (.value.violations // "")] | join("")),
             entries: $left, updatedAt: $now })
       end
   ' <<< "$existing" > "$tmp" 2>/dev/null; then
