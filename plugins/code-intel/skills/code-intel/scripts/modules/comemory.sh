@@ -39,7 +39,7 @@ Subcommands:
   search <query> [flags]              Search memories (--repo <detected>; --k N to widen)
   save <title> <content> [flags]      Save a memory (--repo <detected>; --kind defaults to note)
   list [flags]                        List memories (--repo <detected>)
-  summary <content>                   Save session summary (--kind note --tags session-summary)
+  summary <content>                   Save a session summary (tags: session-summary; yields to caller --tags)
   stats                               Data-directory + index health report (comemory doctor)
 
 Pass-through flags: --kind <kind>, --tags <csv>, --quality N, --k N, --json
@@ -65,7 +65,16 @@ case "$subcmd" in
   summary)
     content="${1:?summary requires content}"
     shift
-    exec comemory save "$(printf '%s\n\n%s' "Session summary" "$content")" --kind note --tags session-summary --repo "$REPO" "$@"
+    body="$(printf '%s\n\n%s' "Session summary" "$content")"
+    # Default the session-summary tag, but yield to a caller-supplied --tags:
+    # comemory/clap rejects a duplicate single-value flag. --kind is left to
+    # comemory's own default (note) so a caller may override it via "$@".
+    case " $* " in
+      *" --tags "*|*" --tags="*)
+        exec comemory save "$body" --repo "$REPO" "$@" ;;
+      *)
+        exec comemory save "$body" --tags session-summary --repo "$REPO" "$@" ;;
+    esac
     ;;
   stats)
     exec comemory doctor "$@"

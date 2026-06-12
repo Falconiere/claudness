@@ -43,6 +43,28 @@ teardown() {
   [[ "$output" == *"$id"* ]]
 }
 
+@test "comemory: summary saves a session-summary and accepts a --kind override without flag collision" {
+  # summary must not hardcode --kind, so a caller-supplied --kind reaches
+  # comemory cleanly (clap rejects a duplicate single-value flag).
+  run bash "$MOD" comemory summary "wrapped up the migration" --kind decision --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ]
+  [ "$id" != "null" ]
+  # The override landed: kind is the caller's value, not a forced default.
+  run bash -c "comemory list --repo '$TEST_REPO' --json | jq -r '.[] | select(.id==\"$id\") | .kind'"
+  [ "$status" -eq 0 ]
+  [ "$output" = "decision" ]
+}
+
+@test "comemory: summary yields to a caller-supplied --tags without flag collision" {
+  # When the caller passes --tags, the wrapper must NOT also inject its own.
+  run bash "$MOD" comemory summary "custom tagged summary" --tags "release,notes" --json
+  [ "$status" -eq 0 ]
+  [ -n "$output" ]
+}
+
 @test "comemory: wrapper injects --repo into the comemory invocation" {
   grep -q 'comemory search "\$query" --repo "\$REPO"' "$COMEMORY_SH"
   grep -q 'comemory save .* --repo "\$REPO"' "$COMEMORY_SH"
