@@ -57,6 +57,33 @@ mod.sh comemory save "verb what in file-or-module" \
   --kind bug --tags "area,subtopic"
 ```
 
+## Code intelligence (comemory, repo-scoped)
+
+The wrapper auto-injects `--repo` for these too.
+
+| When | Command |
+|---|---|
+| Lexical code-symbol search (FTS/BM25, NOT semantic) | `mod.sh comemory search-code "<query>" [--lang L] [--k N]` |
+| Index a repo's code symbols (lexical) | `mod.sh comemory index-code --path <dir>` |
+| Code relationship graph | `mod.sh comemory graph [--rel imports\|co-changed\|all] [--format json\|dot\|html] [--min-weight N]` |
+
+> `search-code` is **lexical only** — comemory ships no embedder, so it is not semantic. **ast-grep is the FIRST choice for structural code queries**; reach for `search-code` only as a text fallback over code symbols.
+
+## Retrieval-quality loop (comemory, global — local, token-free)
+
+All LOCAL, no LLM/API, no `--repo`. Most run automatically once/day via the claudness SessionEnd hook, so manual calls are rarely needed.
+
+| When | Command |
+|---|---|
+| Record recall relevance (`query_id` from `search --json`) | `mod.sh comemory feedback <query_id> [--used <csv ids>] [--irrelevant <csv ids>]` |
+| Mine query-expansion pairs from the log | `mod.sh comemory mine [--apply]` |
+| Tune ranking blend weights vs golden set | `mod.sh comemory tune [--apply]` |
+| Score recall@k + MRR | `mod.sh comemory eval [--golden <file>] [--k N]` |
+| Soft-delete low-value memories | `mod.sh comemory prune [--apply]` |
+| Hard-delete trash + stale telemetry | `mod.sh comemory gc` |
+| Rebuild SQLite mirror from markdown | `mod.sh comemory rebuild` |
+| Bundle: `mine --apply` + `prune --apply` + `gc` | `mod.sh comemory maintain` |
+
 ## Token Discipline
 
 | Tool | Default flags (baked in) | Cost if ignored |

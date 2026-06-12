@@ -59,6 +59,17 @@ ${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory stats
 ```
 Reports data-directory + index health (maps to `comemory doctor`).
 
+## Retrieval-quality loop (autonomous)
+The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `maintain`) are **LOCAL and token-free** — no LLM, no API, no `--repo`. They run **automatically once per day via the claudness SessionEnd hook**, so you rarely invoke them by hand.
+
+The one verb you SHOULD call yourself: after you actually **use** a recalled memory, close the loop so future recall sharpens.
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory feedback <query_id> --used <id>
+```
+- `<query_id>` comes from a prior `search --json` envelope (run search with `--json` to get it).
+- `--used <csv ids>` = memories that helped; `--irrelevant <csv ids>` = memories that didn't.
+- This is the only loop step worth doing in-session; the rest are handled by the daily hook.
+
 ## 1. Memory Before Files — Layered Recall
 
 Before exploring the codebase to *understand* something, search **comemory first**, then fall back to **ast-grep** for structural patterns and **Grep** for exact literals. Never jump straight to Read/Grep/Glob for *understanding* (as opposed to known-file reads).

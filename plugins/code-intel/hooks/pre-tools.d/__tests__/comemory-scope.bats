@@ -76,6 +76,27 @@ _decision() {
   [ "$(_decision "$output")" = "allow" ]
 }
 
+@test "comemory-scope: bare comemory search-code is denied" {
+  payload=$(_mk 'comemory search-code "fn foo"')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "deny" ]
+}
+
+@test "comemory-scope: comemory search-code with --repo is allowed" {
+  payload=$(_mk 'comemory search-code "fn foo" --repo claudness')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
+@test "comemory-scope: retrieval-loop verb (mine) is allowed (global by design)" {
+  payload=$(_mk 'comemory mine --apply')
+  run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
+  [ "$status" -eq 0 ]
+  [ "$(_decision "$output")" = "allow" ]
+}
+
 @test "comemory-scope: comemory list is allowed (global by design)" {
   payload=$(_mk 'comemory list --repo claudness')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
