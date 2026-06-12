@@ -189,3 +189,62 @@ EOF
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "rust-quality: test file (#[test]) outside tests/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/foo.rs <<'EOF'
+#[test]
+fn it_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/foo.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Rust test file outside tests/"
+}
+
+@test "rust-quality: integration test under tests/ is accepted" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p tests
+  cat > tests/integration_test.rs <<'EOF'
+#[test]
+fn it_works() {
+    assert_eq!(1, 1);
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/tests/integration_test.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "test file outside"
+}
+
+@test "rust-quality: project config lowers maxFileLines, flags a file the default would not" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  mkdir -p "$TMP/.claude"
+  echo '{"lang":{"rust":{"maxFileLines":10}}}' > "$TMP/.claude/claudness.config.json"
+  : > src/big.rs
+  for i in $(seq 1 15); do echo "pub const V$i: u32 = $i;" >> src/big.rs; done
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/big.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "exceeds 10-line limit"
+}
+
+@test "rust-quality: pub fn without /// doc emits a non-blocking docs advisory" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/api.rs <<'EOF'
+pub fn do_thing() -> u32 {
+    1
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "missing a /// doc"
+  ! echo "$output" | grep -q "QUALITY VIOLATION"
+}

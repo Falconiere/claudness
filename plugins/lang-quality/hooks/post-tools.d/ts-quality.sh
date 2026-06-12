@@ -19,6 +19,12 @@
 [ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
 # shellcheck source=../../../claudness/hooks/lib/detect.sh
 . "$CLAUDNESS_LIB_DIR/detect.sh"
+# Threshold resolver (defaults + project/native overrides). Soft if absent.
+# shellcheck source=../../../claudness/hooks/lib/quality-config.sh
+[ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
+command -v ts_max_file_lines >/dev/null 2>&1 || ts_max_file_lines() { echo "${DEFAULT_TS_MAX_FILE_LINES:-300}"; }
+command -v ts_max_fn_lines   >/dev/null 2>&1 || ts_max_fn_lines()   { echo "${DEFAULT_TS_MAX_FN_LINES:-60}"; }
+command -v count_code_lines  >/dev/null 2>&1 || count_code_lines()  { wc -l < "$1" | tr -d ' '; }
 
 # Exit early if this isn't a TypeScript project.
 [ "$(detect_ts)" = "ts" ] || exit 0
@@ -101,23 +107,28 @@ if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
   fi
 fi
 
-TS_LINE_COUNT=$(wc -l < "$FILE_PATH" | tr -d ' ')
-if [[ "$TS_LINE_COUNT" -gt 300 ]]; then
-  add_error "TS file exceeds 300-line limit: $FILE_PATH ($TS_LINE_COUNT lines) — split into smaller modules"
+TS_MAX_FILE=$(ts_max_file_lines)
+TS_LINE_COUNT=$(count_code_lines "$FILE_PATH")
+if [[ "$TS_LINE_COUNT" -gt "$TS_MAX_FILE" ]]; then
+  _split_hint="split into smaller modules"
+  _linter="$(detect_ts_linter)"
+  [ -n "$_linter" ] && _split_hint="$_split_hint ($_linter owns max-lines here)"
+  add_error "TS file exceeds ${TS_MAX_FILE}-line limit: $FILE_PATH ($TS_LINE_COUNT code lines, blanks/comments excluded) — $_split_hint"
 fi
 
-LONG_FUNCS=$(awk '
+TS_MAX_FN=$(ts_max_fn_lines)
+LONG_FUNCS=$(awk -v max="$TS_MAX_FN" '
   /^(export )?(async )?function / || /^const [a-zA-Z_]+ = (async )?\(/ {
     start=NR; name=$0
   }
   start && /^}/ {
     len=NR-start
-    if (len > 60) printf "%s:%d (%d lines)\n", name, start, len
+    if (len > max) printf "%s:%d (%d lines)\n", name, start, len
     start=0
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_FUNCS" ]]; then
-  add_error "Function too long in $FILE_PATH (>60 lines) — simplify or split"
+  add_error "Function too long in $FILE_PATH (>${TS_MAX_FN} lines) — simplify or split"
 fi
 
 if [[ "$FILE_PATH" =~ use-.*\.ts$ || "$FILE_PATH" =~ use[A-Z].*\.ts$ ]]; then
@@ -282,6 +293,36 @@ if [[ -z "$MESSAGES" && ! "$FILE_PATH" =~ \.(test|spec)\. ]]; then
   fi
 fi
 
+# --- Docs (soft advisory, never blocks) ---
+# Exported API should carry a concise JSDoc. Advisory only — kept out of
+# MESSAGES so it never sets the failing gate. Skips tests, barrels, declarations.
+DOC_ADVISORY=""
+_ts_base="$(basename "$FILE_PATH")"
+if [[ ! "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && ! "$FILE_PATH" =~ \.d\.ts$ \
+      && "$_ts_base" != "index.ts" && "$_ts_base" != "index.tsx" ]]; then
+  _undoc=$(awk '
+    /^[[:space:]]*$/ { next }
+    {
+      if ($0 ~ /^export (async )?function / || $0 ~ /^export (abstract )?class / \
+          || $0 ~ /^export default / || $0 ~ /^export (const|interface|type|enum) [A-Z]/) {
+        if (prev !~ /\*\/[[:space:]]*$/ && prev !~ /^[[:space:]]*\/\*\*/) printf "%d: %s\n", NR, $0
+      }
+      prev=$0
+    }
+  ' "$FILE_PATH" 2>/dev/null | head -3)
+  if [[ -n "$_undoc" ]]; then
+    DOC_ADVISORY="Exported API missing a JSDoc in $FILE_PATH — add a concise /** */ doc:\n${_undoc}"
+  fi
+  _verbose_doc=$(awk '
+    /\/\*\*/ { inb=1; start=NR; cnt=0 }
+    inb { cnt++ }
+    inb && /\*\// { if (cnt>12) printf "%d: JSDoc block is %d lines — trim to the essentials\n", start, cnt; inb=0 }
+  ' "$FILE_PATH" 2>/dev/null | head -2)
+  if [[ -n "$_verbose_doc" ]]; then
+    DOC_ADVISORY="${DOC_ADVISORY:+$DOC_ADVISORY\n}Verbose JSDoc in $FILE_PATH — docs must be present but concise:\n${_verbose_doc}"
+  fi
+fi
+
 # --- Output ---
 
 if [[ -n "$MESSAGES" ]]; then
@@ -327,9 +368,12 @@ else
     fi
   fi
 
-  # Duplication advisory (non-blocking — no gate write)
-  if [[ -n "$DUPLICATION_WARNING" ]]; then
-    jq -n --arg ctx "$DUPLICATION_WARNING" '{
+  # Advisories (non-blocking — no gate write). Duplication + docs combined into
+  # a single additionalContext so the hook emits exactly one JSON object.
+  ADVISORY="$DUPLICATION_WARNING"
+  [[ -n "$DOC_ADVISORY" ]] && ADVISORY="${ADVISORY:+$ADVISORY\n}$DOC_ADVISORY"
+  if [[ -n "$ADVISORY" ]]; then
+    jq -n --arg ctx "$ADVISORY" '{
       "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
         "additionalContext": $ctx

@@ -23,12 +23,32 @@ back to "all enabled".
   "version": 1,
   "skills":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
-  "mcp":     { "<server>": true | false }
+  "mcp":     { "<server>": true | false },
+  "lang":    { "ts":   { "maxFileLines": 300, "maxFnLines": 60 },
+               "rust": { "maxFileLines": 500, "maxFnLines": 50, "maxImplLines": 200 } }
 }
 ```
 
 `version` is reserved for future schema bumps; v1 is the current value.
 See `plugins/claudness/settings/claudness.config.example.json` for a fully-populated example.
+
+### Quality thresholds (`lang`)
+
+The lang-quality gate's line limits are not hardcoded. Each threshold resolves
+with this precedence (first hit wins, always a positive integer):
+
+1. **Project / user override** — the `lang.<ts|rust>.<key>` value above.
+2. **Native linter config** (TS `maxFileLines` only) — the `max-lines` rule read
+   from `.eslintrc.json` then `.oxlintrc.json` (all encodings: `N`,
+   `["error", N]`, `["error", {"max": N}]`). Flat config
+   `eslint.config.{js,mjs,ts}` is JavaScript and not parsed — it falls through.
+3. **Built-in default** — TS `maxFileLines` 300 / `maxFnLines` 60; Rust
+   `maxFileLines` 500 / `maxFnLines` 50 / `maxImplLines` 200.
+
+A value of `0`, a negative, or `"off"` is treated as "no override" and falls
+through to the next layer — it does not mean a limit of zero. The gate never
+invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
+advisory wording. Resolver: `plugins/claudness/hooks/lib/quality-config.sh`.
 
 ### Recognized names
 
