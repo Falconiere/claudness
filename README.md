@@ -12,7 +12,7 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
 └── plugins/
     ├── claudness/            # Core plugin: hook engine + security/process gates
     │   ├── .claude-plugin/   # plugin.json manifest
-    │   ├── skills/           # Standalone skills (context7, exa-search, brainstorm, plan, execute, test)
+    │   ├── skills/           # Standalone skills (context7, exa-search, brainstorm, spec, spec-review, plan, execute, test)
     │   ├── agents/           # Subagent definitions (.md with YAML frontmatter)
     │   ├── commands/         # Slash commands (.md prompt templates)
     │   ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
@@ -41,11 +41,12 @@ while the owning plugin is installed.
 - One directory per skill containing `SKILL.md`.
 - Frontmatter: `name`, `description` (when-to-trigger phrasing), optional `allowed-tools`.
 - Keep `SKILL.md` short; push detail into sibling files (`references/`, `scripts/`, `assets/`).
-- **Workflow skills** — `brainstorm → plan → execute → test` are native, opinionated
+- **Workflow skills** — `brainstorm → spec → plan → execute → test` are native, opinionated
   process skills. They bake in the house conventions: one-responsibility files named
   after their export, tests colocated by language (TS `__tests__/`, Rust `tests/`),
   real-world data only (no mocks), concise-but-required docs, and per-project line
-  limits. The lang-quality gate enforces those conventions on every edit.
+  limits. The lang-quality gate enforces those conventions on every edit. `spec` writes a
+  design contract to `docs/claudness/specs/`; `spec-review` audits it before planning.
 
 ### Agents
 - One `.md` file per agent under the plugin's `agents/`.
