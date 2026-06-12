@@ -21,8 +21,10 @@
 # `existing` blob would each rewrite it and the last `mv` would drop the other's
 # entry. This is safe today because PostToolUse hooks fire serially per tool
 # call (one writer at a time). If a parallel-edit flow is ever added, guard both
-# functions — AND the single-slot fallback write below — with `flock` against a
-# `${gate_file}.lock` sentinel; the fallback path races identically.
+# functions — AND the single-slot fallback write below, AND the separate
+# single-slot passing write in post-tools/modules/gate-status.sh (which writes
+# the same gate file) — with `flock` against a `${gate_file}.lock` sentinel; all
+# of those paths race identically.
 #
 # Public API:
 #   gate_record_failure GATE_FILE FILE SOURCE REASON VIOLATIONS
