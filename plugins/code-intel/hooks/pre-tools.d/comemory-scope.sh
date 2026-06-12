@@ -33,7 +33,7 @@
 # shellcheck source=../../../claudness/hooks/lib/detect.sh
 . "$CLAUDNESS_LIB_DIR/detect.sh"
 
-[[ "$tool_name" != "Bash" && "$tool_name" != "Shell" ]] && exit 0
+[[ "$tool_name" != "Bash" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
 command=$(echo "$input" | jq -r '.tool_input.command // ""')

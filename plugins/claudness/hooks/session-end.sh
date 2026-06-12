@@ -23,11 +23,15 @@ HOOK_DIR="$(dirname "$0")"
 # `hooks.session-end: false` disables BOTH, honoring the docs/config.md contract
 # that a disabled hook "exits early and emits nothing" (and here, mutates nothing).
 if claudness_enabled hooks session-end && [ "$(claudness_comemory_state)" = "available" ]; then
-  _cm_data="${COMEMORY_DATA_DIR:-$HOME/.comemory}"
-  _cm_stamp="$_cm_data/.claudness-last-maintain"
+  # Stamp lives in the claudness config dir, NOT comemory's data dir: we don't
+  # assume where comemory stores data (the throttle only needs a stable, writable
+  # path of our own). $CLAUDE_CONFIG_DIR override is honored for parity with the
+  # rest of claudness.
+  _cm_stamp_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness"
+  _cm_stamp="$_cm_stamp_dir/.comemory-last-maintain"
   _cm_today="$(date -u +%Y%m%d 2>/dev/null || echo '')"
   if [ -n "$_cm_today" ] && [ "$(cat "$_cm_stamp" 2>/dev/null || echo '')" != "$_cm_today" ]; then
-    mkdir -p "$_cm_data" 2>/dev/null || true
+    mkdir -p "$_cm_stamp_dir" 2>/dev/null || true
     printf '%s' "$_cm_today" > "$_cm_stamp" 2>/dev/null || true
     # Bound each call's lifetime with timeout/gtimeout when available (absent on
     # stock macOS); the trailing `&` + `disown` detaches the whole sequence so

@@ -75,24 +75,55 @@ teardown() {
   [[ "$output" == *"$id"* ]]
 }
 
-@test "comemory: repo_flag helper carries --repo \$REPO and is used by all scoped verbs" {
-  # --repo is injected via the repo_flag helper / REPO_ARGS array (not inline),
-  # so a caller-supplied --repo can suppress it (see the override test above).
-  grep -q 'REPO_ARGS=(--repo "\$REPO")' "$COMEMORY_SH"
-  # Each repo-scoped verb (search, save, list, summary, search-code, index-code,
-  # graph) calls the helper before exec — 7 invocations.
-  [ "$(grep -c 'repo_flag "\$@"' "$COMEMORY_SH")" -ge 7 ]
+# A stub `comemory` on PATH echoes its argv one-per-line, so these assert the
+# EXACT argv the wrapper builds (behavioral) rather than grepping wrapper source.
+_stub_argv() {
+  STUB="$BATS_TEST_TMPDIR/argv-stub"
+  mkdir -p "$STUB"
+  printf '#!/bin/sh\nfor a in "$@"; do printf "%%s\\n" "$a"; done\n' > "$STUB/comemory"
+  chmod +x "$STUB/comemory"
+}
+
+@test "comemory: wrapper injects --repo <repo> and guards the positional with -- (behavioral argv)" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search "hello"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -cx -- '--repo')" -eq 1 ]
+  printf '%s\n' "$output" | grep -qx 'behave'
+  printf '%s\n' "$output" | grep -qx -- '--'      # end-of-options guard present
+  printf '%s\n' "$output" | grep -qx 'hello'      # query passed as positional
+}
+
+@test "comemory: caller --repo suppresses the wrapper's injection — no duplicate (behavioral argv)" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search "hi" --repo caller
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -cx -- '--repo')" -eq 1 ]
+  printf '%s\n' "$output" | grep -qx 'caller'
+  ! printf '%s\n' "$output" | grep -qx 'behave'
+}
+
+@test "comemory: search-code/index-code/graph carry --repo (behavioral argv)" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search-code "sym"
+  [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'; printf '%s\n' "$output" | grep -qx 'behave'
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory graph
+  [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory index-code --path /tmp/x
+  [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'
 }
 
 @test "comemory: filter_project is gone from the wrapper" {
   ! grep -q 'filter_project' "$COMEMORY_SH"
 }
 
-# ── Code-intel verbs: repo-scoped via the same REPO_ARGS injection ─────────
-@test "comemory: search-code/index-code/graph use the REPO_ARGS injection" {
-  grep -q 'comemory search-code "\$query" ${REPO_ARGS' "$COMEMORY_SH"
-  grep -q 'comemory index-code ${REPO_ARGS' "$COMEMORY_SH"
-  grep -q 'comemory graph ${REPO_ARGS' "$COMEMORY_SH"
+@test "comemory: save with a leading-dash title is not parsed as a flag (real binary)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-dash"
+  run bash "$MOD" comemory save "--dashy-title" "real body" --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ] && [ "$id" != "null" ]
 }
 
 @test "comemory: search-code runs against the real binary (lexical, empty index → no results, exit 0)" {
@@ -106,8 +137,8 @@ teardown() {
   # The combined branch forwards the subcommand verbatim — no --repo appended.
   grep -q 'mine|tune|eval|prune|gc|rebuild)' "$COMEMORY_SH"
   grep -q 'exec comemory "\$subcmd" "\$@"' "$COMEMORY_SH"
-  # feedback forwards the positional query_id, also without --repo.
-  grep -q 'exec comemory feedback "\$query_id" "\$@"' "$COMEMORY_SH"
+  # feedback forwards the positional query_id after the -- guard, still no --repo.
+  grep -q 'exec comemory feedback "\$@" -- "\$query_id"' "$COMEMORY_SH"
   # No --repo anywhere on the global-verb lines.
   ! grep -E 'comemory (mine|tune|eval|prune|gc|rebuild|feedback).*--repo' "$COMEMORY_SH"
 }
