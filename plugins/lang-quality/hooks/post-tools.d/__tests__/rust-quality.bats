@@ -109,7 +109,7 @@ EOF
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
   tool_name=Edit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "Forbidden #\[allow"
+  echo "$output" | grep -q "Forbidden lint suppression"
 }
 
 # Regression: the PostToolUse matcher includes MultiEdit, but the file-path
@@ -125,7 +125,7 @@ EOF
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
   tool_name=MultiEdit input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "Forbidden #\[allow"
+  echo "$output" | grep -q "Forbidden lint suppression"
 }
 
 @test "rust-quality: gate is cleared when the failing file is re-edited clean" {
@@ -247,4 +247,35 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "missing a /// doc"
   ! echo "$output" | grep -q "QUALITY VIOLATION"
+}
+
+@test "rust-quality: cfg_attr(allow) lint suppression is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/bad.rs <<'EOF'
+#[cfg_attr(test, allow(dead_code))]
+fn helper() {}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden lint suppression"
+}
+
+@test "rust-quality: unreachable! in src/ is flagged" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _rust_project
+  cat > src/bad.rs <<'EOF'
+fn f(x: u8) -> u8 {
+    match x {
+        0 => 1,
+        _ => unreachable!("never"),
+    }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "unreachable!"
 }

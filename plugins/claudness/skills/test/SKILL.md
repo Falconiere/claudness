@@ -1,11 +1,11 @@
 ---
 name: test
-description: Use when writing or organizing tests for any feature or bugfix. Enforces the claudness test layout (TS __tests__/, Rust tests/), real-world data only (NO mocks), and test-first discipline. Native claudness workflow; fifth phase of brainstorm → spec → plan → execute → test.
+description: Use when writing or organizing tests for any feature or bugfix. Enforces the claudness test layout (TS __tests__/, Rust tests/), real-world data only (NO mocks), and test-first discipline. Native claudness workflow; the final test phase of brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test.
 ---
 
 # Test
 
-Fifth phase of the claudness workflow. Tests are written **with** the code, not after — this skill defines how and where.
+The final phase of the claudness workflow. Tests are written **with** the code, not after — this skill defines how and where.
 
 **Trigger phrases:** write tests, add a test, test this, TDD, cover this with tests.
 

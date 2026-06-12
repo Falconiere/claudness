@@ -1,11 +1,11 @@
 ---
 name: spec-review
-description: Use to review a design spec BEFORE planning or building it — check it's complete, unambiguous, scoped, and testable. Tells: "review the spec", "is this spec ready", "audit the design", "poke holes in this spec", "did we miss anything". Pairs with the `spec` skill; reviews specs under docs/claudness/specs/. Catches gaps while they're cheap (a paragraph) instead of expensive (a rewrite). Part of the claudness brainstorm → spec → plan → execute → test workflow.
+description: Use to review a design spec BEFORE planning or building it — check it's complete, unambiguous, scoped, and testable. Tells: "review the spec", "is this spec ready", "audit the design", "poke holes in this spec", "did we miss anything". Pairs with the `spec` skill; reviews specs under docs/claudness/specs/. Catches gaps while they're cheap (a paragraph) instead of expensive (a rewrite). Part of the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow.
 ---
 
 # Spec Review
 
-The cheapest place to catch a design flaw is the spec — a missing non-goal is one line here and a week of rework after `execute`. This skill pressure-tests a spec before it becomes a plan. It is adversarial on purpose: the job is to find what's missing or unclear, not to admire what's there.
+The cheapest place to catch a design flaw is the spec — a missing non-goal is one line here and a week of rework after `execution`. This skill pressure-tests a spec before it becomes a plan. It is adversarial on purpose: the job is to find what's missing or unclear, not to admire what's there.
 
 Read the spec (under `docs/claudness/specs/`) and run it against the checklist. For each item, ask *would a competent builder be blocked or misled by this?* — that's the bar, not stylistic preference.
 

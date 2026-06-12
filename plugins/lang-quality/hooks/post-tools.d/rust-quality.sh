@@ -88,9 +88,10 @@ if [[ "$_is_rust_test" -eq 1 ]]; then
   fi
 fi
 
-# Forbidden #[allow(...)] / #![allow(...)] / #[expect(...)] / #![expect(...)]
-if grep -qE '#!?\[(allow|expect)\(' "$FILE_PATH" 2>/dev/null; then
-  add_error "Forbidden #[allow(...)] / #[expect(...)] in $FILE_PATH — remove it and fix the underlying warning. For unsafe_code, override in Cargo.toml [lints.rust]."
+# Forbidden lint suppression: #[allow(...)] / #![allow(...)] / #[expect(...)]
+# and the #[cfg_attr(..., allow(...))] / cfg_attr(..., expect(...)) back door.
+if grep -qE '#!?\[(allow|expect)\(|#!?\[cfg_attr\([^]]*\b(allow|expect)\b' "$FILE_PATH" 2>/dev/null; then
+  add_error "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in $FILE_PATH — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]."
 fi
 
 # Forbidden unsafe blocks/functions — except for crates listed in the
@@ -185,8 +186,9 @@ if [[ "$FILE_PATH" == */src/* ]] && command -v ast-grep >/dev/null 2>&1; then
   PANIC_HITS=$(ast_scan 'panic!($$$)' 3) || { ast_grep_failed=1; record_ast_fail; }
   TODO_HITS=$(ast_scan 'todo!($$$)' 3) || { ast_grep_failed=1; record_ast_fail; }
   UNIMPL_HITS=$(ast_scan 'unimplemented!($$$)' 3) || { ast_grep_failed=1; record_ast_fail; }
-  if [[ -n "$PANIC_HITS" || -n "$TODO_HITS" || -n "$UNIMPL_HITS" ]]; then
-    add_error "panic!/todo!/unimplemented! in $FILE_PATH — return a Result instead\n${PANIC_HITS}${TODO_HITS}${UNIMPL_HITS}"
+  UNREACH_HITS=$(ast_scan 'unreachable!($$$)' 3) || { ast_grep_failed=1; record_ast_fail; }
+  if [[ -n "$PANIC_HITS" || -n "$TODO_HITS" || -n "$UNIMPL_HITS" || -n "$UNREACH_HITS" ]]; then
+    add_error "panic!/todo!/unimplemented!/unreachable! in $FILE_PATH — return a Result instead\n${PANIC_HITS}${TODO_HITS}${UNIMPL_HITS}${UNREACH_HITS}"
   fi
 
   rm -f "$ast_err_file" "$ast_rc_file"

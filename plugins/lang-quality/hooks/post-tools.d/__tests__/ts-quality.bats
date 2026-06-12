@@ -315,3 +315,93 @@ EOF
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -q "missing a JSDoc"
 }
+
+@test "ts-quality: eslint-disable comment is flagged as suppression" {
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+// eslint-disable-next-line
+export const a = thing();
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden suppression comment"
+}
+
+@test "ts-quality: @ts-expect-error is flagged outside test files" {
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+// @ts-expect-error legacy boundary
+export const b = thing();
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Forbidden suppression comment"
+}
+
+@test "ts-quality: @ts-expect-error is allowed in test files" {
+  _ts_project
+  echo 'export const code = 1;' > src/code.ts
+  mkdir -p src/__tests__
+  cat > src/__tests__/code.test.ts <<'EOF'
+// @ts-expect-error asserting a type error is the point of this test
+const z: string = 123;
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/__tests__/code.test.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "Forbidden suppression comment"
+}
+
+@test "ts-quality: catch that returns null is flagged as swallow" {
+  command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
+  _ts_project
+  cat > src/bad.ts <<'EOF'
+export function f() {
+  try {
+    risky();
+  } catch (e) {
+    return null;
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/bad.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "swallows the error"
+}
+
+@test "ts-quality: await with no try/catch emits a non-blocking advisory" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+/** Fetch a thing. */
+export async function f() {
+  const r = await fetchThing("x");
+  return r;
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "uses await with no try/catch"
+  ! echo "$output" | grep -q "QUALITY VIOLATION"
+}
+
+@test "ts-quality: await inside try/catch produces no error-handling advisory" {
+  _ts_project
+  cat > src/a.ts <<'EOF'
+/** Fetch a thing safely. */
+export async function f() {
+  try {
+    return await fetchThing("x");
+  } catch (e) {
+    throw new Error("fetch failed", { cause: e });
+  }
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/a.ts"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -q "uses await with no try/catch"
+}
