@@ -308,7 +308,7 @@ if [[ "$FILE_PATH" == */src/* && ! "$_is_rust_test" -eq 1 ]]; then
     /^[[:space:]]*$/   { next }   # blanks do not reset the doc context
     /^[[:space:]]*#\[/ { next }   # attributes sit between doc and item
     {
-      if ($0 ~ /^[[:space:]]*pub[[:space:]]+(fn|struct|enum|trait)[[:space:]]/) {
+      if ($0 ~ /^[[:space:]]*pub(\([^)]+\))?[[:space:]]+(fn|struct|enum|trait|const|static|type|mod)[[:space:]]/) {
         if (prev !~ /^[[:space:]]*(\/\/\/|\/\/!)/) printf "%d: %s\n", NR, $0
       }
       prev=$0

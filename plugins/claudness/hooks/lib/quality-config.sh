@@ -63,12 +63,17 @@ _qc_project_override() {
 
 # Memoize the git toplevel for this process. detect_project_root shells out to
 # `git rev-parse` every call; the root can't change mid-hook, so cache it once
-# (mirrors claudness_load_config's caching). Tests reset _QC_PROJECT_ROOT="".
+# (mirrors claudness_load_config's caching). A separate _CACHED flag is used so
+# an EMPTY result (non-git cwd) is still treated as cached — keying on
+# _QC_PROJECT_ROOT being non-empty would re-shell git on every call there. Tests
+# re-source this file (resetting both) between cases.
 _QC_PROJECT_ROOT=""
+_QC_PROJECT_ROOT_CACHED=0
 _qc_project_root() {
-  [ -n "$_QC_PROJECT_ROOT" ] && { printf '%s' "$_QC_PROJECT_ROOT"; return 0; }
+  [ "$_QC_PROJECT_ROOT_CACHED" = "1" ] && { printf '%s' "$_QC_PROJECT_ROOT"; return 0; }
   command -v detect_project_root >/dev/null 2>&1 || return 0
   _QC_PROJECT_ROOT=$(detect_project_root)
+  _QC_PROJECT_ROOT_CACHED=1
   printf '%s' "$_QC_PROJECT_ROOT"
 }
 

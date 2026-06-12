@@ -42,6 +42,10 @@ fi
 if [[ -f "$GATE_FILE" ]]; then
   current_source=$(jq -r '.source // ""' "$GATE_FILE" 2>/dev/null || echo "")
   current_status=$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null || echo "")
+  # NAMING CONTRACT: every file-level quality hook must set its gate `source`
+  # ending in `-quality-hook` (e.g. ts-quality-hook, rust-quality-hook) so this
+  # `*-quality-hook` guard recognises it; a new hook with a different suffix
+  # would be silently clobbered by a passing command here.
   if [[ "$current_source" == *-quality-hook && "$current_status" == "failing" ]]; then
     exit 0
   fi

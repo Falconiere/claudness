@@ -234,6 +234,24 @@ EOF
   echo "$output" | grep -q "exceeds 10-line limit"
 }
 
+# Regression: the docs advisory matched only bare `pub (fn|struct|enum|trait)`,
+# so `pub(crate)` / `pub(super)` visibility and pub const/static/type/mod were
+# silently skipped. The broadened regex covers them.
+@test "rust-quality: pub(crate) fn without /// doc emits a docs advisory" {
+  command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
+  _rust_project
+  cat > src/api.rs <<'EOF'
+pub(crate) fn do_thing() -> u32 {
+    1
+}
+EOF
+  payload='{"tool_input":{"file_path":"'"$TMP"'/src/api.rs"}}'
+  tool_name=Write input="$payload" PROJECT_ROOT="$TMP" run bash "$HOOK"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "missing a /// doc"
+  ! echo "$output" | grep -q "QUALITY VIOLATION"
+}
+
 @test "rust-quality: pub fn without /// doc emits a non-blocking docs advisory" {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project

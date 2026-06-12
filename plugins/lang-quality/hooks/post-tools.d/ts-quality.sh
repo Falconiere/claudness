@@ -220,6 +220,11 @@ LONG_FUNCS=$(awk -v max="$TS_MAX_FN" -v q="'" '
       if (len > max) printf "%s:%d (%d lines)\n", name, start, len
       infn=0
     }
+    # Release a brace-less single-line form (an expression-bodied arrow like
+    # `const sq = (x) => x * x;` or a parenthesized `const x = (a, b);`) on its
+    # terminating `;`. Mirrors rust-quality.sh: without this the start sticks and
+    # the NEXT real function is misattributed to this line — a bogus over-length.
+    if (!opened && $0 ~ /;[[:space:]]*$/) infn=0
   }
 ' "$FILE_PATH" 2>/dev/null)
 if [[ -n "$LONG_FUNCS" ]]; then

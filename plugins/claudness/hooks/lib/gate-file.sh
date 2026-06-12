@@ -66,6 +66,18 @@ gate_record_failure() {
     mv -f "$tmp" "$gate_file"
   else
     [ -n "$tmp" ] && rm -f "$tmp"
+    # Fallback (mktemp or the merge jq failed): write a single-slot record so
+    # THIS failure is never lost. That collapses any pre-existing multi-slot
+    # `entries` to one record — emit a stderr breadcrumb naming the dropped
+    # count so a vanished-state debugging session can see it happened, rather
+    # than the entries disappearing silently.
+    local _dropped
+    _dropped=$(jq -r '((.entries? // {}) | keys | map(select(. != $f)) | length)' \
+      --arg f "$file" <<< "$existing" 2>/dev/null || echo "")
+    if [ -n "$_dropped" ] && [ "$_dropped" -gt 0 ] 2>/dev/null; then
+      printf 'gate-file: primary write failed at %s; single-slot fallback dropped %s other entry(ies)\n' \
+        "$gate_file" "$_dropped" >&2
+    fi
     jq -n --arg reason "$reason" --arg source "$source" --arg file "$file" \
       --arg violations "$violations" --arg updatedAt "$now" \
       '{status: "failing", reason: $reason, source: $source, file: $file,
