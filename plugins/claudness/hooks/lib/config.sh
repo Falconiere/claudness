@@ -80,6 +80,21 @@ claudness_enabled() {
   return 0
 }
 
+# Like claudness_enabled but DEFAULT OFF: returns 0 only when the key is
+# explicitly `true`. For opt-in components (e.g. the session-end engram
+# reminder) where the default-enabled opt-out semantics are wrong. Missing jq or
+# a missing/non-true value -> 1 (disabled).
+claudness_enabled_explicit() {
+  local category="$1" name="$2"
+  claudness_load_config
+  [ "$_CLAUDNESS_HAS_JQ" = "1" ] || return 1
+  local val
+  val=$(jq -r --arg c "$category" --arg n "$name" \
+    '(.[$c]? // {})[$n]? | tostring' "$CLAUDNESS_CFG_CACHE" 2>/dev/null)
+  [ "$val" = "true" ] && return 0
+  return 1
+}
+
 # Return 0 if any config file is on disk. Stat-only; no jq, no load. Used by
 # hot-path hooks (e.g. mcp-blocker) to skip config-load entirely when no
 # user has opted in.

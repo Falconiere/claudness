@@ -8,7 +8,12 @@ HOOK_DIR="$(dirname "$0")"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
 
-if ! claudness_enabled hooks session-end; then
+# OPT-IN: the end-of-session engram reminder is OFF by default. The agent-memory
+# protocol is always-active and saves proactively during the session, so a
+# Stop-time nag is redundant noise for most users. It emits only when explicitly
+# enabled with `hooks.session-end: true` in claudness.config.json. (This is the
+# one hook with opt-in rather than opt-out semantics — see claudness_enabled_explicit.)
+if ! claudness_enabled_explicit hooks session-end; then
   cat > /dev/null 2>&1 || true
   exit 0
 fi

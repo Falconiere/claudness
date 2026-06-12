@@ -69,3 +69,26 @@ teardown() {
   [ "$output" = "missing" ]
 }
 
+
+@test "claudness_enabled_explicit: disabled by default (no config)" {
+  run claudness_enabled_explicit hooks session-end
+  [ "$status" -eq 1 ]
+}
+
+@test "claudness_enabled_explicit: disabled when key absent but config exists" {
+  echo '{"version":1,"skills":{"engram":true}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_enabled_explicit hooks session-end
+  [ "$status" -eq 1 ]
+}
+
+@test "claudness_enabled_explicit: enabled only when explicitly true" {
+  echo '{"version":1,"hooks":{"session-end":true}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_enabled_explicit hooks session-end
+  [ "$status" -eq 0 ]
+}
+
+@test "claudness_enabled_explicit: disabled when explicitly false" {
+  echo '{"version":1,"hooks":{"session-end":false}}' > "$HOME/.claude/claudness.config.json"
+  run claudness_enabled_explicit hooks session-end
+  [ "$status" -eq 1 ]
+}
