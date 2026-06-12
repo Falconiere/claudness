@@ -65,26 +65,6 @@ detect_ts_linter() {
       || compgen -G "$root/eslint.config.*" >/dev/null 2>&1; }              && echo eslint && return
 }
 
-# Echo the project's TS formatter: biome | prettier | oxc | "" (presence-only).
-# Precedence biome > prettier > oxc.
-detect_ts_formatter() {
-  local root
-  root=$(detect_project_root)
-  [ -z "$root" ] && return 0
-  { [ -f "$root/biome.json" ] || [ -f "$root/biome.jsonc" ]; }                       && echo biome    && return
-  { compgen -G "$root/.prettierrc*" >/dev/null 2>&1 \
-      || compgen -G "$root/prettier.config.*" >/dev/null 2>&1; }                     && echo prettier && return
-  [ -f "$root/.oxlintrc.json" ]                                                      && echo oxc      && return
-}
-
-# Echo "rustfmt" if a rustfmt config exists at the git root.
-detect_rustfmt() {
-  local root
-  root=$(detect_project_root)
-  [ -z "$root" ] && return 0
-  { [ -f "$root/rustfmt.toml" ] || [ -f "$root/.rustfmt.toml" ]; } && echo rustfmt
-}
-
 # Echo "clippy" if a clippy config exists at the git root.
 detect_clippy() {
   local root

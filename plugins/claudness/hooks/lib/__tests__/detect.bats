@@ -115,26 +115,6 @@ source_lib() {
   [ -z "$output" ]
 }
 
-@test "detect_ts_formatter: prettier for .prettierrc" {
-  touch .prettierrc
-  source_lib
-  run detect_ts_formatter
-  [ "$output" = "prettier" ]
-}
-
-@test "detect_ts_formatter: biome for biome.jsonc" {
-  touch biome.jsonc
-  source_lib
-  run detect_ts_formatter
-  [ "$output" = "biome" ]
-}
-
-@test "detect_ts_formatter: empty when none present" {
-  source_lib
-  run detect_ts_formatter
-  [ -z "$output" ]
-}
-
 @test "count_code_lines: excludes blanks and // comments" {
   printf '%s\n' 'let a = 1;' '' '// a comment' '   ' 'let b = 2;' > f.ts
   source_lib
@@ -163,18 +143,16 @@ source_lib() {
   [ "$output" = "2" ]
 }
 
-@test "detect_rustfmt / detect_clippy: token when config present" {
-  touch rustfmt.toml clippy.toml
+@test "detect_clippy: clippy token when config present" {
+  touch clippy.toml
   source_lib
-  run detect_rustfmt
-  [ "$output" = "rustfmt" ]
   run detect_clippy
   [ "$output" = "clippy" ]
 }
 
-@test "detect_rustfmt: empty when absent" {
+@test "detect_clippy: empty when absent" {
   source_lib
-  run detect_rustfmt
+  run detect_clippy
   [ -z "$output" ]
 }
 

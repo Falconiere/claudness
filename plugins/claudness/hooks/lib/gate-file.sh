@@ -16,6 +16,13 @@
 # or "__global__" when it has none. Both jq programs below start with the same
 # seed step — keep them in sync.
 #
+# CONCURRENCY: single-writer by assumption. Both functions read-merge-write via
+# `mktemp` + `mv -f`, which has a TOCTOU window — two writers that read the same
+# `existing` blob would each rewrite it and the last `mv` would drop the other's
+# entry. This is safe today because PostToolUse hooks fire serially per tool
+# call (one writer at a time). If a parallel-edit flow is ever added, guard both
+# functions with `flock` against a `${gate_file}.lock` sentinel.
+#
 # Public API:
 #   gate_record_failure GATE_FILE FILE SOURCE REASON VIOLATIONS
 #   gate_clear_file     GATE_FILE FILE SOURCE
