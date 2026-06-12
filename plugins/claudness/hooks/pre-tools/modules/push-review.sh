@@ -115,20 +115,27 @@ if [[ "$current_diff_sha" == "$EMPTY_BLOB_SHA" ]]; then
   exit 0
 fi
 
+# Reviewer guidance is agnostic: any one accepted reviewer satisfies the gate.
+# Prefer caveman's cavecrew-reviewer when that plugin is installed; otherwise the
+# built-in /code-review skill is the always-available baseline.
+if [ -n "$(detect_plugin_installed 'caveman@caveman' 2>/dev/null)" ]; then
+  reviewer_hint="\`caveman:cavecrew-reviewer\` (caveman is installed — preferred), recorded as \"caveman:cavecrew-reviewer\""
+else
+  reviewer_hint="the built-in \`/code-review xhigh --fix\` skill, recorded as \"code-review\" (or install the caveman plugin and use \`caveman:cavecrew-reviewer\`)"
+fi
+
 # State file gate.
 if [[ ! -f "$state_file" ]]; then
-  jq -n --arg sha "$current_diff_sha" --arg base "$base_branch" --arg file "$state_file" '{
+  jq -n --arg sha "$current_diff_sha" --arg base "$base_branch" --arg file "$state_file" --arg hint "$reviewer_hint" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": (
         "Code review required before push (diff SHA " + $sha + ", base " + $base + ").\n" +
-        "Run 2 reviewers on `git diff " + $base + "...HEAD` SEQUENTIALLY (code-simplifier first): " +
-        "(1) `code-simplifier` — apply its rewrites to the working tree and commit; " +
-        "(2) `caveman:cavecrew-reviewer` — review the post-simplification diff and apply findings. " +
+        "Run a code reviewer on `git diff " + $base + "...HEAD` and apply its findings — use " + $hint + ". " +
         "Then atomically write " + $file + " (tmp+mv) with schema " +
         "{ version: 1, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round }. " +
-        "`reviewers` must include [\"code-simplifier\",\"caveman:cavecrew-reviewer\"] (in that order), " +
+        "`reviewers` must include at least one accepted reviewer (caveman:cavecrew-reviewer, code-review, code-review:xhigh, review, or security-review), " +
         "`findings_count` must be 0, `review_round` starts at 1 and bumps by 1 each rewrite. " +
         "Retry push."
       )
@@ -153,25 +160,26 @@ if [[ "$state_version" != "1" || -z "$state_sha" || -z "$state_findings" ]]; the
   exit 0
 fi
 
-# Reviewers must include the required set. Strict check prevents an agent
-# from writing a partial list and bypassing the gate. `security-review` and
-# `code-review:xhigh` were dropped: `code-simplifier` (from
-# claude-plugins-official) runs first to rewrite for clarity, then
-# `caveman:cavecrew-reviewer` (from the caveman plugin) reviews the
-# post-simplification diff. Both are declared as plugin `dependencies`. Order is
-# enforced only in the deny-message — the membership check below is set-based.
-required_reviewers='["code-simplifier","caveman:cavecrew-reviewer"]'
-if ! jq -e --argjson req "$required_reviewers" \
-     '(.reviewers // []) as $r | ($req | all(. as $x | $r | index($x) != null))' \
+# Reviewer-agnostic gate: at least ONE accepted reviewer must appear in the
+# state file. This keeps claudness usable without the caveman plugin — the
+# built-in /code-review skill is the always-available baseline — while still
+# accepting caveman:cavecrew-reviewer (preferred when installed) and other known
+# reviewers. The check is "intersection non-empty", not equality, so running
+# extra reviewers (e.g. code-simplifier first) is always fine. Requiring at
+# least one known name still prevents an agent from writing a junk reviewer
+# entry to bypass the gate.
+accepted_reviewers='["caveman:cavecrew-reviewer","code-review","code-review:xhigh","review","security-review"]'
+if ! jq -e --argjson acc "$accepted_reviewers" \
+     '(.reviewers // []) as $r | any($acc[]; . as $x | $r | index($x) != null)' \
      "$state_file" >/dev/null 2>&1; then
-  jq -n --arg file "$state_file" --arg req "$required_reviewers" '{
+  jq -n --arg file "$state_file" --arg acc "$accepted_reviewers" --arg hint "$reviewer_hint" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
       "permissionDecision": "deny",
       "permissionDecisionReason": (
-        "state file missing required reviewers at " + $file + "\n" +
-        "All of the following must appear in `reviewers`: " + $req + "\n" +
-        "Run every reviewer (the missing ones too), merge findings, then rewrite the state file."
+        "state file lists no accepted reviewer at " + $file + "\n" +
+        "`reviewers` must include at least one of: " + $acc + "\n" +
+        "Run a reviewer — use " + $hint + " — then rewrite the state file."
       )
     }
   }'

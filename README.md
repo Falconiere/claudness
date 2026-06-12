@@ -51,7 +51,7 @@ Add the language gates and structural-search tooling too:
 /plugin install code-intel@falconiere     # ast-grep + persistent memory
 ```
 
-> **Note** — `code-intel` and `lang-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically.
+> **Note** — `code-intel` and `lang-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 ## What's inside
 
@@ -120,7 +120,7 @@ Plus utility skills: **`context7`** (live library docs) and **`exa-search`** (we
 ## More that comes with it
 
 - **Gate-aware statusline** — one `jq` pass per render shows the live quality-gate status, resolved at the git root so subdir-launched sessions still see it.
-- **`push-review` gate** — blocks `git push` on a feature branch until the diff has been run through `code-simplifier` and `caveman:cavecrew-reviewer`, with a round cap that escalates instead of looping forever.
+- **`push-review` gate** — blocks `git push` on a feature branch until the diff has been run through `caveman:cavecrew-reviewer`, with a round cap that escalates instead of looping forever.
 - **Slash commands** — `/commit`, `/review-and-commit`, `/address-pr-comments`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
 - **Caveman mode** — ultra-compressed, token-frugal output (via the `caveman` dependency).
