@@ -34,6 +34,18 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "session-start: symlinks the statusline to the registry root" {
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  run env CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [ -L "$TMP/cfg/claudness/statusline.sh" ]
+  target=$(readlink "$TMP/cfg/claudness/statusline.sh")
+  [[ "$target" == *"/statusline.sh" ]]
+  [ -f "$target" ]
+}
+
 @test "session-start: emits per-toolchain doc only when toolchain detected" {
   cd "$TMP"
   git init -q

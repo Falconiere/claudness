@@ -16,6 +16,7 @@ Installable as a plugin: `claudness@falconiere` (see [Install](#install) below).
     │   ├── agents/           # Subagent definitions (.md with YAML frontmatter)
     │   ├── commands/         # Slash commands (.md prompt templates)
     │   ├── hooks/            # Hook scripts (PreToolUse, PostToolUse, SessionStart, etc.) + hooks.json
+    │   ├── statusline.sh     # Gate-aware Claude Code statusline (symlinked to a stable path at SessionStart)
     │   ├── tooling/          # Helper CLIs used by skills (context7, exa-search) + bats tests
     │   └── settings/         # Reusable settings.json fragments + hook data files
     ├── code-intel/           # Domain plugin: ast-grep + engram skills, registry-driven hooks
