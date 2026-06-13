@@ -1,0 +1,10 @@
+{
+  "name": "statusliner",
+  "version": "0.1.0",
+  "description": "Optional Claude Code statusline: model, effort, context, a loud quality-gate marker, folder, branch, and caveman mode — wired via a stable symlink. Standalone, no dependencies.",
+  "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+  "homepage": "https://github.com/falconiere/claudness",
+  "repository": "https://github.com/falconiere/claudness.git",
+  "license": "MIT",
+  "keywords": ["claude-code", "statusline", "quality-gate", "caveman"]
+}

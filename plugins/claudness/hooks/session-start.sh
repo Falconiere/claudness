@@ -13,29 +13,15 @@ shopt -u patsub_replacement 2>/dev/null || true
 . "$HOOK_DIR/lib/detect.sh"
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
-# shellcheck source=lib/registry.sh
-. "$HOOK_DIR/lib/registry.sh"
 
-# Symlink the statusline to a stable path so settings.json can point at it
-# without hardcoding the version-specific plugin cache path (plugins cannot
-# declare statusLine in their manifest). Done before the enabled gate so the
-# statusline stays wired even when session-start context injection is disabled.
-# Resolve the plugin dir first: if the cd fails, the old one-liner degraded to
-# the literal path "/statusline.sh" — harmless only as long as no such root
-# file exists. Skip explicitly instead.
-statusline_dir="$(cd "$HOOK_DIR/.." 2>/dev/null && pwd)"
-statusline_src="${statusline_dir:+$statusline_dir/statusline.sh}"
-if [ -n "$statusline_src" ] && [ -f "$statusline_src" ]; then
-  reg_root="$(claudness_registry_root)"
-  mkdir -p "$reg_root" 2>/dev/null || true
-  # Own the path only when it is already our symlink or absent — never clobber a
-  # real file a user may have placed at $reg_root/statusline.sh. (-L catches a
-  # broken/relinked symlink that -e would report as missing.)
-  _sl_dst="$reg_root/statusline.sh"
-  if [ -L "$_sl_dst" ] || [ ! -e "$_sl_dst" ]; then
-    ln -sf "$statusline_src" "$_sl_dst" 2>/dev/null || true
-  fi
-fi
+# Transitional one-time orphan sweep: the statusline moved to the standalone
+# `statusliner` plugin (~/.claude/statusliner/statusline.sh, wired by its own
+# SessionStart hook). Remove the stale symlink claudness used to own at
+# $config/claudness/statusline.sh so an un-migrated settings.json fails loudly
+# (missing file) instead of dangling into a cleaned plugin cache. Only ever
+# removes OUR symlink — a real file a user placed there is left untouched.
+_old_sl="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/statusline.sh"
+[ -L "$_old_sl" ] && rm -f "$_old_sl"
 
 if ! claudness_enabled hooks session-start; then
   cat > /dev/null 2>&1 || true

@@ -81,33 +81,24 @@ no per-project `.claude/settings/` lookup — to override per project, point
 
 ## Statusline
 
-`plugins/claudness/statusline.sh` is a Claude Code statusline: `model | effort |
-ctx | <gate> | folder | branch | <caveman>`. Its claudness-specific segment is a
-loud red `✗ gate:failing` whenever this project's PostToolUse quality gate is
-failing — the same state the lang-quality hooks write to
-`.claude/tmp/quality-gate-status.json`.
-
-Claude Code does not let a plugin declare `statusLine` in its manifest, so the
-SessionStart hook symlinks the script to a stable, version-independent path:
+The statusline moved to its own optional plugin, **`statusliner`** — it shows
+`model | effort | ctx | <gate> | folder | branch | <caveman>`, with a loud red
+`✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
+the lang-quality hooks write. Install it and wire `settings.json` per
+`plugins/statusliner/README.md`:
 
 ```
-~/.claude/claudness/statusline.sh   (→ the installed plugin's statusline.sh)
+/plugin install statusliner@falconiere
 ```
-
-Wire it up once in your `settings.json`:
 
 ```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/claudness/statusline.sh"
-  }
-}
+{ "statusLine": { "type": "command",
+                  "command": "bash ~/.claude/statusliner/statusline.sh" } }
 ```
 
-(Use `$CLAUDE_CONFIG_DIR/claudness/statusline.sh` if you run with a custom
-config dir.) The symlink is refreshed every session, so plugin updates are
-picked up automatically with no settings change.
+Claudness no longer ships or symlinks the statusline; on upgrade it sweeps the
+old `~/.claude/claudness/statusline.sh` symlink it used to own. If you previously
+wired that path, re-point it to `~/.claude/statusliner/statusline.sh`.
 
 ## Runtime config
 

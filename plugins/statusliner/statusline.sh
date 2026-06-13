@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Claudness statusline.
+# Statusliner statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
 #   model | effort | ctx | <gate> | folder | branch | <caveman>
-# The claudness-specific bit is the quality-gate segment: when this project's
+# The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
+# (Lights up only when a gate writer — e.g. lang-quality/claudness — is present.)
 #
 # Wire it up (settings.json) after the SessionStart hook has symlinked it to a
 # stable path:
 #   "statusLine": { "type": "command",
-#                   "command": "bash ~/.claude/claudness/statusline.sh" }
+#                   "command": "bash ~/.claude/statusliner/statusline.sh" }
 #
 # Every field is read defensively — the schema marks effort/used_percentage/etc.
 # as absent before the first API call, after /compact, or on models that lack
@@ -82,7 +83,7 @@ if [ -n "$cwd" ] && [ -d "$cwd" ]; then
   folder=$(basename "$cwd")
 fi
 
-# --- Caveman mode (claudness ships the caveman dependency) ---
+# --- Caveman mode (lights up when the caveman plugin is installed) ---
 # Read the flag file written by caveman-activate; refuse symlinks, cap the read,
 # strip to a safe charset, whitelist known modes.
 caveman_seg=""

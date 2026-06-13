@@ -49,6 +49,15 @@
       "dependencies": [
         { "name": "claudness", "marketplace": "falconiere" }
       ]
+    },
+    {
+      "name": "statusliner",
+      "source": "./plugins/statusliner",
+      "description": "Optional Claude Code statusline: model, effort, context, quality-gate marker, folder, branch, caveman mode. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["statusline", "quality-gate", "caveman", "hooks"],
+      "license": "MIT"
     }
   ]
 }
