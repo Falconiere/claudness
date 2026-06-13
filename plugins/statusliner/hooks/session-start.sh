@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# SessionStart hook for the statusliner plugin.
+#
+# Claude Code does not let a plugin declare `statusLine` in its manifest, so we
+# symlink the script to a stable, version-independent path that settings.json
+# can point at without hardcoding the version-specific plugin cache dir:
+#   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusliner/statusline.sh
+# The symlink is refreshed every session, so plugin updates are picked up with
+# no settings change. statusliner is self-contained — this hook sources no
+# claudness libs; the registry root is just the config dir + /statusliner.
+#
+# Silent on success; every step is non-fatal (a failed symlink means the
+# statusline is stale, not that the session breaks).
+
+# Consume stdin so Claude Code's hook IPC never stalls.
+cat > /dev/null 2>&1 || true
+
+# Resolve the plugin dir from this hook's location: hooks/.. = plugin root.
+# If the cd fails, skip rather than symlinking a bogus "/statusline.sh" path.
+plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+statusline_src="${plugin_dir:+$plugin_dir/statusline.sh}"
+[ -n "$statusline_src" ] && [ -f "$statusline_src" ] || exit 0
+
+reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusliner"
+mkdir -p "$reg_root" 2>/dev/null || exit 0
+
+# Own the path only when it is already our symlink or absent — never clobber a
+# real file a user may have placed at $reg_root/statusline.sh. (-L catches a
+# broken/relinked symlink that -e would report as missing.)
+dst="$reg_root/statusline.sh"
+if [ -L "$dst" ] || [ ! -e "$dst" ]; then
+  ln -sf "$statusline_src" "$dst" 2>/dev/null || true
+fi
+
+exit 0

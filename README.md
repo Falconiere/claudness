@@ -55,13 +55,14 @@ Add the language gates and structural-search tooling too:
 
 ## What's inside
 
-Three plugins, one marketplace. Install the core alone, or add the domain plugins.
+Four plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.5.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, the `deep-explore` agent, and a gate-aware statusline. |
+| **`claudness`** | `1.5.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`lang-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** and **TypeScript** — size limits, error-handling rules, test placement, and more, registered into the core engine. |
 | **`code-intel`** | `0.2.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules. |
+| **`statusliner`** | `0.1.0` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| caveman`, wired via a stable symlink. Standalone, no dependencies. |
 
 ## The quality gate
 
@@ -119,7 +120,7 @@ Plus utility skills: **`context7`** (live library docs) and **`exa-search`** (we
 
 ## More that comes with it
 
-- **Gate-aware statusline** — one `jq` pass per render shows the live quality-gate status, resolved at the git root so subdir-launched sessions still see it.
+- **Gate-aware statusline** — shipped as the optional **`statusliner`** plugin: one `jq` pass per render shows the live quality-gate status, resolved at the git root so subdir-launched sessions still see it.
 - **`push-review` gate** — blocks `git push` on a feature branch until the diff has been run through an accepted reviewer (`caveman:cavecrew-reviewer` when installed, otherwise the built-in `/code-review xhigh --fix` skill), with a round cap that escalates instead of looping forever.
 - **Slash commands** — `/commit`, `/review-and-commit`, `/address-pr-comments`.
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
@@ -160,11 +161,11 @@ At `SessionStart`, each domain plugin's `register.sh` mirrors its `hooks/<event>
     │   ├── agents/             # deep-explore
     │   ├── commands/           # commit, review-and-commit, address-pr-comments
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
-    │   ├── statusline.sh       # gate-aware statusline
     │   ├── tooling/            # helper CLIs (context7, exa-search) + bats tests
     │   └── settings/           # reusable settings fragments
     ├── code-intel/             # ast-grep + comemory skills, registry PreToolUse modules
-    └── lang-quality/           # Rust + TypeScript PostToolUse quality modules
+    ├── lang-quality/           # Rust + TypeScript PostToolUse quality modules
+    └── statusliner/            # optional gate-aware statusline + SessionStart symlink hook
 ```
 
 </details>
