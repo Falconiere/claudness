@@ -33,7 +33,9 @@
       "./plugins/claudness/skills",
       "./plugins/ast-grep/skills",
       "./plugins/comemory/skills",
-      "./plugins/code-review/skills"
+      "./plugins/code-review/skills",
+      "./plugins/context7/skills",
+      "./plugins/exa-search/skills"
     ],
     "prompts": [
       "./plugins/claudness/commands",

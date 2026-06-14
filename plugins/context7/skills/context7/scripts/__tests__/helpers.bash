@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Shared bats helpers for tooling/ script tests.
+# Shared bats helpers for the search.sh script tests.
 #
 # Each test gets a fresh sandbox with a `curl` stub on PATH that records its
 # argv to <TMP>/curl.log instead of hitting the network. Tests assert against
 # curl.log to verify behavior. API keys are passed via the environment
 # variables CONTEXT7_API_KEY / EXA_API_KEY — never via a .env file.
 
-# Two levels up from tooling/__tests__/ is the dir that CONTAINS tooling/ —
-# now plugins/claudness (was the repo root before the Plan 2 reorg).
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# helpers.bash lives in scripts/__tests__/; the script under test is one level
+# up at scripts/search.sh.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 setup_sandbox() {
   local tool="$1"
@@ -18,7 +18,7 @@ setup_sandbox() {
   export TOOL_DIR="$SANDBOX/$tool"
 
   mkdir -p "$TOOL_DIR" "$SANDBOX/bin"
-  cp "$REPO_ROOT/tooling/$tool/search.sh" "$TOOL_DIR/search.sh"
+  cp "$SCRIPT_DIR/search.sh" "$TOOL_DIR/search.sh"
   chmod +x "$TOOL_DIR/search.sh"
 
   cat > "$SANDBOX/bin/curl" <<'CURL'

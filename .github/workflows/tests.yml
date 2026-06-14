@@ -73,10 +73,10 @@ jobs:
       - name: Run bats suite
         run: |
           set -euo pipefail
-          # Run every bats suite in every plugin (hooks, tooling, skills live
-          # under plugins/claudness/ since the Plan 2 reorg; future plugins are
-          # discovered automatically). Tooling tests stub curl on PATH, so they
-          # never hit real APIs.
+          # Run every bats suite in every plugin (hook and skill tests live
+          # under their owning plugin; discovery is dynamic, so new plugins are
+          # picked up automatically). Skill tests that wrap a REST API stub curl
+          # on PATH, so they never hit real APIs.
           mapfile -d '' suites < <(find plugins -name "*.bats" -print0)
           if [ "${#suites[@]}" -eq 0 ]; then
             echo "No bats suites found — test discovery is broken" >&2
