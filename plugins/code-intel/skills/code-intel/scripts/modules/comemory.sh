@@ -7,14 +7,33 @@
 # reads it from the environment) for the data root.
 set -euo pipefail
 
-# Self-contained project detection — inlined from the claudness core's
-# hooks/lib/detect.sh so this plugin has no cross-plugin source path (it may
-# be installed without a claudness checkout next to it). detect_project_name
+# Self-contained project detection — no cross-plugin source path (this plugin
+# may be installed without a claudness checkout next to it). detect_project_name
 # uses an if-block (not a bare `[ -n ] && basename`) so it exits 0 outside a
-# git repo and `set -e` reaches the REPO="unknown" fallback below; the
-# core helper matches this contract.
+# git repo and `set -e` reaches the REPO="unknown" fallback below.
+#
+# Unlike the claudness core's hooks/lib/detect.sh (which resolves the per-worktree
+# --show-toplevel — correct for per-worktree gate state), memory scope must be
+# the CANONICAL repo root, SHARED across every git worktree: --show-toplevel is
+# the worktree path, so each worktree would otherwise mint a separate `--repo`
+# scope and saves made in a worktree become invisible from main and sibling
+# worktrees. All worktrees share one .git, and --git-common-dir points at the
+# main worktree's .git from every worktree AND the main checkout, so dirname of
+# it is the stable repo root. Mirrors comemory-status.sh's repo_key. Falls back
+# to --show-toplevel when common-dir is not "<root>/.git" (custom GIT_DIR / bare
+# layouts), then empty (→ "unknown") outside a repo.
 detect_project_root() {
-  git rev-parse --show-toplevel 2>/dev/null || true
+  local common
+  # --path-format=absolute needs git >= 2.31; retry plain then absolutize for older git.
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+  if [ -z "$common" ]; then
+    common=$(git rev-parse --git-common-dir 2>/dev/null || true)
+    [ -n "$common" ] && common=$(cd "$common" 2>/dev/null && pwd || true)
+  fi
+  case "$common" in
+    */.git) dirname "$common" ;;
+    *)      git rev-parse --show-toplevel 2>/dev/null || true ;;
+  esac
 }
 detect_project_name() {
   local root

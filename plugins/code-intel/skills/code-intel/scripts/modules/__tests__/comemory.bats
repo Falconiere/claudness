@@ -171,6 +171,52 @@ _stub_argv() {
   [ "$status" -eq 0 ]
 }
 
+# ── Worktree scope: --repo must be the REPO, not the per-worktree checkout dir ─
+# Regression: detect_project_root used `git rev-parse --show-toplevel`, which in
+# a worktree is the worktree dir — so saves made in a worktree got an orphan
+# `--repo <worktree-name>` scope, invisible from main and sibling worktrees.
+# Build a REAL repo + worktree (no mocks for git) and capture the injected
+# --repo via the argv stub so the real store is untouched.
+_make_repo_with_worktree() {
+  REPO_DIR="$BATS_TEST_TMPDIR/myrepo"
+  WT_DIR="$BATS_TEST_TMPDIR/wt-feature"
+  git init -q "$REPO_DIR"
+  git -C "$REPO_DIR" config user.email t@t.t
+  git -C "$REPO_DIR" config user.name t
+  git -C "$REPO_DIR" commit -q --allow-empty -m init
+  git -C "$REPO_DIR" worktree add -q "$WT_DIR" >/dev/null 2>&1
+}
+
+@test "comemory: --repo resolves to the repo name from inside a git worktree (real worktree, argv stub)" {
+  _stub_argv
+  _make_repo_with_worktree
+  # MY_CLAUDE_COMEMORY_REPO is exported suite-wide; unset it so auto-detection runs.
+  cd "$WT_DIR"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  [ "$status" -eq 0 ]
+  local repo_val
+  repo_val=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
+  [ "$repo_val" = "myrepo" ]        # the repo, shared across worktrees
+  [ "$repo_val" != "wt-feature" ]   # NOT the per-worktree checkout dir
+}
+
+@test "comemory: --repo matches between the main checkout and its worktree (real worktree, argv stub)" {
+  _stub_argv
+  _make_repo_with_worktree
+  cd "$REPO_DIR"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  [ "$status" -eq 0 ]
+  local from_main
+  from_main=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
+  cd "$WT_DIR"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  [ "$status" -eq 0 ]
+  local from_wt
+  from_wt=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
+  [ "$from_main" = "myrepo" ]
+  [ "$from_wt" = "$from_main" ]
+}
+
 @test "comemory: feedback round-trips against the real binary (isolated store)" {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-fb"
   mkdir -p "$COMEMORY_DATA_DIR"
