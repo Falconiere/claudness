@@ -51,13 +51,34 @@
       ]
     },
     {
-      "name": "statusliner",
-      "source": "./plugins/statusliner",
+      "name": "statusline",
+      "source": "./plugins/statusline",
       "description": "Optional Claude Code statusline: model, effort, context, quality-gate marker, folder, branch, caveman mode. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["statusline", "quality-gate", "caveman", "hooks"],
       "license": "MIT"
+    },
+    {
+      "name": "code-review",
+      "source": "./plugins/code-review",
+      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the claudness push-review state so the gate passes. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["code-review", "push-review", "quality", "skills"],
+      "license": "MIT"
+    },
+    {
+      "name": "pr-babysit",
+      "source": "./plugins/pr-babysit",
+      "description": "Babysit a PR: fetch unresolved review comments + the CI review bot's verdict, triage, fix, reply, resolve, and chase findings to zero until CI is green. Cron-driven.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["pr", "review", "ci", "automation"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "claudness", "marketplace": "falconiere" }
+      ]
     }
   ]
 }

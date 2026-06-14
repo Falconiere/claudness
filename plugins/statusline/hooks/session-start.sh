@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# SessionStart hook for the statusliner plugin.
+# SessionStart hook for the statusline plugin.
 #
 # Claude Code does not let a plugin declare `statusLine` in its manifest, so we
 # symlink the script to a stable, version-independent path that settings.json
 # can point at without hardcoding the version-specific plugin cache dir:
-#   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusliner/statusline.sh
+#   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline/statusline.sh
 # The symlink is refreshed every session, so plugin updates are picked up with
-# no settings change. statusliner is self-contained — this hook sources no
-# claudness libs; the registry root is just the config dir + /statusliner.
+# no settings change. statusline is self-contained — this hook sources no
+# claudness libs; the registry root is just the config dir + /statusline.
 #
 # Silent on success; every step is non-fatal (a failed symlink means the
 # statusline is stale, not that the session breaks).
@@ -21,7 +21,7 @@ plugin_dir="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 statusline_src="${plugin_dir:+$plugin_dir/statusline.sh}"
 [ -n "$statusline_src" ] && [ -f "$statusline_src" ] || exit 0
 
-reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusliner"
+reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline"
 mkdir -p "$reg_root" 2>/dev/null || exit 0
 
 # Own the path only when it is already our symlink or absent — never clobber a

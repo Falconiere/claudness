@@ -1,0 +1,10 @@
+### Code Review — `some PR title`
+
+The review ran but emitted no checklist (format drift / partial post).
+
+### Findings
+
+`plugins/foo/bar.sh:10`: low: A finding that exists even though there is no checklist.
+
+### Other checks
+- nothing else
