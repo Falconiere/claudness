@@ -28,8 +28,12 @@ _empty() { jq -nc '{is_review_comment:false, state:"unknown", complete:false, ve
 [ -n "${input//[[:space:]]/}" ] || { _empty; exit 0; }
 
 # --- Identify: marker-based, both states ---
+# Precondition: the babysit pre-filters comments to claude[bot]/github-actions[bot]
+# before calling this; the markers below are anchored to the bot's own structures
+# (review headings, the [View job] CI link, a backticked agent-merge label) so a
+# stray "actions/runs/…" or "agent-merge-…" in arbitrary prose won't false-positive.
 is_review=false
-if printf '%s' "$input" | grep -qE '^### Code Review|^### PR Review in Progress|actions/runs/[0-9]+|agent-merge-'; then
+if printf '%s' "$input" | grep -qE '^### Code Review|^### PR Review in Progress|\[View job\]\([^)]*actions/runs/[0-9]+|`agent-merge-[a-z]'; then
   is_review=true
 fi
 if [ "$is_review" != true ]; then _empty; exit 0; fi
@@ -44,12 +48,14 @@ else                              state="complete"
 fi
 complete=false; [ "$state" = complete ] && complete=true
 
-# --- Verdict ---
+# --- Verdict --- check "changes" BEFORE "approved": if a body ever carries both
+# literals (e.g. a transitional "was approved → now requesting changes"), the
+# stricter verdict must win rather than a stray "**Approved**" short-circuiting.
 verdict_label=$(printf '%s' "$input" | grep -oE 'agent-merge-[a-z-]+' | head -1 || true)
-if printf '%s' "$input" | grep -qiE '\*\*Approved\*\*' || [[ "$verdict_label" == *approved* ]]; then
-  verdict="approved"
-elif printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested|agent-merge-blocked' || [[ "$verdict_label" == *changes* || "$verdict_label" == *blocked* ]]; then
+if printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested|agent-merge-blocked' || [[ "$verdict_label" == *changes* || "$verdict_label" == *blocked* ]]; then
   verdict="changes"
+elif printf '%s' "$input" | grep -qiE '\*\*Approved\*\*' || [[ "$verdict_label" == *approved* ]]; then
+  verdict="approved"
 else
   verdict="none"
 fi
@@ -57,7 +63,9 @@ fi
 # --- Findings: only the `### Findings` … next `### ` block, lines of the form
 #     `path[:line]`: severity: text
 _sha1() { (sha1sum 2>/dev/null || shasum 2>/dev/null || echo nohash) | cut -c1-8; }
-findings_block=$(printf '%s\n' "$input" | awk '/^### Findings[[:space:]]*$/{f=1;next} /^### /{f=0} f')
+# Tolerate a decorated header (`### Findings`, `### Findings (6)`) — exact-match
+# would miss a count suffix and silently report zero findings.
+findings_block=$(printf '%s\n' "$input" | awk '/^### Findings([[:space:]]|$)/{f=1;next} /^### /{f=0} f')
 findings_json="[]"
 while IFS= read -r line; do
   [[ "$line" =~ ^\`([^\`]+)\`:\ (blocker|high|medium|low|nit):\ (.*)$ ]] || continue

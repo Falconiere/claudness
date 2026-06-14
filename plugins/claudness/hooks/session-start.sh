@@ -22,6 +22,8 @@ shopt -u patsub_replacement 2>/dev/null || true
 # $config/claudness/statusline.sh so an un-migrated settings.json fails loudly
 # (missing file) instead of dangling into a cleaned plugin cache. Only ever
 # removes OUR symlink — a real file a user placed there is left untouched.
+# Deliberately runs BEFORE the `claudness_enabled` opt-out below: a user who
+# disables session-start context should still not be left with a dangling symlink.
 _old_sl="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/statusline.sh"
 [ -L "$_old_sl" ] && rm -f "$_old_sl"
 
