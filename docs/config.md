@@ -34,7 +34,7 @@ See `plugins/claudness/settings/claudness.config.example.json` for a fully-popul
 
 ### Quality thresholds (`lang`)
 
-The lang-quality gate's line limits are not hardcoded. Each threshold resolves
+The rust-quality and ts-quality gates' line limits are not hardcoded. Each threshold resolves
 with this precedence (first hit wins, always a positive integer):
 
 1. **Project / user override** — the `lang.<ts|rust>.<key>` value above.

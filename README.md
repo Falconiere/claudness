@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/claudness?sort=semver&color=d97757)](https://github.com/Falconiere/claudness/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-547%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-568%20passing-brightgreen)](#testing)
 [![Built for Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://claude.com/claude-code)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -47,20 +47,22 @@ Install from the public marketplace in any Claude Code session:
 Add the language gates and structural-search tooling too:
 
 ```text
-/plugin install lang-quality@falconiere   # Rust + TypeScript quality gates
+/plugin install rust-quality@falconiere   # Rust quality gates
+/plugin install ts-quality@falconiere     # TypeScript quality gates
 /plugin install code-intel@falconiere     # ast-grep + persistent memory
 ```
 
-> **Note** — `code-intel` and `lang-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `code-intel`, `rust-quality`, and `ts-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 ## What's inside
 
-Six plugins, one marketplace. Install the core alone, or add the domain plugins.
+Seven plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.7.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
-| **`lang-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** and **TypeScript** — size limits, error-handling rules, test placement, and more, registered into the core engine. |
+| **`claudness`** | `1.8.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
+| **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
 | **`code-intel`** | `0.2.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules. |
 | **`statusline`** | `0.2.0` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
 | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
@@ -68,7 +70,7 @@ Six plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 ## The quality gate
 
-The headline feature. When `lang-quality` is installed, every Rust/TypeScript file Claude edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
+The headline feature. When `rust-quality` and/or `ts-quality` is installed, every Rust/TypeScript file Claude edits is checked on the spot. Limits are **config-driven** (project/user override → the active native linter's `max-lines` → built-in default), and the gate is **multi-slot**: a failing test command and a failing file check are tracked independently, so fixing one never silently masks the other.
 
 <table>
 <tr><th align="left">TypeScript</th><th align="left">Rust</th></tr>
@@ -138,16 +140,18 @@ flowchart TD
         D["hook dispatcher<br/>PreToolUse · PostToolUse · SessionStart …"]
     end
     subgraph plugins["domain plugins"]
-        LQ["lang-quality<br/>register.sh"]
+        RQ["rust-quality<br/>register.sh"]
+        TQ["ts-quality<br/>register.sh"]
         CI["code-intel<br/>register.sh"]
     end
-    LQ -- "mirror per-event modules at SessionStart" --> R[("registry<br/>~/.claude/claudness/")]
+    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>~/.claude/claudness/")]
+    TQ -- "one assembled module per language" --> R
     CI -- "namespaced plugin__name.sh" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` mirrors its `hooks/<event>.d/*.sh` into the registry as `<plugin-spec>__<name>.sh`. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `code-intel` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -166,7 +170,8 @@ At `SessionStart`, each domain plugin's `register.sh` mirrors its `hooks/<event>
     │   ├── tooling/            # helper CLIs (context7, exa-search) + bats tests
     │   └── settings/           # reusable settings fragments
     ├── code-intel/             # ast-grep + comemory skills, registry PreToolUse modules
-    ├── lang-quality/           # Rust + TypeScript PostToolUse quality modules
+    ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
+    ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/            # optional gate-aware statusline + SessionStart symlink hook
     ├── pr-babysit/             # /pr-babysit:babysit command + parse-verdict.sh
     └── code-review/            # code-review:review skill + push-review state writer
@@ -189,7 +194,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **547 [bats](https://github.com/bats-core/bats-core) tests** across 39 suites, run in CI on every push:
+The hook engine and language gates are covered by **568 [bats](https://github.com/bats-core/bats-core) tests** across 55 suites, run in CI on every push:
 
 ```sh
 bats -r plugins

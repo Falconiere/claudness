@@ -4,7 +4,7 @@
 #   model | effort | ctx | <gate> | folder | branch | <caveman>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
-# (Lights up only when a gate writer — e.g. lang-quality/claudness — is present.)
+# (Lights up only when a gate writer — e.g. rust-quality/ts-quality/claudness — is present.)
 #
 # Wire it up (settings.json) after the SessionStart hook has symlinked it to a
 # stable path:
@@ -63,7 +63,7 @@ else
 fi
 
 # --- Quality gate (claudness): red marker only when failing ---
-# Resolve the gate file at the git root (where the lang-quality hooks write it
+# Resolve the gate file at the git root (where the rust-quality / ts-quality hooks write it
 # via $PROJECT_ROOT), not at $cwd — a subdir-launched session or worktree has
 # cwd != project root, which would silently miss the marker.
 gate_seg=""

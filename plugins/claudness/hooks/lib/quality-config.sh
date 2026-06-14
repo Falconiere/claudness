@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quality-threshold resolver for the lang-quality hooks.
+# Quality-threshold resolver for the rust-quality / ts-quality hooks.
 #
 # Limits are NOT hardcoded in the quality modules. Each threshold resolves with
 # this precedence (first hit wins, always a positive integer):

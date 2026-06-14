@@ -1,0 +1,13 @@
+{
+  "name": "rust-quality",
+  "version": "0.1.0",
+  "description": "Rust PostToolUse quality checks registered into the claudness hook engine.",
+  "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+  "homepage": "https://github.com/falconiere/claudness",
+  "repository": "https://github.com/falconiere/claudness.git",
+  "license": "MIT",
+  "keywords": ["claude-code", "rust", "quality", "hooks"],
+  "dependencies": [
+    { "name": "claudness", "marketplace": "falconiere" }
+  ]
+}

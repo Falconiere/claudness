@@ -39,12 +39,24 @@
       ]
     },
     {
-      "name": "lang-quality",
-      "source": "./plugins/lang-quality",
-      "description": "Rust + TypeScript PostToolUse quality checks via the claudness registry.",
+      "name": "rust-quality",
+      "source": "./plugins/rust-quality",
+      "description": "Rust PostToolUse quality checks via the claudness registry.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
-      "keywords": ["rust", "typescript", "quality", "hooks"],
+      "keywords": ["rust", "quality", "hooks"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "claudness", "marketplace": "falconiere" }
+      ]
+    },
+    {
+      "name": "ts-quality",
+      "source": "./plugins/ts-quality",
+      "description": "TypeScript PostToolUse quality checks via the claudness registry.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["typescript", "quality", "hooks"],
       "license": "MIT",
       "dependencies": [
         { "name": "claudness", "marketplace": "falconiere" }

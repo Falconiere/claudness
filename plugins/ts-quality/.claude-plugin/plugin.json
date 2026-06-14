@@ -1,12 +1,12 @@
 {
-  "name": "lang-quality",
+  "name": "ts-quality",
   "version": "0.1.0",
-  "description": "Language-specific PostToolUse quality checks (Rust, TypeScript) registered into the claudness hook engine.",
+  "description": "TypeScript PostToolUse quality checks registered into the claudness hook engine.",
   "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
   "homepage": "https://github.com/falconiere/claudness",
   "repository": "https://github.com/falconiere/claudness.git",
   "license": "MIT",
-  "keywords": ["claude-code", "rust", "typescript", "quality", "hooks"],
+  "keywords": ["claude-code", "typescript", "quality", "hooks"],
   "dependencies": [
     { "name": "claudness", "marketplace": "falconiere" }
   ]
