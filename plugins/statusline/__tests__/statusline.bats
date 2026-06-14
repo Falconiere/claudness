@@ -73,3 +73,71 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   plain=$(_plain "$out")
   [[ "$plain" == *"gate:failing"* ]]
 }
+
+@test "statusline: format_tokens M-tier renders millions with one decimal" {
+  # format_tokens drives the ctx segment; feed a millions-scale token count.
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":13779513,"used_percentage":99}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"ctx:13.7M/200k"* ]]
+}
+
+@test "statusline: format_tokens M-tier stays k below a million" {
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":13779,"used_percentage":7}}' | bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"ctx:13k/200k"* ]]
+}
+
+@test "statusline: wk: renders the summed current-week usage dir" {
+  wk=$(date +%G-W%V)
+  mkdir -p "$TMP/cfg/statusline/usage/$wk"
+  printf '{"tokens":1000000}' > "$TMP/cfg/statusline/usage/$wk/s1.json"
+  printf '{"tokens":234567}'  > "$TMP/cfg/statusline/usage/$wk/s2.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"wk:1.2M"* ]]
+}
+
+@test "statusline: wk: omitted when there is no usage for the week" {
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" != *"wk:"* ]]
+}
+
+@test "statusline: wk: a non-numeric usage file does not zero the whole week" {
+  wk=$(date +%G-W%V)
+  mkdir -p "$TMP/cfg/statusline/usage/$wk"
+  printf '{"tokens":1000000}' > "$TMP/cfg/statusline/usage/$wk/good.json"
+  printf '{"tokens":"abc"}'   > "$TMP/cfg/statusline/usage/$wk/bad.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"wk:1.0M"* ]]
+}
+
+@test "statusline: mem: renders the count from the comemory marker" {
+  ( cd "$TMP" && git init -q )
+  key=$(basename "$TMP")
+  mkdir -p "$TMP/cfg/comemory-status"
+  printf '{"repo":"%s","count":7}' "$key" > "$TMP/cfg/comemory-status/$key.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"[mem:7]"* ]]
+}
+
+@test "statusline: mem: worktree resolves to the main-repo key" {
+  main="$TMP/main"; mkdir -p "$main"
+  ( cd "$main" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init )
+  git -C "$main" worktree add -q "$TMP/wt" >/dev/null 2>&1
+  key=$(basename "$main")
+  mkdir -p "$TMP/cfg/comemory-status"
+  printf '{"repo":"%s","count":5}' "$key" > "$TMP/cfg/comemory-status/$key.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'/wt"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"[mem:5]"* ]]
+}
+
+@test "statusline: mem: omitted when there is no marker" {
+  ( cd "$TMP" && git init -q )
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" != *"[mem:"* ]]
+}
