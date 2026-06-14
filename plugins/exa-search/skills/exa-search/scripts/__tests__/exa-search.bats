@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for tooling/exa-search/search.sh env resolution.
+# Tests for the exa-search search.sh env resolution.
 # API key is supplied via the EXA_API_KEY environment variable.
 
 load helpers

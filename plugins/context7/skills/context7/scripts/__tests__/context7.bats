@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for tooling/context7/search.sh env resolution.
+# Tests for the context7 search.sh env resolution.
 # API key is supplied via the CONTEXT7_API_KEY environment variable.
 
 load helpers

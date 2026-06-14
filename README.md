@@ -44,16 +44,18 @@ Install from the public marketplace in any Claude Code session:
 /plugin install claudness@falconiere
 ```
 
-Add the language gates and structural-search tooling too:
+Add the language gates, search, and docs tooling too:
 
 ```text
 /plugin install rust-quality@falconiere   # Rust quality gates
 /plugin install ts-quality@falconiere     # TypeScript quality gates
 /plugin install ast-grep@falconiere       # structural code search & rewrite
 /plugin install comemory@falconiere       # persistent cross-session memory
+/plugin install context7@falconiere       # live library documentation lookup
+/plugin install exa-search@falconiere     # web / code / URL search + research
 ```
 
-> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `claudness`; `ast-grep` is standalone (zero deps); `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `claudness`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 ## Pi
 
@@ -66,7 +68,7 @@ pi install https://github.com/Falconiere/claudness
 That package exposes:
 
 - the claudness workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, etc.)
-- the ast-grep, agent-memory, and code-review skills
+- the ast-grep, agent-memory, code-review, context7, and exa-search skills
 - a pi extension that reuses the existing claudness pre/post-tool shell hooks for:
   - protected-file and bash-command blocking
   - quality-gate enforcement between steps
@@ -82,7 +84,7 @@ See [`docs/config.md`](./docs/config.md).
 
 ## What's inside
 
-Eight plugins, one marketplace. Install the core alone, or add the domain plugins.
+Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
@@ -94,6 +96,8 @@ Eight plugins, one marketplace. Install the core alone, or add the domain plugin
 | **`statusline`** | `0.3.0` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
 | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | **`code-review`** | `0.1.0` | `code-review:review` — project-tuned pre-push review mirroring the CI bot's checklist; writes the `push-review` state so the gate passes. Standalone. |
+| **`context7`** | `1.12.0` | `context7` skill — live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
+| **`exa-search`** | `1.12.0` | `exa-search` skill — **web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 
 ## The quality gate
 
@@ -147,7 +151,7 @@ flowchart LR
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
 
-Plus utility skills: **`context7`** (live library docs) and **`exa-search`** (web / code search / crawl), from `ast-grep`: **`ast-grep`**, and from `comemory`: **`agent-memory`**.
+Plus, from `ast-grep`: **`ast-grep`**, and from `comemory`: **`agent-memory`**. Live library docs (**`context7`**) and web / code search / crawl (**`exa-search`**) ship as their own standalone, individually-installable plugins.
 
 ## More that comes with it
 
@@ -192,14 +196,15 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     ├── claudness/              # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # plugin.json manifest
     │   ├── skills/             # brainstorm, spec(+review), plan(+review),
-    │   │                       #   execution(+review), test, context7, exa-search
+    │   │                       #   execution(+review), test
     │   ├── agents/             # deep-explore
     │   ├── commands/           # commit, review-and-commit
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
-    │   ├── tooling/            # helper CLIs (context7, exa-search) + bats tests
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + Grep→ast-grep nudge registry module
     ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
+    ├── context7/               # context7 skill + Context7 REST wrapper
+    ├── exa-search/             # exa-search skill + Exa REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/            # optional gate-aware statusline + SessionStart symlink hook

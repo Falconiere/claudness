@@ -10,7 +10,7 @@
     {
       "name": "claudness",
       "source": "./plugins/claudness",
-      "description": "Omnibus bundle: all skills, agents, commands, and hooks in this repo.",
+      "description": "claudness workflow core: brainstorm → spec → plan → execution → test skills, agents, slash commands, and the hook engine.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
@@ -103,6 +103,24 @@
       "dependencies": [
         { "name": "claudness", "marketplace": "falconiere" }
       ]
+    },
+    {
+      "name": "context7",
+      "source": "./plugins/context7",
+      "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["context7", "documentation", "skills"],
+      "license": "MIT"
+    },
+    {
+      "name": "exa-search",
+      "source": "./plugins/exa-search",
+      "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["exa", "web-search", "skills"],
+      "license": "MIT"
     }
   ]
 }
