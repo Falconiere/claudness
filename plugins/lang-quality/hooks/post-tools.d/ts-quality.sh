@@ -117,7 +117,9 @@ if [[ -n "$AS_LINES" ]]; then
   add_error "Forbidden 'as' type assertion in $FILE_PATH — use type guards or Zod\n${AS_LINES}"
 fi
 
-if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ ]]; then
+# E2E specs follow a framework layout (e2e/specs/<feature>/*.spec.ts), not the
+# unit-test __tests__/ co-location model — exempt them from these rules.
+if [[ "$FILE_PATH" =~ \.(test|spec)\.(ts|tsx)$ && "$FILE_PATH" != */e2e/* ]]; then
   if [[ "$FILE_PATH" != */__tests__/* ]]; then
     add_error "Test file outside __tests__/: $FILE_PATH — move to sibling __tests__/ directory"
   else
