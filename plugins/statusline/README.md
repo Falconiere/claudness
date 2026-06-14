@@ -12,7 +12,7 @@ model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main |
 | model | `.model.display_name` | always |
 | effort | `.effort.level` | the model reports an effort level |
 | ctx | `.context_window.*` | always |
-| `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `lang-quality` / `claudness` plugins) marks the gate failing |
+| `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `claudness` plugins) marks the gate failing |
 | folder + branch | git, from the workspace dir | inside a git repo |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
 

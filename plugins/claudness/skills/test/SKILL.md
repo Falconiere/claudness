@@ -16,7 +16,7 @@ The final phase of the claudness workflow. Tests are written **with** the code, 
    - **TS / TSX** → sibling `__tests__/` directory at the same level as the code under test. Keep it flat (only `fixtures/`, `helpers/`, `mocks/`, `utils/` subdirs). Files `*.test.ts` / `*.spec.ts`.
    - **Rust** → sibling `tests/` directory, kept flat (only `fixtures/`, `helpers/`, `common/` subdirs). No inline `#[cfg(test)]` in `src/`.
 
-The lang-quality gate enforces both placements on every edit — a misplaced test fails the gate.
+The rust-quality / ts-quality gate enforces both placements on every edit — a misplaced test fails the gate.
 
 ## Test-first loop
 
