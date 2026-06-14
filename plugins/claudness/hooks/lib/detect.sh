@@ -215,6 +215,25 @@ strip_heredocs() {
   '
 }
 
+# Echo a filesystem-safe slug for a branch name: '/'→'_', strip to
+# [a-zA-Z0-9_-], empty → "_default". Used to key per-branch transient state
+# files (push-review, plan-ledger). Takes the branch name as $1.
+branch_slug() {
+  local branch="$1"
+  local slug
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  [[ -z "$slug" ]] && slug="_default"
+  echo "$slug"
+}
+
+# Return 0 iff the raw command string $1 is a `git push` (heredoc bodies
+# stripped first so a `git push` inside a heredoc/commit-message is ignored).
+# Boundary-anchored on both sides so `gitpush`/`git pushup` do not match.
+is_git_push() {
+  printf '%s\n' "$1" | strip_heredocs \
+    | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|;|&|\||$)'
+}
+
 # Read non-comment non-blank lines from a settings file. Returns 0 with no
 # output if the file is missing.
 read_list() {

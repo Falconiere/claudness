@@ -25,6 +25,7 @@ Review the diff (the executed work) against the checklist. For each item ask *wo
 - **Structure** — one responsibility per file, named after its export, under the size ceiling; no leftover duplication of existing helpers.
 - **Docs** — public/exported symbols carry a concise doc; nothing verbose.
 - **Gate is green** — the quality gate passes; the change didn't land by working around it.
+- **Ledger is fresh-green** — for ledger-tracked work, `bash plugins/claudness/hooks/lib/plan-ledger.sh status` reports every step fresh-green (status==green against the current diff_sha) before done; any red/pending/stale step is a blocker.
 
 ## Output
 

@@ -18,6 +18,7 @@ A design exists — ideally a reviewed spec (`spec` + `spec-review` ran for larg
 1. **Context** — why this change, the problem it solves, intended outcome. 2–4 sentences.
 2. **Approach** — the chosen design only, not the alternatives. Name the reused functions/utilities with their paths.
 3. **Steps / workstreams** — ordered, each independently verifiable. For a pattern repeated across many files, describe it once and list a few representative paths — don't enumerate every file.
+   - For non-trivial work (features/refactors/behavior changes), emit the plan doc at `docs/claudness/plans/<date>-<slug>.md` with a machine-readable steps block under a heading literally `## Steps (machine-readable)` — a single fenced ` ```json ` array of `{id,title,check}`, where `check` is a runnable command (exit 0 = green). This block is the ledger contract `execution` tracks against.
 4. **Critical files** — exact paths to create or modify.
 5. **Verification** — how to prove it works end-to-end: the commands to run, the tests to add, the real-data path to exercise.
 

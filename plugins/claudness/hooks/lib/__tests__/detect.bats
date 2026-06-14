@@ -377,3 +377,87 @@ _stub_comemory() {  # $1 = version string the stub reports
   PATH="$bin" run comemory_version_ok
   [ "$status" -eq 2 ]
 }
+
+# ── branch_slug ─────────────────────────────────────────────────────────────
+# Shared with push-review.sh / write-state.sh: '/'→'_', strip to safe charset,
+# empty → "_default". Keyed branch-slug naming for transient state files.
+
+@test "branch_slug: feat/foo -> feat_foo" {
+  source_lib
+  run branch_slug "feat/foo"
+  [ "$status" -eq 0 ]
+  [ "$output" = "feat_foo" ]
+}
+
+@test "branch_slug: a/b/c -> a_b_c (all slashes)" {
+  source_lib
+  run branch_slug "a/b/c"
+  [ "$status" -eq 0 ]
+  [ "$output" = "a_b_c" ]
+}
+
+@test "branch_slug: weird chars stripped (feat#\$% -> feat)" {
+  source_lib
+  run branch_slug 'feat#$%'
+  [ "$status" -eq 0 ]
+  [ "$output" = "feat" ]
+}
+
+@test "branch_slug: empty -> _default" {
+  source_lib
+  run branch_slug ""
+  [ "$status" -eq 0 ]
+  [ "$output" = "_default" ]
+}
+
+# ── is_git_push ─────────────────────────────────────────────────────────────
+# Shared push detection: strip_heredocs then the exact push-review regex.
+# Returns 0 iff the command is a real `git push` (boundary-anchored).
+
+@test "is_git_push: bare 'git push' matches" {
+  source_lib
+  run is_git_push "git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'git push origin main' matches" {
+  source_lib
+  run is_git_push "git push origin main"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'x && git push' matches" {
+  source_lib
+  run is_git_push "x && git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'foo; git push' matches" {
+  source_lib
+  run is_git_push "foo; git push"
+  [ "$status" -eq 0 ]
+}
+
+@test "is_git_push: 'gitpush' does NOT match" {
+  source_lib
+  run is_git_push "gitpush"
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: 'git status' does NOT match" {
+  source_lib
+  run is_git_push "git status"
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: 'git pushup' does NOT match (boundary required after push)" {
+  source_lib
+  run is_git_push "git pushup"
+  [ "$status" -ne 0 ]
+}
+
+@test "is_git_push: 'git push' inside heredoc body is ignored" {
+  source_lib
+  run is_git_push "$(printf '%s\n' 'cat <<EOF' 'about git push' 'EOF')"
+  [ "$status" -ne 0 ]
+}
