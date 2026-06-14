@@ -88,7 +88,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`toolu`** | `1.13.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`toolu`** | `1.14.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
 | **`ast-grep`** | `0.1.0` | Structural code search & rewrite (**ast-grep**) — a `Grep → ast-grep` nudge mirrored into the runtime registry. Standalone, no dependencies. |
@@ -96,8 +96,8 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 | **`statusline`** | `0.3.0` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
 | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | **`code-review`** | `0.1.0` | `code-review:review` — project-tuned pre-push review mirroring the CI bot's checklist; writes the `push-review` state so the gate passes. Standalone. |
-| **`context7`** | `1.13.0` | `context7` skill — live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
-| **`exa-search`** | `1.13.0` | `exa-search` skill — **web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
+| **`context7`** | `1.14.0` | `context7` skill — live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
+| **`exa-search`** | `1.14.0` | `exa-search` skill — **web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 
 ## The quality gate
 
