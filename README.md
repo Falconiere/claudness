@@ -54,11 +54,11 @@ Add the language gates and structural-search tooling too:
 
 > **Note** — `code-intel`, `rust-quality`, and `ts-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
-## New in v1.9.0
+## New in v1.10.0
 
-- **Language gates are now split by language** — install `rust-quality` for Rust and `ts-quality` for TypeScript instead of one combined quality plugin.
-- **The split is structural, not behavioral** — each language gate is now authored as ordered concern fragments and assembled at `SessionStart`, so installs are leaner without changing the gate's actual checks.
-- **Upgrade path:** if you previously used `lang-quality`, replace it with whichever of `rust-quality` and `ts-quality` you need.
+- **Statusline weekly token usage (`wk:`)** — the `statusline` plugin now shows account-wide tokens consumed this ISO week (Mon–Sun, local time), summed across the main agent and its subagents and deduped by message id. A `Stop` hook does the work off the render hot path; each Monday a fresh bucket starts and prior weeks are kept for future reporting.
+- **Comemory count badge (`[mem:N]`)** — when `code-intel` is installed, the statusline shows the project's memory count, published once per session and worktree-correct so a worktree shares its main repo's scope.
+- **Upgrade path:** no action needed — both segments light up automatically when the relevant plugins are installed, and degrade silently when they're not.
 
 ## What's inside
 
@@ -66,11 +66,11 @@ Seven plugins, one marketplace. Install the core alone, or add the domain plugin
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.9.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`claudness`** | `1.10.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
-| **`code-intel`** | `0.2.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules. |
-| **`statusline`** | `0.2.0` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
+| **`code-intel`** | `0.3.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules and a `SessionStart` memory-count publisher for the statusline. |
+| **`statusline`** | `0.3.0` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
 | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | **`code-review`** | `0.1.0` | `code-review:review` — project-tuned pre-push review mirroring the CI bot's checklist; writes the `push-review` state so the gate passes. Standalone. |
 
