@@ -15,6 +15,8 @@ A reviewed plan exists (`plan` + `plan-review` ran for non-trivial work). If the
 
 ## Loop (per step)
 
+For ledger-tracked work, read progress with `bash plugins/claudness/hooks/lib/plan-ledger.sh status` to find the next non-fresh-green step, do the loop below for it, then record it with `bash plugins/claudness/hooks/lib/plan-ledger.sh run --step <id>` — the script stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Before push, do a final full `bash plugins/claudness/hooks/lib/plan-ledger.sh run` so every step is fresh-green against the final code.
+
 1. **Take one step** from the plan — the smallest shippable unit.
 2. **Write tests with the code** (see `test`) — real data, colocated. For a bugfix, reproduce first.
 3. **Handle errors in code, never suppress them.** Every fallible call gets a real handler — propagate (`?`, rethrow), match, or convert; never swallow, never silence with a disable comment (`@ts-ignore`, `eslint-disable`, `#[allow]`). The gate enforces this on every edit; write it right the first time.

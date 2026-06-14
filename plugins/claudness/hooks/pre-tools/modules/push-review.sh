@@ -29,23 +29,16 @@ command -v jq  >/dev/null 2>&1 || exit 0
 command -v git >/dev/null 2>&1 || exit 0
 
 command=$(echo "$input" | jq -r '.tool_input.command // ""')
-cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-# The trailing boundary must also catch statement terminators (`git push;`,
-# `git push&`, `git push|tee`) — without them an agent could append `;` and
-# slip the push past the gate, which is now the only push-time check.
-echo "$cmd_only" | grep -qE '(^|\s|&&|\|\||;)git\s+push(\s|;|&|\||$)' || exit 0
-
-_branch_slug() {
-  local branch="$1"
-  local slug
-  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
-  [[ -z "$slug" ]] && slug="_default"
-  echo "$slug"
-}
+# Push detection (strip_heredocs + boundary-anchored regex) is shared via
+# detect.sh's is_git_push. The trailing boundary also catches statement
+# terminators (`git push;`, `git push&`, `git push|tee`) — without them an agent
+# could append `;` and slip the push past the gate, which is now the only
+# push-time check.
+is_git_push "$command" || exit 0
 
 current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-slug=$(_branch_slug "$current_branch")
+slug=$(branch_slug "$current_branch")
 
 # Resolve state dir: env override takes precedence; else project-root default.
 state_dir=${STATE_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/tmp/push-review}

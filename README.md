@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/claudness?sort=semver&color=d97757)](https://github.com/Falconiere/claudness/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-495%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-547%20passing-brightgreen)](#testing)
 [![Built for Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://claude.com/claude-code)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -189,7 +189,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **495 [bats](https://github.com/bats-core/bats-core) tests** across 35 suites, run in CI on every push:
+The hook engine and language gates are covered by **547 [bats](https://github.com/bats-core/bats-core) tests** across 39 suites, run in CI on every push:
 
 ```sh
 bats -r plugins
