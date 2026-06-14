@@ -60,13 +60,13 @@ _expected_module() {
 @test "register: idempotent — second run leaves the module byte- and mtime-stable, silent" {
   bash "$REGISTER" </dev/null
   before_sum=$(cksum < "$REG_DIR/$MODULE")
-  before_mtime=$(stat -f %m "$REG_DIR/$MODULE")
+  before_mtime=$({ stat -c %Y "$REG_DIR/$MODULE" 2>/dev/null || stat -f %m "$REG_DIR/$MODULE"; })
   sleep 1
   run bash "$REGISTER" </dev/null
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   after_sum=$(cksum < "$REG_DIR/$MODULE")
-  after_mtime=$(stat -f %m "$REG_DIR/$MODULE")
+  after_mtime=$({ stat -c %Y "$REG_DIR/$MODULE" 2>/dev/null || stat -f %m "$REG_DIR/$MODULE"; })
   [ "$before_sum" = "$after_sum" ]
   [ "$before_mtime" = "$after_mtime" ]
 }
