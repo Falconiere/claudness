@@ -59,6 +59,19 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
 }
 
+@test "parse-verdict: a bare actions/runs substring in prose is NOT a review comment" {
+  out=$(printf 'fyi see actions/runs/999 and agent-merge-foo, thanks' | bash "$PV")
+  [ "$(jq -r .is_review_comment <<<"$out")" = "false" ]
+}
+
+@test "parse-verdict: decorated '### Findings (N)' header still extracts findings" {
+  body=$'### Code Review — x\n\n- [x] done\n\n### Findings (1)\n\n`a/b.sh:5`: low: a thing.\n\n### Other checks\n- ok'
+  out=$(printf '%s' "$body" | bash "$PV")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 1 ]
+  [ "$(jq -r '.findings[0].path' <<<"$out")" = "a/b.sh" ]
+}
+
 @test "parse-verdict: empty input is handled" {
   out=$(printf '' | bash "$PV")
   [ "$(jq -r .is_review_comment <<<"$out")" = "false" ]

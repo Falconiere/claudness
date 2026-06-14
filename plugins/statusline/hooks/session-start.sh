@@ -22,7 +22,10 @@ statusline_src="${plugin_dir:+$plugin_dir/statusline.sh}"
 [ -n "$statusline_src" ] && [ -f "$statusline_src" ] || exit 0
 
 reg_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline"
-mkdir -p "$reg_root" 2>/dev/null || exit 0
+# Non-fatal hook: a failure here (e.g. a non-directory file occupies $reg_root)
+# must not break the session, but leave one stderr breadcrumb so the otherwise-
+# silent no-op is debuggable.
+mkdir -p "$reg_root" 2>/dev/null || { echo "statusline: cannot create $reg_root — statusline not wired" >&2; exit 0; }
 
 # Own the path only when it is already our symlink or absent — never clobber a
 # real file a user may have placed at $reg_root/statusline.sh. (-L catches a
