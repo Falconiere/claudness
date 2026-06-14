@@ -48,13 +48,19 @@ else                              state="complete"
 fi
 complete=false; [ "$state" = complete ] && complete=true
 
-# --- Verdict --- check "changes" BEFORE "approved": if a body ever carries both
-# literals (e.g. a transitional "was approved → now requesting changes"), the
-# stricter verdict must win rather than a stray "**Approved**" short-circuiting.
+# --- Verdict --- the machine-readable `agent-merge-*` label is AUTHORITATIVE.
+# Don't infer from prose when a label exists: finding TEXT routinely discusses
+# "Changes requested"/"approved" (e.g. a finding about verdict parsing itself),
+# and a whole-body grep would misclassify an approved PR as "changes". Fall back
+# to prose only when no label is present (changes-first there, as the safe bias).
 verdict_label=$(printf '%s' "$input" | grep -oE 'agent-merge-[a-z-]+' | head -1 || true)
-if printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested|agent-merge-blocked' || [[ "$verdict_label" == *changes* || "$verdict_label" == *blocked* ]]; then
+if [[ "$verdict_label" == *approved* ]]; then
+  verdict="approved"
+elif [[ "$verdict_label" == *blocked* || "$verdict_label" == *changes* ]]; then
   verdict="changes"
-elif printf '%s' "$input" | grep -qiE '\*\*Approved\*\*' || [[ "$verdict_label" == *approved* ]]; then
+elif printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested'; then
+  verdict="changes"
+elif printf '%s' "$input" | grep -qiE '\*\*Approved\*\*'; then
   verdict="approved"
 else
   verdict="none"

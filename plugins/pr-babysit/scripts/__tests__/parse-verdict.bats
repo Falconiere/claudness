@@ -39,6 +39,19 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$a" = "$b" ]
 }
 
+@test "parse-verdict: agent-merge-approved label wins over finding prose mentioning 'Changes requested'" {
+  body=$'### Code Review — x\n\n- [x] done (`agent-merge-approved`)\n\n### Findings\n\n`a/b.sh:9`: low: prefer checking **Changes requested** before approved here.\n\n**Approved** (`agent-merge-approved`)'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  [ "$(jq -r .verdict_label <<<"$out")" = "agent-merge-approved" ]
+}
+
+@test "parse-verdict: agent-merge-blocked label → changes" {
+  body=$'### Code Review — x\n\n- [x] done\n\n### Findings\n\n`a/b.sh:9`: high: real problem.\n\n**Changes requested** (`agent-merge-blocked`)'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .verdict <<<"$out")" = "changes" ]
+}
+
 @test "parse-verdict: in-progress comment is not complete" {
   out=$(bash "$PV" < "$FIX/in-progress.txt")
   [ "$(jq -r .is_review_comment <<<"$out")" = "true" ]
