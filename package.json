@@ -1,0 +1,42 @@
+{
+  "name": "claudness",
+  "version": "1.9.0",
+  "description": "Engineering discipline for coding agents — now packaged for Pi too.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "claude-code",
+    "skills",
+    "hooks",
+    "quality-gate"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^25.9.3",
+    "bun-types": "^1.3.14",
+    "typescript": "^5.8.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bats -r plugins && bun run typecheck"
+  },
+  "pi": {
+    "extensions": [
+      "./pi/extensions"
+    ],
+    "skills": [
+      "./plugins/claudness/skills",
+      "./plugins/code-intel/skills",
+      "./plugins/code-review/skills"
+    ],
+    "prompts": [
+      "./plugins/claudness/commands",
+      "./plugins/pr-babysit/commands"
+    ]
+  }
+}

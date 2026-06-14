@@ -6,8 +6,13 @@ disable what you do not want.
 
 ## Locations
 
+Claude Code:
 - User-global: `~/.claude/claudness.config.json`
 - Project override: `$CLAUDE_PROJECT_DIR/.claude/claudness.config.json`
+
+Pi (via the bundled pi extension):
+- User-global: `~/.pi/agent/claudness.config.json`
+- Project override: `<repo>/.pi/claudness.config.json`
 
 Both are optional. When both exist they are deep-merged via `jq '. * .'`;
 project values win on conflict. Missing keys default to **enabled**.

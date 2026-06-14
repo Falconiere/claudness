@@ -4,3 +4,6 @@
 
 # Local workflow artifacts (specs/plans) — not shipped
 docs/claudness/
+
+# Dependencies
+node_modules/

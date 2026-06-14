@@ -12,7 +12,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 [![Built for Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://claude.com/claude-code)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
-[Install](#install) · [What's inside](#whats-inside) · [The quality gate](#the-quality-gate) · [Workflow skills](#workflow-skills) · [Configuration](#configuration)
+[Install](#install) · [Pi](#pi) · [What's inside](#whats-inside) · [The quality gate](#the-quality-gate) · [Workflow skills](#workflow-skills) · [Configuration](#configuration)
 
 </div>
 
@@ -53,6 +53,31 @@ Add the language gates and structural-search tooling too:
 ```
 
 > **Note** — `code-intel`, `rust-quality`, and `ts-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+
+## Pi
+
+claudness is also installable as a **pi package**:
+
+```bash
+pi install https://github.com/Falconiere/claudness
+```
+
+That package exposes:
+
+- the claudness workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, etc.)
+- the code-intel and code-review skills
+- a pi extension that reuses the existing claudness pre/post-tool shell hooks for:
+  - protected-file and bash-command blocking
+  - quality-gate enforcement between steps
+  - TS/Rust post-edit checks
+  - live gate status in pi's footer
+
+Pi config locations are:
+
+- user: `~/.pi/agent/claudness.config.json`
+- project: `.pi/claudness.config.json`
+
+See [`docs/config.md`](./docs/config.md).
 
 ## New in v1.10.0
 
@@ -150,7 +175,7 @@ flowchart TD
         TQ["ts-quality<br/>register.sh"]
         CI["code-intel<br/>register.sh"]
     end
-    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>~/.claude/claudness/")]
+    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>agent config dir/claudness/")]
     TQ -- "one assembled module per language" --> R
     CI -- "namespaced plugin__name.sh" --> R
     R --> D
@@ -187,7 +212,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers without uninstalling anything. Drop a `~/.claude/claudness.config.json` (or per-project `$CLAUDE_PROJECT_DIR/.claude/claudness.config.json`). Defaults are opt-out — no file required.
+Toggle individual skills, hooks, or MCP servers without uninstalling anything. In Claude Code, use `~/.claude/claudness.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/claudness.config.json`). In pi, use `~/.pi/agent/claudness.config.json` (or `.pi/claudness.config.json`). Defaults are opt-out — no file required.
 
 ```json
 {
