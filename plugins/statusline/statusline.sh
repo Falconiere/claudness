@@ -52,7 +52,10 @@ format_tokens() {
   # Guard non-numeric input (a future schema change could emit a string) so the
   # arithmetic and printf below stay safe on the per-render hot path.
   [[ "$n" =~ ^[0-9]+$ ]] || { printf '0'; return; }
-  if [ "$n" -ge 1000 ]; then printf '%dk' "$(( n / 1000 ))"; else printf '%d' "$n"; fi
+  if [ "$n" -ge 1000000 ]; then
+    # M-tier with one decimal, integer-only (no float arithmetic in bash): 13779513 -> 13.7M
+    printf '%d.%dM' "$(( n / 1000000 ))" "$(( (n % 1000000) / 100000 ))"
+  elif [ "$n" -ge 1000 ]; then printf '%dk' "$(( n / 1000 ))"; else printf '%d' "$n"; fi
 }
 ctx_used_fmt=$(format_tokens "$ctx_used")
 ctx_size_fmt=$(format_tokens "$ctx_size")
@@ -98,14 +101,50 @@ if [ -f "$caveman_flag" ] && [ ! -L "$caveman_flag" ]; then
   esac
 fi
 
+# --- Weekly token usage (wk): account-wide Mon–Sun consumption ---
+# Sum the per-(week,session) files the token-ledger Stop hook writes for the
+# current local ISO week. Read-only and cheap (a handful of small files) — the
+# expensive transcript parse lives in the hook, never on this render path.
+CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+usage_seg=""
+_usage_dir="${CFG}/statusline/usage/$(date +%G-W%V 2>/dev/null)"
+_usage_sum=$(cat "$_usage_dir"/*.json 2>/dev/null | jq -s 'map((.tokens // 0) | numbers) | add // 0' 2>/dev/null)
+if [ -n "$_usage_sum" ] && [ "$_usage_sum" -gt 0 ] 2>/dev/null; then
+  usage_seg="${BOLD}wk:$(format_tokens "$_usage_sum")${RESET}"
+fi
+
+# --- Comemory memory count ([mem:N]): per-project, main-repo scoped ---
+# Read the marker written by code-intel's comemory-status SessionStart hook.
+# The key derivation MUST match that hook (git-common-dir → main-repo basename)
+# so a worktree resolves to the same scope as its main checkout.
+comemory_seg=""
+if [ -n "$cwd" ]; then
+  _ck=$(git -C "$cwd" --no-optional-locks rev-parse --git-common-dir 2>/dev/null)
+  if [ -n "$_ck" ]; then
+    case "$_ck" in
+      /*) ;;
+      *) _ck=$(cd "$cwd" 2>/dev/null && cd "$_ck" 2>/dev/null && pwd) ;;
+    esac
+    if [ -n "$_ck" ]; then  # absolutize may fail; never build a key from an empty path
+      _cfile="${CFG}/comemory-status/$(basename "$(dirname "$_ck")").json"
+      if [ -f "$_cfile" ]; then
+        _cn=$(jq -r '.count // empty' "$_cfile" 2>/dev/null)
+        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[mem:${_cn}]${RESET}"
+      fi
+    fi
+  fi
+fi
+
 # --- Assemble ---
 sep="${DIM} | ${RESET}"
 line="${CYAN}${model}${RESET}"
 [ -n "$effort" ] && [ "$effort" != "null" ] && line="${line}${sep}${YELLOW}effort:${effort}${RESET}"
 line="${line}${sep}${MAGENTA}ctx:${tokens_seg}${RESET}"
+[ -n "$usage_seg" ] && line="${line}${sep}${usage_seg}"
 [ -n "$gate_seg" ] && line="${line}${sep}${gate_seg}"
 [ -n "$folder" ] && line="${line}${sep}${BOLD}${folder}${RESET}"
 [ -n "$branch" ] && line="${line}${sep}${BLUE}${branch}${RESET}"
+[ -n "$comemory_seg" ] && line="${line}${sep}${comemory_seg}"
 [ -n "$caveman_seg" ] && line="${line}${sep}${caveman_seg}"
 
 printf '%s' "$line"

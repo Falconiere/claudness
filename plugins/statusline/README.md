@@ -4,7 +4,7 @@ An optional Claude Code statusline. One line, assembled defensively from the
 statusline JSON Claude Code sends on stdin:
 
 ```
-model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main | [CAVEMAN]
+model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-folder | main | [mem:42] | [CAVEMAN]
 ```
 
 | Segment | Source | Shows when |
@@ -12,14 +12,30 @@ model | effort:high | ctx:45k/200k (22%) | ✗ gate:failing | my-folder | main |
 | model | `.model.display_name` | always |
 | effort | `.effort.level` | the model reports an effort level |
 | ctx | `.context_window.*` | always |
+| `wk:` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline/usage/<week>/*.json` | any token usage has been recorded this week |
 | `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `claudness` plugins) marks the gate failing |
 | folder + branch | git, from the workspace dir | inside a git repo |
+| `[mem:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **code-intel** plugin published a memory count this session |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
 
-The gate and caveman segments degrade gracefully — if the file they read is
-absent, the segment simply doesn't render. So statusline is **standalone**: it
-declares no plugin dependencies. Those two segments just light up automatically
-when the relevant plugins are also installed.
+The gate, usage, comemory, and caveman segments degrade gracefully — if the file
+they read is absent, the segment simply doesn't render. So statusline is
+**standalone**: it declares no plugin dependencies. Those segments just light up
+automatically when the relevant plugins are also installed.
+
+### Weekly token usage (`wk:`)
+
+`wk:` is the account-wide tokens consumed **this ISO week (Mon–Sun, local time)** —
+`input + output + cache_creation` summed across every session (main agent **and**
+subagents), deduped by message id, with `cache_read` excluded (it is ~98% of raw
+usage, billed ~0.1×, and does not pace the rate-limit window). A `Stop` hook
+(`hooks/token-ledger.sh`) does the transcript parsing once per turn and writes a
+small per-`(week, session)` file; the render only sums those files, so it stays
+cheap. Each Monday a new week bucket starts and the display resets; prior weeks
+are kept on disk under `statusline/usage/` for future reporting, never deleted.
+
+> Week boundaries follow the **local** timezone (the hook buckets each message by
+> its own timestamp's local ISO week). Tests pin `TZ=UTC` only for determinism.
 
 ## Install & wire up
 

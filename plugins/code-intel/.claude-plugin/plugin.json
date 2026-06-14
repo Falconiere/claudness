@@ -1,7 +1,7 @@
 {
   "name": "code-intel",
-  "version": "0.2.0",
-  "description": "Structural code search (ast-grep) + persistent memory (comemory): skills, wrappers, and PreToolUse enforcement modules registered into the claudness hook engine.",
+  "version": "0.3.0",
+  "description": "Structural code search (ast-grep) + persistent memory (comemory): skills, wrappers, PreToolUse enforcement modules, and a SessionStart memory-count publisher for the statusline — registered into the claudness hook engine.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
