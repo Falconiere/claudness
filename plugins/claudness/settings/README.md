@@ -81,24 +81,24 @@ no per-project `.claude/settings/` lookup — to override per project, point
 
 ## Statusline
 
-The statusline moved to its own optional plugin, **`statusliner`** — it shows
+The statusline moved to its own optional plugin, **`statusline`** — it shows
 `model | effort | ctx | <gate> | folder | branch | <caveman>`, with a loud red
 `✗ gate:failing` marker driven by the same `.claude/tmp/quality-gate-status.json`
 the lang-quality hooks write. Install it and wire `settings.json` per
-`plugins/statusliner/README.md`:
+`plugins/statusline/README.md`:
 
 ```
-/plugin install statusliner@falconiere
+/plugin install statusline@falconiere
 ```
 
 ```json
 { "statusLine": { "type": "command",
-                  "command": "bash ~/.claude/statusliner/statusline.sh" } }
+                  "command": "bash ~/.claude/statusline/statusline.sh" } }
 ```
 
 Claudness no longer ships or symlinks the statusline; on upgrade it sweeps the
 old `~/.claude/claudness/statusline.sh` symlink it used to own. If you previously
-wired that path, re-point it to `~/.claude/statusliner/statusline.sh`.
+wired that path, re-point it to `~/.claude/statusline/statusline.sh`.
 
 ## Runtime config
 

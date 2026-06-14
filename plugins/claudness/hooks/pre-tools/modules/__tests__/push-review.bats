@@ -266,6 +266,27 @@ EOF
   [ -z "$output" ]
 }
 
+@test "push-review: code-review:review reviewer alone satisfies the accepted set" {
+  sha=$(current_diff_sha)
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
+  jq -n --arg sha "$sha" '{
+    version: 1,
+    branch: "feat/example",
+    diff_sha: $sha,
+    base_branch: "development",
+    reviewed_at: "2026-06-07T00:00:00Z",
+    reviewers: ["code-review:review"],
+    findings_count: 0,
+    review_round: 1,
+    findings: []
+  }' > "$STATE_DIR/${slug}.json"
+  payload=$(build_input "git push")
+  run_hook "Bash" "$payload"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "push-review: caveman reviewer alone satisfies the accepted set" {
   sha=$(current_diff_sha)
   branch=$(git rev-parse --abbrev-ref HEAD)
@@ -332,7 +353,7 @@ EOF
 
 @test "push-review: review_round above MAX_ROUNDS triggers escalation deny" {
   sha=$(current_diff_sha)
-  write_state "$sha" 0 4
+  write_state "$sha" 0 6
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
   [ "$status" -eq 0 ]
@@ -343,7 +364,7 @@ EOF
 
 @test "push-review: review_round at MAX_ROUNDS still allowed" {
   sha=$(current_diff_sha)
-  write_state "$sha" 0 3
+  write_state "$sha" 0 5
   payload=$(build_input "git push")
   run_hook "Bash" "$payload"
   [ "$status" -eq 0 ]
