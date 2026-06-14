@@ -67,6 +67,14 @@ teardown() {
   [ "$(jq -r .review_round "$out2")" = "2" ]
 }
 
+@test "write-state: refuses the empty-blob SHA (no divergence from base)" {
+  git checkout -q -b feature   # branched from main, no new commit → empty diff
+  run env CLAUDE_PROJECT_DIR="$TMP" PUSH_REVIEW_BASE=main bash "$WS" --findings-count 0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"empty"* ]]
+  [ ! -f "$TMP/.claude/tmp/push-review/feature.json" ]
+}
+
 @test "write-state: non-integer findings-count is rejected" {
   git checkout -q -b feature
   echo a > f.txt && git add f.txt && git commit -qm work

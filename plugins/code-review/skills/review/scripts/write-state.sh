@@ -52,6 +52,16 @@ fi
 diff_sha=$(git diff --no-color "${base}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null || echo "")
 [ -n "$diff_sha" ] || { echo "write-state.sh: git diff ${base}...HEAD failed" >&2; exit 1; }
 
+# Refuse the empty-blob SHA: an empty diff against base means nothing diverged
+# (or a force-reset). The push-review gate treats this sentinel as never-matching
+# and denies, so writing a state file with it just yields a confusing
+# "review recorded" → "diff is empty" deny. Fail early with an actionable message.
+EMPTY_BLOB_SHA="e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+if [ "$diff_sha" = "$EMPTY_BLOB_SHA" ]; then
+  echo "write-state.sh: diff against ${base} is empty; nothing to review yet" >&2
+  exit 1
+fi
+
 # slug — MIRROR of push-review.sh:_branch_slug.
 slug=$(echo "$branch" | tr '/' '_' | tr -cd 'a-zA-Z0-9_-')
 [ -n "$slug" ] || slug="_default"

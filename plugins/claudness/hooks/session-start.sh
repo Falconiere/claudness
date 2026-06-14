@@ -14,9 +14,11 @@ shopt -u patsub_replacement 2>/dev/null || true
 # shellcheck source=lib/config.sh
 . "$HOOK_DIR/lib/config.sh"
 
-# Transitional one-time orphan sweep: the statusline moved to the standalone
-# `statusline` plugin (~/.claude/statusline/statusline.sh, wired by its own
-# SessionStart hook). Remove the stale symlink claudness used to own at
+# Transitional orphan sweep (safe to delete this block once users have migrated,
+# ~v1.7+): the statusline moved to the standalone `statusline` plugin
+# (~/.claude/statusline/statusline.sh, wired by its own SessionStart hook). Runs
+# every session but no-ops once the symlink is gone. Remove the stale symlink
+# claudness used to own at
 # $config/claudness/statusline.sh so an un-migrated settings.json fails loudly
 # (missing file) instead of dangling into a cleaned plugin cache. Only ever
 # removes OUR symlink — a real file a user placed there is left untouched.

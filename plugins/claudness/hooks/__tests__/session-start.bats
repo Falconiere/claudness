@@ -34,6 +34,26 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "session-start: orphan sweep removes the legacy statusline symlink" {
+  cd "$TMP"
+  mkdir -p "$TMP/cfg/claudness"
+  ln -s "$TMP/cfg/claudness/gone.sh" "$TMP/cfg/claudness/statusline.sh"
+  run env CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [ ! -L "$TMP/cfg/claudness/statusline.sh" ]
+  [ ! -e "$TMP/cfg/claudness/statusline.sh" ]
+}
+
+@test "session-start: orphan sweep never deletes a real statusline file" {
+  cd "$TMP"
+  mkdir -p "$TMP/cfg/claudness"
+  printf 'user-owned' > "$TMP/cfg/claudness/statusline.sh"
+  run env CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  [ -f "$TMP/cfg/claudness/statusline.sh" ]
+  [ "$(cat "$TMP/cfg/claudness/statusline.sh")" = "user-owned" ]
+}
+
 @test "session-start: emits per-toolchain doc only when toolchain detected" {
   cd "$TMP"
   git init -q
