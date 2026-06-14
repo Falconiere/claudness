@@ -52,6 +52,48 @@ teardown() { rm -rf "$TMP"; }
   [ "$before" = "$after" ]
 }
 
+@test "register: syncs post-tools.d modules with the spec prefix" {
+  POST_SRC="$(cd "$(dirname "$BATS_TEST_FILENAME")/../post-tools.d" && pwd)"
+  run bash "$REGISTER" <<<'{}'
+  [ "$status" -eq 0 ]
+  for src in "$POST_SRC"/*.sh; do
+    name=$(basename "$src")
+    dst="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ast-grep@toolu__${name}"
+    [ -f "$dst" ]
+    cmp -s "$src" "$dst"
+  done
+}
+
+@test "register e2e: post-tools module records a byte-savings ledger via the core dispatcher" {
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/post-tools" && pwd)/mod.sh"
+  bash "$REGISTER" <<<'{}'
+  mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
+  printf '%s' '{"plugins":{"ast-grep@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  f="$TMP/big.txt"; printf 'x%.0s' {1..4000} > "$f"
+  payload=$(jq -n --arg fp "$f" '{tool_name:"Read",session_id:"e2e",tool_input:{file_path:$fp},tool_response:"abc"}')
+  run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" HOME="$TMP" \
+    bash "$CORE_MOD" <<<"$payload"
+  [ "$status" -eq 0 ]
+  led="$CLAUDE_CONFIG_DIR/toolu/byte-savings/e2e.jsonl"
+  [ -f "$led" ]
+  [ "$(jq -r '.kind'     "$led")" = "read" ]
+  [ "$(jq -r '.returned' "$led")" = "3" ]
+  [ "$(jq -r '.full'     "$led")" = "4000" ]
+}
+
+@test "register e2e: post-tools module is gated off when the plugin is absent" {
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/post-tools" && pwd)/mod.sh"
+  bash "$REGISTER" <<<'{}'
+  mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
+  printf '%s' '{"plugins":{}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  f="$TMP/big.txt"; printf 'x%.0s' {1..4000} > "$f"
+  payload=$(jq -n --arg fp "$f" '{tool_name:"Read",session_id:"gated",tool_input:{file_path:$fp},tool_response:"abc"}')
+  run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" HOME="$TMP" \
+    bash "$CORE_MOD" <<<"$payload"
+  [ "$status" -eq 0 ]
+  [ ! -e "$CLAUDE_CONFIG_DIR/toolu/byte-savings/gated.jsonl" ]
+}
+
 @test "register: writes are atomic (no *.tmp.* leftovers)" {
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]

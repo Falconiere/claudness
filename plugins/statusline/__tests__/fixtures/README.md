@@ -49,6 +49,30 @@ jq -s '[ .[] | select(.type=="assistant")
 > tests — pin **`TZ=UTC`** so the Monday-00:00 week boundary is deterministic.
 > Under a different TZ the straddle fixture collapses into a single week.
 
+## Cost + per-bucket fields
+
+Alongside `tokens`, the ledger now records the per-bucket token sums
+(`input` / `output` / `cache_read` / `cache_write`) and a `$`-weighted `cost`,
+priced per message at that message's model rate (Opus $5/$25, Sonnet $3/$15,
+Haiku $1/$5 per Mtok; cache_read 0.1×input; cache writes 1.25× for 5-min and 2×
+for 1-hour TTL, split via `usage.cache_creation.ephemeral_{5m,1h}_input_tokens`;
+unknown models price at the Sonnet tier). The `sub-session` fixtures use
+`opus-4-7`/`opus-4-8`/`haiku-4-5` and 1-hour cache writes. Reference values
+(main + 3 subagents, deduped, week `2026-W24`), pinned by the bats test:
+
+| field        | value     |
+|--------------|-----------|
+| `tokens`     | 268219    |
+| `input`      | 7554      |
+| `output`     | 17448     |
+| `cache_read` | 4550314   |
+| `cache_write`| 243217    |
+| `cost`       | ≈ $1.45   |
+
+The spread is the point: `cache_read` (4.55M) dwarfs the rate-limit-pacing
+`tokens` total (268k) but is billed at ~0.1×, so a tokens-only view hides where
+the money goes — hence the `$` and `cache:NN%` statusline segments.
+
 ## Fixtures
 
 ### `straddle.jsonl` — Monday-midnight week straddle

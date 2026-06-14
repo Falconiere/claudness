@@ -39,8 +39,6 @@ NODE_PM="$(detect_node_pm)"
 HAS_RUST="$(detect_rust)"
 HAS_TS="$(detect_ts)"
 
-GATE_FILE="$PROJECT_ROOT/.claude/tmp/quality-gate-status.json"
-
 # ── Parse stdin to detect event type ────────────────────────────────────────
 input=$(cat 2>/dev/null || echo "{}")
 event="startup"
@@ -69,29 +67,22 @@ render_doc() {
   printf '%s' "$content"
 }
 
-# ── Git context (branch + dirty count) ──────────────────────────────────────
+# ── Git context (branch only) ───────────────────────────────────────────────
+# Cache discipline: this string lands in the once-cached SessionStart prefix, so
+# it must depend only on stable inputs. The branch is stable within a session;
+# the working-tree dirty count is NOT — it goes stale immediately and differs on
+# every startup/resume/compact, perturbing the prefix for no lasting value. Live
+# working state is already on the statusline and one `git status` away.
 git_ctx=""
 if command -v git >/dev/null 2>&1; then
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  if [[ -n "$branch" ]]; then
-    dirty_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    if [[ "$dirty_count" -gt 0 ]]; then
-      git_ctx="Branch: $branch ($dirty_count uncommitted files)"
-    else
-      git_ctx="Branch: $branch (clean)"
-    fi
-  fi
+  [[ -n "$branch" ]] && git_ctx="Branch: $branch"
 fi
 
-# ── Quality gate status ─────────────────────────────────────────────────────
-gate_hint=""
-if [[ -f "$GATE_FILE" ]] && command -v jq >/dev/null 2>&1; then
-  gate_status=$(jq -r '.status // ""' "$GATE_FILE" 2>/dev/null)
-  if [[ "$gate_status" == "failing" ]]; then
-    reason=$(jq -r '.reason // "Unknown"' "$GATE_FILE" 2>/dev/null)
-    gate_hint="WARNING: Quality gate failing — $reason. Fix before other work."
-  fi
-fi
+# Note: the failing-quality-gate reminder is deliberately NOT injected here. It
+# is volatile (flips as you work) and already surfaced live by the statusline
+# and per-prompt by user-prompt-submit.sh — re-injecting it into the cached
+# prefix would duplicate context and perturb the cache on every gate flip.
 
 # ── Build context based on event type ───────────────────────────────────────
 parts=()
@@ -244,9 +235,8 @@ if [[ -n "$plugin_manifest" && -f "$plugin_manifest" ]] && command -v jq >/dev/n
   fi
 fi
 
-# Append git context and gate status
+# Append git context (branch only — see the cache-discipline note above).
 [[ -n "$git_ctx" ]] && parts+=("$git_ctx")
-[[ -n "$gate_hint" ]] && parts+=("$gate_hint")
 
 # ── Join and output ─────────────────────────────────────────────────────────
 full_context=""

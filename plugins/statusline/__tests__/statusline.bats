@@ -141,3 +141,46 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   plain=$(_plain "$out")
   [[ "$plain" != *"[COMEMORY:"* ]]
 }
+
+# --- token-ledger: weighted cost + cache_read ---------------------------------
+LEDGER="${BATS_TEST_DIRNAME}/../hooks/token-ledger.sh"
+
+@test "token-ledger: records weighted cost + cache_read buckets from real fixtures" {
+  # sub-session.jsonl auto-picks up its …/sub-session/subagents/agent-*.jsonl.
+  # Reference values computed independently from the fixtures (real data, no mocks):
+  #   tokens 268219, input 7554, output 17448, cache_read 4550314, cache_write 243217, cost ≈ $1.45.
+  fix="${BATS_TEST_DIRNAME}/fixtures/sub-session.jsonl"
+  printf '%s' '{"transcript_path":"'"$fix"'","session_id":"testsess"}' \
+    | CLAUDE_CONFIG_DIR="$TMP/cfg" TZ=UTC bash "$LEDGER"
+  f="$TMP/cfg/statusline/usage/2026-W24/testsess.json"
+  [ -f "$f" ]
+  [ "$(jq -r '.tokens'      "$f")" = "268219" ]
+  [ "$(jq -r '.input'       "$f")" = "7554" ]
+  [ "$(jq -r '.output'      "$f")" = "17448" ]
+  [ "$(jq -r '.cache_read'  "$f")" = "4550314" ]
+  [ "$(jq -r '.cache_write' "$f")" = "243217" ]
+  [ "$(jq -r '.cost*100|floor' "$f")" = "145" ]
+}
+
+@test "statusline: wk: shows weekly cost and cache-hit%" {
+  wk=$(date +%G-W%V)
+  mkdir -p "$TMP/cfg/statusline/usage/$wk"
+  printf '{"tokens":268219,"input":7554,"output":17448,"cache_read":4550314,"cache_write":243217,"cost":1.4508}' \
+    > "$TMP/cfg/statusline/usage/$wk/s1.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"wk:268k"* ]]
+  [[ "$plain" == *'$1.45'* ]]
+  [[ "$plain" == *"cache:99%"* ]]
+}
+
+@test "statusline: wk: cost/cache omitted for legacy token-only files" {
+  wk=$(date +%G-W%V)
+  mkdir -p "$TMP/cfg/statusline/usage/$wk"
+  printf '{"tokens":1000000}' > "$TMP/cfg/statusline/usage/$wk/s1.json"
+  out=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
+  plain=$(_plain "$out")
+  [[ "$plain" == *"wk:1.0M"* ]]
+  [[ "$plain" != *'$'* ]]
+  [[ "$plain" != *"cache:"* ]]
+}
