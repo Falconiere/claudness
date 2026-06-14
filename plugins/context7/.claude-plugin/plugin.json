@@ -1,13 +1,13 @@
 {
   "name": "context7",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Library documentation & code-example lookup via Context7 (skill + REST wrapper). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
   },
-  "homepage": "https://github.com/falconiere/claudness",
-  "repository": "https://github.com/falconiere/claudness.git",
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
   "keywords": ["claude-code", "context7", "documentation", "skills"]
 }

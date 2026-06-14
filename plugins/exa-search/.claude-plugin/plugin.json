@@ -1,13 +1,13 @@
 {
   "name": "exa-search",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Web, code, and URL search plus deep research via Exa (skill + REST wrapper). Standalone, no dependencies.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
   },
-  "homepage": "https://github.com/falconiere/claudness",
-  "repository": "https://github.com/falconiere/claudness.git",
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
   "keywords": ["claude-code", "exa", "web-search", "skills"]
 }

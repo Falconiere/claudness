@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+# Plan-ledger checker lib + CLI: run each plan step's `check`, stamp mechanical
+# status + content-addressed diff_sha into the per-branch ledger, and report
+# fresh-green/next. The SCRIPT sets status (exit-code truth) — the agent cannot
+# claim green. Sourceable (functions only) and runnable (guarded `main`).
+# jq-only. Parse/IO errors fail closed (exit 2).
+#
+# Run:    bash plan-ledger.sh run <doc.md> [--step <id>] | status | --self-test
+# Source: . "${BASH_SOURCE%/*}/plan-ledger.sh"   (defines pl_* helpers, no run)
+
+# pipefail so the `git diff | git hash-object` pipe surfaces failures instead of
+# silently yielding the empty-blob sha. NOT -euo: this file sources libs and runs
+# user `check` commands whose non-zero exits are expected signal, not fatal.
+set -o pipefail
+
+_toolu_lib="${TOOLU_LIB_DIR:-${BASH_SOURCE%/*}}"
+# shellcheck source=plan-ledger-parse.sh
+. "$_toolu_lib/plan-ledger-parse.sh"
+# shellcheck source=detect.sh
+. "$_toolu_lib/detect.sh"
+
+# pl_diff_sha BASE
+# Print the content-addressed diff hash of BASE...HEAD (matches push-review.sh:88).
+# Empty stdout + non-zero on git failure so callers can fail closed.
+pl_diff_sha() {
+  local base="$1" sha
+  sha=$(git diff --no-color "${base}...HEAD" 2>/dev/null | git hash-object --stdin 2>/dev/null) || return 1
+  [ -n "$sha" ] || return 1
+  printf '%s\n' "$sha"
+}
+
+# pl_ledger_path
+# Print the ledger path for the current branch:
+#   <project_root>/.claude/tmp/plan-ledger/<branch_slug>.json
+# Non-zero if the project root can't be resolved (not a git repo).
+pl_ledger_path() {
+  local root branch slug
+  root=$(detect_project_root)
+  [ -n "$root" ] || return 1
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
+  slug=$(branch_slug "$branch")
+  printf '%s\n' "$root/.claude/tmp/plan-ledger/${slug}.json"
+}
+
+# pl_evidence COMBINED_OUTPUT
+# JSON-encode the last 10 lines of a check's combined stdout+stderr, capped to
+# ~2000 bytes, via `jq -Rs` (handles null bytes / invalid UTF-8 safely). Prints a
+# JSON string (quoted) on stdout.
+pl_evidence() {
+  printf '%s' "$1" \
+    | tail -n 10 \
+    | head -c 2000 \
+    | jq -Rs .
+}
+
+# pl_recompute LEDGER_JSON CURRENT_DIFF_SHA
+# Recompute summary{total,green,red,pending,stale,fresh_green} and next against
+# CURRENT_DIFF_SHA (a step is fresh-green iff status==green AND diff_sha matches;
+# next = first non-fresh-green step id, null when all fresh-green). Print the
+# updated ledger json on stdout.
+pl_recompute() {
+  local ledger="$1" cur="$2"
+  jq --arg cur "$cur" '
+    def is_fresh: (.status == "green") and (.diff_sha == $cur);
+    .summary = {
+      total:       (.steps | length),
+      green:       ([.steps[] | select(.status == "green")]  | length),
+      red:         ([.steps[] | select(.status == "red")]    | length),
+      pending:     ([.steps[] | select(.status == "pending")]| length),
+      stale:       ([.steps[] | select(.status == "green" and .diff_sha != $cur)] | length),
+      fresh_green: ([.steps[] | select(is_fresh)] | length)
+    }
+    | .next = (first(.steps[] | select(is_fresh | not) | .id) // null)
+  ' <<< "$ledger"
+}
+
+# pl_summary_line LEDGER_JSON SLUG
+# Print the single-line, parseable summary:
+#   plan-ledger <slug>: <fresh_green>/<total> fresh-green, next=<id|none>
+pl_summary_line() {
+  local ledger="$1" slug="$2"
+  jq -r --arg slug "$slug" '
+    "plan-ledger " + $slug + ": "
+    + (.summary.fresh_green | tostring) + "/" + (.summary.total | tostring)
+    + " fresh-green, next=" + (.next // "none")
+  ' <<< "$ledger"
+}
+
+# pl_all_fresh LEDGER_JSON  ->  return 0 iff every step is fresh-green.
+pl_all_fresh() {
+  local ledger="$1"
+  [ "$(jq -r '.next == null' <<< "$ledger")" = "true" ]
+}
+
+# pl_now  ->  UTC ISO-8601 timestamp.
+pl_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# pl_build_step_entry STEPS_JSON ID STATUS EXIT_CODE DIFF_SHA EVIDENCE_JSON
+# Print a single ledger step object merging the doc fields (id/title/check from
+# STEPS_JSON) with the run results. EVIDENCE_JSON is an already-JSON-encoded string.
+pl_build_step_entry() {
+  local steps="$1" id="$2" status="$3" code="$4" sha="$5" evidence="$6"
+  jq -n \
+    --argjson steps "$steps" \
+    --arg id "$id" \
+    --arg status "$status" \
+    --argjson code "$code" \
+    --arg sha "$sha" \
+    --arg now "$(pl_now)" \
+    --argjson evidence "$evidence" '
+    ($steps[] | select(.id == $id)) as $s
+    | { id: $s.id, title: $s.title, check: $s.check,
+        status: $status, exit_code: $code, diff_sha: $sha,
+        last_run: $now, evidence_tail: $evidence }
+  '
+}
+
+# pl_cmd_run DOC [--step ID]
+# Parse DOC's steps; cd to project root; run checks (all, or only --step ID
+# preserving other entries from an existing ledger); recompute and write the
+# ledger; print the summary line. Exit 0 iff all fresh-green, else 1; parse/IO
+# error -> exit 2 (writes nothing).
+pl_cmd_run() {
+  local doc="$1"; shift
+  local only_step="" steps base cur ledger_file root
+  if [ "${1:-}" = "--step" ]; then
+    only_step="${2:-}"
+    [ -n "$only_step" ] || { echo "plan-ledger: --step requires an id" >&2; return 2; }
+  fi
+
+  # Parse first — on failure write NOTHING (crit8).
+  steps=$(pl_parse_steps "$doc") || return 2
+
+  base="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
+  root=$(detect_project_root)
+  [ -n "$root" ] || { echo "plan-ledger: not in a git repo" >&2; return 2; }
+  ledger_file=$(pl_ledger_path) || { echo "plan-ledger: cannot resolve ledger path" >&2; return 2; }
+
+  # cd to project root so checks run there (and diff_sha is repo-relative).
+  cd "$root" || { echo "plan-ledger: cannot cd to $root" >&2; return 2; }
+
+  cur=$(pl_diff_sha "$base") || { echo "plan-ledger: git diff ${base}...HEAD failed" >&2; return 2; }
+
+  local branch slug
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 2
+  slug=$(branch_slug "$branch")
+
+  # Existing entries (preserved when running a single step). Indexed by id.
+  local existing="{}"
+  if [ "$only_step" != "" ]; then
+    local prior
+    if prior=$(pl_read_ledger "$ledger_file" 2>/dev/null); then
+      existing=$(jq '[.steps[] | {key: .id, value: .}] | from_entries' <<< "$prior") \
+        || { echo "plan-ledger: corrupt prior ledger at $ledger_file" >&2; return 2; }
+    fi
+  fi
+
+  # Build the steps array.
+  local out_steps id check status code evidence tmpout new_entry
+  out_steps="[]"
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    check=$(jq -r --arg id "$id" '.[] | select(.id==$id) | .check' <<< "$steps") \
+      || { echo "plan-ledger: failed to read check for step $id" >&2; return 2; }
+    if [ -n "$only_step" ] && [ "$id" != "$only_step" ]; then
+      # Reuse the prior entry verbatim if present; else seed a pending entry.
+      new_entry=$(jq -n --argjson ex "$existing" --argjson steps "$steps" --arg id "$id" '
+        ($ex[$id]) as $p
+        | if $p != null then $p
+          else (($steps[] | select(.id==$id)) as $s
+                | { id: $s.id, title: $s.title, check: $s.check,
+                    status: "pending", exit_code: null, diff_sha: null,
+                    last_run: null, evidence_tail: null })
+          end
+      ') || { echo "plan-ledger: failed to assemble entry for step $id" >&2; return 2; }
+    else
+      tmpout="$ledger_file.run.$$.$id"
+      mkdir -p "$(dirname "$ledger_file")" 2>/dev/null || true
+      bash -c "$check" >"$tmpout" 2>&1
+      code=$?
+      [ "$code" -eq 0 ] && status="green" || status="red"
+      evidence=$(pl_evidence "$(cat "$tmpout")")
+      rm -f "$tmpout"
+      new_entry=$(pl_build_step_entry "$steps" "$id" "$status" "$code" "$cur" "$evidence") \
+        || { echo "plan-ledger: failed to build entry for step $id" >&2; return 2; }
+    fi
+    out_steps=$(jq --argjson e "$new_entry" '. + [$e]' <<< "$out_steps") \
+      || { echo "plan-ledger: failed to append step $id" >&2; return 2; }
+  done < <(jq -r '.[].id' <<< "$steps")
+
+  # Assemble the full ledger, then recompute summary/next against current sha.
+  local ledger
+  ledger=$(jq -n \
+    --arg branch "$branch" \
+    --arg base "$base" \
+    --arg doc "$doc" \
+    --arg now "$(pl_now)" \
+    --argjson steps "$out_steps" '
+    { version: 1, branch: $branch, base_branch: $base, plan_doc: $doc,
+      updated_at: $now,
+      summary: {}, next: null, steps: $steps }
+  ') || { echo "plan-ledger: failed to assemble ledger" >&2; return 2; }
+  ledger=$(pl_recompute "$ledger" "$cur") \
+    || { echo "plan-ledger: failed to recompute summary" >&2; return 2; }
+
+  pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
+
+  pl_summary_line "$ledger" "$slug"
+  pl_all_fresh "$ledger" && return 0 || return 1
+}
+
+# pl_cmd_status
+# Read the current branch's ledger (absent -> exit 2), recompute summary/next vs
+# the current diff_sha WITHOUT running checks, write the refreshed ledger, print
+# the summary line. Exit 0 iff all fresh-green, else 1.
+pl_cmd_status() {
+  local base cur ledger_file ledger slug branch
+  base="${PUSH_REVIEW_BASE:-$(detect_base_branch)}"
+  ledger_file=$(pl_ledger_path) || { echo "plan-ledger: cannot resolve ledger path" >&2; return 2; }
+  ledger=$(pl_read_ledger "$ledger_file") || { echo "plan-ledger: no ledger at $ledger_file" >&2; return 2; }
+  cur=$(pl_diff_sha "$base") || { echo "plan-ledger: git diff ${base}...HEAD failed" >&2; return 2; }
+
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 2
+  slug=$(branch_slug "$branch")
+
+  ledger=$(pl_recompute "$ledger" "$cur") \
+    || { echo "plan-ledger: failed to recompute summary" >&2; return 2; }
+  pl_write_ledger "$ledger_file" "$ledger" || { echo "plan-ledger: ledger write failed" >&2; return 2; }
+
+  pl_summary_line "$ledger" "$slug"
+  pl_all_fresh "$ledger" && return 0 || return 1
+}
+
+# pl_self_test
+# Parse a tiny inline fixture doc and assert pl_parse_steps yields the expected
+# two-step array. Minimal but real. Exit 0/1.
+pl_self_test() {
+  local dir doc out
+  dir=$(mktemp -d) || return 1
+  doc="$dir/selftest-plan.md"
+  cat > "$doc" <<'EOF'
+# Self-test Plan
+
+## Steps (machine-readable)
+
+```json
+[
+  { "id": "s1", "title": "ok", "check": "true" },
+  { "id": "s2", "title": "fail", "check": "false" }
+]
+```
+EOF
+  if ! out=$(pl_parse_steps "$doc"); then
+    rm -rf "$dir"; echo "plan-ledger --self-test: parse failed" >&2; return 1
+  fi
+  rm -rf "$dir"
+  if [ "$(jq -r 'length' <<< "$out")" != "2" ] \
+    || [ "$(jq -r '.[0].id' <<< "$out")" != "s1" ] \
+    || [ "$(jq -r '.[1].check' <<< "$out")" != "false" ]; then
+    echo "plan-ledger --self-test: unexpected parse result" >&2; return 1
+  fi
+  echo "plan-ledger --self-test: ok"
+  return 0
+}
+
+# main "$@"
+# CLI dispatch. Requires jq + git. Unknown command -> exit 2.
+main() {
+  command -v jq  >/dev/null 2>&1 || { echo "plan-ledger: jq is required" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "plan-ledger: git is required" >&2; exit 2; }
+
+  local cmd="${1:-}"; shift || true
+  case "$cmd" in
+    run)
+      [ -n "${1:-}" ] || { echo "plan-ledger: run requires a plan doc path" >&2; exit 2; }
+      pl_cmd_run "$@"; exit $?
+      ;;
+    status)
+      pl_cmd_status; exit $?
+      ;;
+    --self-test)
+      pl_self_test; exit $?
+      ;;
+    *)
+      echo "plan-ledger: usage: run <doc> [--step <id>] | status | --self-test" >&2
+      exit 2
+      ;;
+  esac
+}
+
+# Guarded main: run only when executed directly, not when sourced.
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  main "$@"
+fi

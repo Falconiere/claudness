@@ -6,10 +6,10 @@
 #   55-size-impl  — per-impl block size via brace-depth counter
 # Drives the ASSEMBLED registry module assembled by register.sh.
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# Core lib lives in the sibling toolu plugin; the dispatcher provides this
 # env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
@@ -17,7 +17,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/rust-quality@falconiere__rust-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/rust-quality@toolu__rust-quality.sh"
 
   TMP_PROJ="$TMP/proj"
   mkdir -p "$TMP_PROJ"
@@ -44,7 +44,7 @@ _rust_project() {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFileLines":10}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFileLines":10}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   : > src/big.rs
   for i in $(seq 1 15); do echo "pub const V$i: u32 = $i;" >> src/big.rs; done
   payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/big.rs"}}'
@@ -57,7 +57,7 @@ _rust_project() {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFileLines":2}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFileLines":2}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   # A string containing /* flips count_code_lines into the raw-count fallback;
   # has_unterminated_block detects the unbalanced /* and the message says so.
   printf '%s\n' 'let s = "/*";' 'let a = 1;' 'let b = 2;' 'let c = 3;' > src/m.rs
@@ -74,7 +74,7 @@ _rust_project() {
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 pub(crate) const fn big() -> u8 {
     let a = 1;
@@ -96,7 +96,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/long.rs <<'EOF'
 fn long_with_branches(x: u8) -> u8 {
     let mut acc = 0;
@@ -124,7 +124,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 pub struct Foo;
 impl Foo {
@@ -149,7 +149,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 pub struct Foo;
 impl Foo {
@@ -177,7 +177,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":5}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 fn unbalanced_string(x: u8) -> u8 {
     let open = "{";
@@ -202,7 +202,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFnLines":3}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 pub(in crate::foo) fn big() -> u8 {
     let a = 1;
@@ -223,7 +223,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxImplLines":6}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxImplLines":6}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   : > src/m.rs
   echo 'pub struct Foo;' >> src/m.rs
   echo 'impl Foo {' >> src/m.rs
@@ -239,7 +239,7 @@ EOF
   command -v cargo >/dev/null 2>&1 || skip "cargo not installed"
   _rust_project
   mkdir -p "$TMP_PROJ/.claude"
-  echo '{"lang":{"rust":{"maxImplLines":20}}}' > "$TMP_PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxImplLines":20}}}' > "$TMP_PROJ/.claude/toolu.config.json"
   cat > src/m.rs <<'EOF'
 pub struct Foo;
 impl Foo {

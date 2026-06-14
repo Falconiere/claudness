@@ -13,21 +13,21 @@
 : "${input:=}"
 : "${PROJECT_ROOT:=$(pwd)}"
 
-# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
-# plugins/claudness/hooks/post-tools/mod.sh before registry dispatch). Outside
+# Core lib comes from the toolu dispatcher via TOOLU_LIB_DIR (set by
+# plugins/toolu/hooks/post-tools/mod.sh before registry dispatch). Outside
 # that pipeline there is no relative path to it — fail SOFT: a quality check
 # must never break a tool call by erroring.
-[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
-# shellcheck source=../../../claudness/hooks/lib/detect.sh
-. "$CLAUDNESS_LIB_DIR/detect.sh"
+[ -n "${TOOLU_LIB_DIR:-}" ] && [ -f "$TOOLU_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../toolu/hooks/lib/detect.sh
+. "$TOOLU_LIB_DIR/detect.sh"
 # Threshold resolver (defaults + project/native overrides). Soft if absent.
-# shellcheck source=../../../claudness/hooks/lib/quality-config.sh
-[ -f "$CLAUDNESS_LIB_DIR/quality-config.sh" ] && . "$CLAUDNESS_LIB_DIR/quality-config.sh"
+# shellcheck source=../../../toolu/hooks/lib/quality-config.sh
+[ -f "$TOOLU_LIB_DIR/quality-config.sh" ] && . "$TOOLU_LIB_DIR/quality-config.sh"
 # Multi-slot gate writer (entries keyed by file — one hook's failure no longer
 # clobbers another's). Soft if absent: fallbacks below keep the legacy
-# single-slot behavior when the claudness lib predates gate-file.sh.
-# shellcheck source=../../../claudness/hooks/lib/gate-file.sh
-[ -f "$CLAUDNESS_LIB_DIR/gate-file.sh" ] && . "$CLAUDNESS_LIB_DIR/gate-file.sh"
+# single-slot behavior when the toolu lib predates gate-file.sh.
+# shellcheck source=../../../toolu/hooks/lib/gate-file.sh
+[ -f "$TOOLU_LIB_DIR/gate-file.sh" ] && . "$TOOLU_LIB_DIR/gate-file.sh"
 command -v gate_record_failure >/dev/null 2>&1 || gate_record_failure() {
   jq -n --arg reason "$4" --arg source "$3" --arg file "$2" --arg violations "$5" \
     --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -49,10 +49,10 @@ command -v rust_max_fn_lines   >/dev/null 2>&1 || rust_max_fn_lines()   { echo "
 command -v rust_max_impl_lines >/dev/null 2>&1 || rust_max_impl_lines() { echo "${DEFAULT_RUST_MAX_IMPL_LINES:-200}"; }
 # count_code_lines comes from detect.sh (sourced above) — no fallback needed.
 
-# Load the merged config ONCE so CLAUDNESS_CFG_LOADED sticks for the threshold
+# Load the merged config ONCE so TOOLU_CFG_LOADED sticks for the threshold
 # lookups below — each runs in a $(...) subshell that inherits it and skips
 # re-merging (otherwise every wrapper re-spawns the jq merge).
-command -v claudness_load_config >/dev/null 2>&1 && claudness_load_config 2>/dev/null || true
+command -v toolu_load_config >/dev/null 2>&1 && toolu_load_config 2>/dev/null || true
 
 [ "$(detect_rust)" = "rust" ] || exit 0
 command -v cargo >/dev/null 2>&1 || exit 0

@@ -2,9 +2,9 @@
 # SessionStart registry sync for the ts-quality plugin.
 #
 # Assembles hooks/concerns/[0-9][0-9]-*.sh (ordered preamble → concern partials
-# → finalize) into ONE runtime module in the claudness registry
-# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/post-tools.d/) under the
-# namespaced filename ts-quality@falconiere__ts-quality.sh. The fragments are
+# → finalize) into ONE runtime module in the toolu registry
+# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/post-tools.d/) under the
+# namespaced filename ts-quality@toolu__ts-quality.sh. The fragments are
 # partials of a single script; concatenating them in numeric order rebuilds the
 # original monolith so one process does one gate write (preserving
 # byte-identical behavior). Prunes any stale entry bearing OUR prefix, and
@@ -13,11 +13,11 @@
 # Silent on success (SessionStart stdout becomes context); errors are
 # non-fatal — a failed sync means the registry copy is stale, not broken.
 
-SPEC="ts-quality@falconiere"
+SPEC="ts-quality@toolu"
 OUT="ts-quality.sh"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SELF_DIR/concerns"
-REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/post-tools.d"
+REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/post-tools.d"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true

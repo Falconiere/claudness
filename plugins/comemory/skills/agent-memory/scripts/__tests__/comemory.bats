@@ -8,7 +8,7 @@ COMEMORY_SH="${BATS_TEST_DIRNAME}/../comemory.sh"
 
 # Throwaway repo: the wrapper auto-detects the repo from the git toplevel, so
 # we override it to a label nothing else uses.
-TEST_REPO="claudness-mig-test"
+TEST_REPO="toolu-mig-test"
 export MY_CLAUDE_COMEMORY_REPO="$TEST_REPO"
 
 setup() {

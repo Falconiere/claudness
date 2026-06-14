@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Statusline — the claudness statusline.
+# Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
 #   model | effort | ctx | <gate> | folder | branch | <caveman>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
-# (Lights up only when a gate writer — e.g. rust-quality/ts-quality/claudness — is present.)
+# (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
 #
 # Wire it up (settings.json) after the SessionStart hook has symlinked it to a
 # stable path:
@@ -23,7 +23,7 @@ MAGENTA=$'\033[35m'; BLUE=$'\033[34m'; RED=$'\033[31m'
 DIM=$'\033[2m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
 
 # Without jq we cannot parse the payload — emit nothing rather than garbage.
-command -v jq >/dev/null 2>&1 || { printf 'claudness'; exit 0; }
+command -v jq >/dev/null 2>&1 || { printf 'toolu'; exit 0; }
 
 # One jq pass extracts every field — a statusline renders on every prompt, so
 # six separate jq spawns would be wasteful. One value per line (not @tsv: tab is
@@ -65,7 +65,7 @@ else
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt}"
 fi
 
-# --- Quality gate (claudness): red marker only when failing ---
+# --- Quality gate (toolu): red marker only when failing ---
 # Resolve the gate file at the git root (where the rust-quality / ts-quality hooks write it
 # via $PROJECT_ROOT), not at $cwd — a subdir-launched session or worktree has
 # cwd != project root, which would silently miss the marker.
@@ -113,8 +113,8 @@ if [ -n "$_usage_sum" ] && [ "$_usage_sum" -gt 0 ] 2>/dev/null; then
   usage_seg="${BOLD}wk:$(format_tokens "$_usage_sum")${RESET}"
 fi
 
-# --- Comemory memory count ([mem:N]): per-project, main-repo scoped ---
-# Read the marker written by code-intel's comemory-status SessionStart hook.
+# --- Comemory memory count ([COMEMORY:N]): per-project, main-repo scoped ---
+# Read the marker written by comemory's comemory-status SessionStart hook.
 # The key derivation MUST match that hook (git-common-dir → main-repo basename)
 # so a worktree resolves to the same scope as its main checkout.
 comemory_seg=""
@@ -129,7 +129,7 @@ if [ -n "$cwd" ]; then
       _cfile="${CFG}/comemory-status/$(basename "$(dirname "$_ck")").json"
       if [ -f "$_cfile" ]; then
         _cn=$(jq -r '.count // empty' "$_cfile" 2>/dev/null)
-        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[mem:${_cn}]${RESET}"
+        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[COMEMORY:${_cn}]${RESET}"
       fi
     fi
   fi

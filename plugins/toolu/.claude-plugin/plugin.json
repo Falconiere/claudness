@@ -1,0 +1,23 @@
+{
+  "name": "toolu",
+  "version": "1.14.0",
+  "description": "Falconiere's personal Claude Code bundle: skills, agents, slash commands, and hooks.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "agents",
+    "hooks",
+    "caveman"
+  ],
+  "dependencies": [
+    { "name": "code-simplifier", "marketplace": "claude-plugins-official" },
+    { "name": "caveman", "marketplace": "caveman" }
+  ]
+}

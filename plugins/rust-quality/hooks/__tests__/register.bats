@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
 # register.sh ASSEMBLES concerns/[0-9][0-9]-*.sh into ONE registry module
-# <spec>__rust-quality.sh under $CLAUDE_CONFIG_DIR/claudness/post-tools.d/,
+# <spec>__rust-quality.sh under $CLAUDE_CONFIG_DIR/toolu/post-tools.d/,
 # prunes its own stale entries + tmp residue, and never touches other plugins.
 
-SPEC="rust-quality@falconiere"
+SPEC="rust-quality@toolu"
 MODULE="${SPEC}__rust-quality.sh"
 
 setup() {
@@ -11,7 +11,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/register.sh"
   CONCERNS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../concerns" && pwd)"
-  REG_DIR="$CLAUDE_CONFIG_DIR/claudness/post-tools.d"
+  REG_DIR="$CLAUDE_CONFIG_DIR/toolu/post-tools.d"
 }
 teardown() { rm -rf "$TMP"; }
 
@@ -99,7 +99,7 @@ _rust_dispatch_project() {
     && printf '[package]\nname = "x"\nversion = "0.1.0"\n' > Cargo.toml \
     && printf '#[allow(dead_code)]\nfn helper() {}\n' > src/bad.rs \
     && git add -A && git -c user.email=t@t -c user.name=t commit -q -m s )
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../claudness/hooks/post-tools" && pwd)/mod.sh"
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/post-tools" && pwd)/mod.sh"
 }
 
 @test "register e2e: assembled module fires through the core dispatcher when installed" {
@@ -107,7 +107,7 @@ _rust_dispatch_project() {
   _rust_dispatch_project
   bash "$REGISTER" </dev/null
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
-  printf '%s' '{"plugins":{"rust-quality@falconiere":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"rust-quality@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run bash -c 'cd "'"$proj"'" && env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="'"$CLAUDE_CONFIG_DIR"'" HOME="'"$TMP"'" bash "'"$CORE_MOD"'" <<<'"'"'{"tool_name":"Edit","tool_input":{"file_path":"'"$proj"'/src/bad.rs"},"tool_response":{}}'"'"''
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "Forbidden lint suppression"

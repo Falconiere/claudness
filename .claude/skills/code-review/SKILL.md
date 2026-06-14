@@ -3,9 +3,9 @@ name: code-review
 description: CI review instructions for the Falconiere/workflows code-review bot on this repo. Report only blocking (medium+) findings so an otherwise-correct PR gets a clean verdict.
 ---
 
-# Code review instructions — claudness
+# Code review instructions — toolu
 
-You are reviewing a PR in the **claudness** repo, which ships Claude Code plugins:
+You are reviewing a PR in the **toolu** repo, which ships Claude Code plugins:
 bash hooks + scripts, markdown skills/commands, JSON manifests, and bats tests.
 Judge the changes as such. Review for **correctness, security, and performance**.
 

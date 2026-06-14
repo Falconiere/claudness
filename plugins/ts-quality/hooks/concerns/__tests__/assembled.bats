@@ -7,10 +7,10 @@
 # on real git-init'd TS projects and diff the resulting gate JSON, so a fragment
 # reorder / clobber / dropped-suppression regression fails here.
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# Core lib lives in the sibling toolu plugin; the dispatcher provides this
 # env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 # The pre-split monolith — the behavioral oracle.
 # Built from the existing plugins/ dir so it resolves even after lang-quality is
@@ -24,7 +24,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  ASSEMBLED="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/ts-quality@falconiere__ts-quality.sh"
+  ASSEMBLED="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@toolu__ts-quality.sh"
 
   PROJ="$TMP/proj"
   mkdir -p "$PROJ"
@@ -55,7 +55,7 @@ _run_gate() {
   local hook="$1" file="$2"
   rm -rf "$PROJ/.claude/tmp"
   local payload='{"tool_input":{"file_path":"'"$file"'"}}'
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Edit input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$hook" >/dev/null 2>&1
   local gate="$PROJ/.claude/tmp/quality-gate-status.json"
   if [ -f "$gate" ]; then cat "$gate"; fi
@@ -198,14 +198,14 @@ EOF
 
   # Phase 1: a violating file (throw of a numeric literal) records a failing gate.
   printf 'export function b(){ throw 42; }\n' > "$PROJ/src/x.ts"
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Edit input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$ASSEMBLED" >/dev/null 2>&1
   jq -e '.status == "failing"' "$GATE"
   jq -e '.source == "ts-quality-hook"' "$GATE"
 
   # Phase 2: same file goes clean → the assembled module clears it → passing.
   printf 'export function b(){ throw new Error("boom"); }\n' > "$PROJ/src/x.ts"
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Edit input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$ASSEMBLED" >/dev/null 2>&1
   jq -e '.status == "passing"' "$GATE"
   jq -e '.source == "ts-quality-hook"' "$GATE"

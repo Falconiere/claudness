@@ -5,15 +5,15 @@
 # Ported VERBATIM from the deleted monolith per-rule suite; the only change is
 # they drive the ASSEMBLED registry module (assembled in setup).
 
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/ts-quality@falconiere__ts-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@toolu__ts-quality.sh"
 
   TMP_PROJ="$TMP/proj"
   mkdir -p "$TMP_PROJ"
@@ -41,7 +41,7 @@ _ts_project() {
 @test "ts-quality: project config lowers maxFileLines, flags a file the default would not" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/toolu.config.json"
   : > src/big.ts
   for i in $(seq 1 15); do echo "export const v$i = $i;" >> src/big.ts; done
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/big.ts"}}'
@@ -53,7 +53,7 @@ _ts_project() {
 @test "ts-quality: comments and blank lines do not count toward maxFileLines" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFileLines":10}}}' > "$TMP/.claude/toolu.config.json"
   # 8 code lines, padded with comments + blanks past the raw-line limit of 10.
   : > src/padded.ts
   for i in $(seq 1 8); do
@@ -96,7 +96,7 @@ _ts_project() {
 @test "ts-quality: long exported arrow const is subject to the fn-length limit" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/a.ts <<'EOF'
 export const fn = () => {
   const a = 1;
@@ -117,7 +117,7 @@ EOF
 @test "ts-quality: one-line arrow consts before a function do not cause a false positive" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/a.ts <<'EOF'
 export const noop = () => undefined;
 export const square = (x: number) => x * x;
@@ -139,7 +139,7 @@ EOF
 @test "ts-quality: long function after one-line arrows is still flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/a.ts <<'EOF'
 export const noop = () => undefined;
 export function foo(): number {
@@ -163,7 +163,7 @@ EOF
 @test "ts-quality: long method inside a class IS flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/svc.ts <<'EOF'
 export class Service {
   process(x: number): number {
@@ -186,7 +186,7 @@ EOF
 @test "ts-quality: short class method followed by other members is NOT flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/svc.ts <<'EOF'
 export class Service {
   ping(): number {
@@ -211,7 +211,7 @@ EOF
 @test "ts-quality: arrow const with a multi-line param list IS flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/a.ts <<'EOF'
 export const compute = (
   a: number,
@@ -234,7 +234,7 @@ EOF
 @test "ts-quality: column-0 } inside a template literal does not end the fn early (regression)" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":5}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/tmpl.ts <<'EOF'
 export function render(): string {
   const css = `
@@ -259,7 +259,7 @@ EOF
 @test "ts-quality: long const function-expression is flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/a.ts <<'EOF'
 export const fn = function() {
   const a = 1;
@@ -279,7 +279,7 @@ EOF
 @test "ts-quality: long class method with a defaulted generic is flagged" {
   _ts_project
   mkdir -p "$TMP/.claude"
-  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/claudness.config.json"
+  echo '{"lang":{"ts":{"maxFnLines":3}}}' > "$TMP/.claude/toolu.config.json"
   cat > src/svc.ts <<'EOF'
 export class Service {
   process<T = number>(x: T): T {
