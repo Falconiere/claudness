@@ -126,7 +126,7 @@ write_module() {
 
 @test "dispatch runs a registry module from an active plugin" {
   builtin_dir=$(mktemp -d); reg_dir=$(mktemp -d)
-  cat > "$reg_dir/code-intel@falconiere__probe.sh" <<'EOF'
+  cat > "$reg_dir/comemory@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"from-registry"}}'
 EOF
@@ -220,7 +220,7 @@ EOF
   mkdir -p "$builtin_dir" "$reg_dir"
   local n
   for n in one two three; do
-    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/code-intel@falconiere__$n.sh"
+    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/comemory@falconiere__$n.sh"
   done
   printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$reg_dir/other@falconiere__solo.sh"
   run bash -c '
@@ -296,16 +296,16 @@ EOF
 @test "pre-tools entrypoint executes an active-plugin registry module" {
   cfg="$TMP/e2e-cfg"
   regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
-  cat > "$regdir/code-intel@falconiere__probe.sh" <<'EOF'
+  cat > "$regdir/comemory@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"e2e-registry"}}'
 EOF
-  # Make code-intel@falconiere read as installed. With CLAUDE_CONFIG_DIR set,
+  # Make comemory@falconiere read as installed. With CLAUDE_CONFIG_DIR set,
   # detect_plugin_installed reads <config-dir>/plugins/installed_plugins.json
   # — NOT <HOME>/.claude/plugins/. Writing the wrong path passes via fail-open
   # (manifest missing = indeterminate) and silently stops testing the gate.
   mkdir -p "$cfg/plugins"
-  printf '%s' '{"plugins":{"code-intel@falconiere":{}}}' > "$cfg/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"comemory@falconiere":{}}}' > "$cfg/plugins/installed_plugins.json"
   # macOS BSD `env` requires option flags (-u) before VAR=val operands.
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$cfg" HOME="$cfg" \
     bash "$REPO_ROOT/hooks/pre-tools/mod.sh" <<<'{"tool_name":"Read"}'
@@ -316,7 +316,7 @@ EOF
 @test "pre-tools entrypoint SKIPS a registry module whose plugin is definitively absent" {
   cfg="$TMP/e2e-cfg-absent"
   regdir="$cfg/claudness/pre-tools.d"; mkdir -p "$regdir"
-  cat > "$regdir/code-intel@falconiere__probe.sh" <<'EOF'
+  cat > "$regdir/comemory@falconiere__probe.sh" <<'EOF'
 #!/usr/bin/env bash
 jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"should-not-appear"}}'
 EOF

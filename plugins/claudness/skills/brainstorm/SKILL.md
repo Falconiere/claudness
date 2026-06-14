@@ -21,7 +21,7 @@ The goal is a written design you and the user both believe in. Get there however
 
 1. **Restate the intent in one sentence and reflect it back.** If you can't, you don't understand it yet — that's the first thing to fix. A wrong restatement is cheap to correct now and ruinous to discover after implementation.
 2. **Resolve the unknowns that actually change the design.** Ask about the decisions you cannot settle from the code or a sensible default: data source, auth model, UX shape, scope boundary, failure behavior. Batch the questions; don't trickle them. Don't ask about things you can reasonably decide yourself — that wastes the user's attention on noise.
-3. **Find what already exists.** Search for reusable functions, patterns, and prior art before inventing (`code-intel` / `ast-grep`). The best design is often "extend this thing that already works." New code is a liability you justify, not a default.
+3. **Find what already exists.** Search for reusable functions, patterns, and prior art before inventing (`ast-grep` / `comemory`). The best design is often "extend this thing that already works." New code is a liability you justify, not a default.
 4. **Weigh two or three approaches and recommend one.** Name the trade-off that actually matters for *this* problem — simplicity vs. flexibility, speed vs. correctness, blast radius vs. cleanliness — and say which way you'd go and why. A menu with no recommendation pushes the decision back onto the user; have an opinion.
 5. **Record the decision.** A short decision record: chosen approach, the why, the alternatives you rejected and why, and the risks still open. Save anything durable (a convention, a constraint, a non-obvious call) to memory via `agent-memory` so it outlives this conversation.
 

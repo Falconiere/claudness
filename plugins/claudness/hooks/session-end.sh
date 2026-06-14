@@ -60,10 +60,10 @@ cat > /dev/null 2>&1 || true
 case "$(claudness_comemory_state)" in
   available)
     save_doc="$HOOK_DIR/docs/vector-helper-save.md"
-    # The wrapper ships in the code-intel plugin (Plan 3 extraction); its
-    # install path differs per machine, so reference the skill, not a path.
-    mod_sh="the code-intel plugin's mod.sh"
-    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh comemory save.")
+    # The wrapper ships in the comemory plugin; its install path differs per
+    # machine, so reference the wrapper name, not a path.
+    mod_sh="the comemory plugin's comemory.sh"
+    save_hint=$(cat "$save_doc" 2>/dev/null || echo "Save reusable learnings via $mod_sh save.")
     ctx="Session ending. $save_hint"
     ;;
   missing)

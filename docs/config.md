@@ -91,7 +91,7 @@ Unknown names are silently ignored (forward compatible).
     "missing tools" warning, and the comemory reminder in `PreCompact` and
     `SessionEnd`. `skills.ast-grep = false` removes the ast-grep STOP /
     install-hint advisories in `search-nudge` (a registry module shipped
-    by the code-intel plugin); the generic `grep/rg → Grep tool` advisory
+    by the ast-grep plugin); the generic `grep/rg → Grep tool` advisory
     still fires.
 
 - `hooks.<name> = false`
@@ -127,7 +127,7 @@ uninstall the plugin to control them.
 claudness targets **comemory ≥ 0.8.0** (pinned as `COMEMORY_MIN_VERSION` in
 `plugins/claudness/hooks/lib/detect.sh`). The wrapper uses comemory's full verb
 surface — the retrieval-quality loop (`feedback`/`mine`/`tune`/`eval`/`prune`/
-`gc`/`rebuild`) and code-intel (`search-code`/`index-code`/`graph`). An older
+`gc`/`rebuild`) and **comemory** (`search-code`/`index-code`/`graph`). An older
 binary lacks some of these and will error on them, so session start emits a
 non-fatal upgrade WARN when it detects one. Basics (`search`/`save`/`list`)
 still work. Upgrade with `brew upgrade comemory` or `cargo install comemory`.

@@ -1,8 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(plugins/code-intel/skills/code-intel/scripts/mod.sh:*)",
-      "Bash(.claude/worktrees/*/plugins/code-intel/skills/code-intel/scripts/mod.sh:*)",
+      "Bash(plugins/ast-grep/skills/ast-grep/scripts/ast-grep.sh:*)",
+      "Bash(.claude/worktrees/*/plugins/ast-grep/skills/ast-grep/scripts/ast-grep.sh:*)",
+      "Bash(plugins/comemory/skills/agent-memory/scripts/comemory.sh:*)",
+      "Bash(.claude/worktrees/*/plugins/comemory/skills/agent-memory/scripts/comemory.sh:*)",
       "Bash(ast-grep:*)",
       "Bash(bun install:*)",
       "Bash(bun run:*)",

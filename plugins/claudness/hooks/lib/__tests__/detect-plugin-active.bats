@@ -29,19 +29,19 @@ _write_installed() {
 }
 
 @test "active: returns 0 when plugin present in installed_plugins.json" {
-  _write_installed '{"plugins":{"code-intel@falconiere":{}}}'
-  run claudness_plugin_active code-intel@falconiere
+  _write_installed '{"plugins":{"comemory@falconiere":{}}}'
+  run claudness_plugin_active comemory@falconiere
   [ "$status" -eq 0 ]
 }
 
 @test "active: returns 1 when plugin absent" {
   _write_installed '{"plugins":{"other@falconiere":{}}}'
-  run claudness_plugin_active code-intel@falconiere
+  run claudness_plugin_active comemory@falconiere
   [ "$status" -eq 1 ]
 }
 
 @test "active: indeterminate (no manifest) defaults to active (fail-open)" {
   rm -f "$TMP/.claude/plugins/installed_plugins.json"
-  run claudness_plugin_active code-intel@falconiere
+  run claudness_plugin_active comemory@falconiere
   [ "$status" -eq 0 ]
 }

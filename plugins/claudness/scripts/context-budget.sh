@@ -92,9 +92,8 @@ run_skills() {
   check_skill plan             plugins/claudness/skills/plan/SKILL.md             60 ""
   check_skill execution        plugins/claudness/skills/execution/SKILL.md        60 ""
   check_skill test             plugins/claudness/skills/test/SKILL.md             60 ""
-  check_skill agent-memory     plugins/code-intel/skills/agent-memory/SKILL.md    30 ""
-  check_skill ast-grep         plugins/code-intel/skills/ast-grep/SKILL.md        40 ""
-  check_skill code-intel       plugins/code-intel/skills/code-intel/SKILL.md      70 ""
+  check_skill agent-memory     plugins/comemory/skills/agent-memory/SKILL.md      30 ""
+  check_skill ast-grep         plugins/ast-grep/skills/ast-grep/SKILL.md          40 ""
 }
 
 main() {

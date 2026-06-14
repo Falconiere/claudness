@@ -103,7 +103,7 @@ Examples:
 3. Read the diff. Confirm metavariables map correctly.
 4. Apply: same command with `-U`.
 5. Run your project's typecheck/lint (use the detected package manager — see `detect_node_pm` / `detect_rust` in `hooks/lib/detect.sh`) to verify zero regressions.
-6. Save the pattern to comemory if reusable: `mod.sh comemory save "ast-grep <name> pattern" "<pattern + what it matches>" --kind pattern --tags "ast-grep"`.
+6. Save the pattern if reusable — when the `comemory` plugin is installed, persist it via its wrapper: `comemory.sh save "ast-grep <name> pattern" "<pattern + what it matches>" --kind pattern --tags "ast-grep"`.
 
 ## Self-Check Before Editing
 

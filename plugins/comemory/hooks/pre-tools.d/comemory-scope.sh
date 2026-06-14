@@ -3,15 +3,15 @@
 #
 # Without --repo, `comemory search` / `save` / `context` / `search-code` mix
 # results across every repo in the local comemory store — wasted tokens at
-# best, wrong-repo answers at worst. The `skills/code-intel/scripts/mod.sh
-# comemory <subcmd>` wrapper (resolved relative to this module — skills/ is a
+# best, wrong-repo answers at worst. The `skills/agent-memory/scripts/comemory.sh
+# <subcmd>` wrapper (resolved relative to this module — skills/ is a
 # sibling of hooks/ inside the plugin root, in-repo and installed alike)
 # auto-scopes; this module pushes the agent toward that path by denying
 # unscoped raw calls.
 #
 # Subcommands that require scoping: search, save, context, search-code,
 # index-code, graph. `context` is a real comemory verb (a repo-scoped headline
-# lookup) and so is guarded here even though the mod.sh wrapper does not
+# lookup) and so is guarded here even though the comemory.sh wrapper does not
 # dispatch it — a raw `comemory context` without --repo would still leak across
 # repos. index-code/graph accept --repo (the wrapper auto-injects it), so a raw
 # unscoped call carries the same leak hazard.
@@ -19,7 +19,7 @@
 # and list/doctor/stats/serve/--help/--version are intentionally global —
 # comemory accepts no --repo on them.
 #
-# Always allowed: wrapper calls (`mod.sh comemory …` adds --repo itself), and
+# Always allowed: wrapper calls (`comemory.sh …` adds --repo itself), and
 # raw calls that already include --repo. comemory has no `-p` short flag and no
 # repo env var, so --repo is the only scope signal.
 #
@@ -46,10 +46,10 @@ command=$(echo "$input" | jq -r '.tool_input.command // ""')
 
 cmd_only=$(printf '%s\n' "$command" | strip_heredocs)
 
-# NOTE: wrapper calls (`mod.sh comemory …`) are skipped PER SEGMENT inside the
+# NOTE: wrapper calls (`comemory.sh …`) are skipped PER SEGMENT inside the
 # loop below — NOT here against the whole command. A whole-command skip let a
-# single `mod.sh comemory` token (even in an `echo`, a comment, or one arm of
-# `mod.sh comemory list && comemory search foo`) short-circuit enforcement for
+# single `comemory.sh` token (even in an `echo`, a comment, or one arm of
+# `comemory.sh list && comemory search foo`) short-circuit enforcement for
 # every other statement, so an unscoped raw `comemory search` slipped past.
 
 # Split on shell statement separators (;, &&, ||) — but ONLY when they are
@@ -121,10 +121,10 @@ while IFS= read -r segment; do
   done
   [[ -z "$segment" ]] && continue
 
-  # Wrapper call? `mod.sh comemory …` (optionally path-prefixed) auto-scopes —
+  # Wrapper call? `comemory.sh …` (optionally path-prefixed) auto-scopes —
   # skip THIS segment only. Evaluated per-segment so a wrapper call in one arm
   # of a chain never excuses a raw unscoped call in another.
-  if [[ "$segment" =~ ^([^[:space:]]*/)?mod\.sh[[:space:]]+comemory([[:space:]]|$) ]]; then
+  if [[ "$segment" =~ ^([^[:space:]]*/)?comemory\.sh([[:space:]]|$) ]]; then
     continue
   fi
 
@@ -137,7 +137,7 @@ while IFS= read -r segment; do
 
   # Only the repo-scoped verbs require --repo; everything else is global
   # (comemory accepts no --repo on the retrieval-loop verbs). index-code and
-  # graph accept --repo and the mod.sh wrapper auto-injects it for them, so a
+  # graph accept --repo and the comemory.sh wrapper auto-injects it for them, so a
   # raw unscoped call carries the same cross-repo-leak hazard and is guarded.
   case "$subcmd" in
     search|save|context|search-code|index-code|graph) ;;
@@ -155,13 +155,13 @@ done < <(split_statements "$cmd_only")
 
 if [[ -n "$violation" ]]; then
   # Resolve the auto-scoping wrapper. Two levels up from this module is the
-  # code-intel plugin root — valid in the repo checkout and installed plugin.
+  # comemory plugin root — valid in the repo checkout and installed plugin.
   # When run from the runtime-registry COPY (~/.claude/claudness/pre-tools.d/)
   # that path does not exist, so fall back to generic wording: the deny text
   # only needs to point the agent at the wrapper, not at an exact path.
   wrapper_root=$(cd "${BASH_SOURCE%/*}/../.." 2>/dev/null && pwd)
-  wrapper="${wrapper_root:+$wrapper_root/}skills/code-intel/scripts/mod.sh"
-  [[ -x "$wrapper" ]] || wrapper="the code-intel plugin's skills/code-intel/scripts/mod.sh"
+  wrapper="${wrapper_root:+$wrapper_root/}skills/agent-memory/scripts/comemory.sh"
+  [[ -x "$wrapper" ]] || wrapper="the comemory plugin's skills/agent-memory/scripts/comemory.sh"
   jq -n --arg cmd "$violation" --arg wrapper "$wrapper" '{
     "hookSpecificOutput": {
       "hookEventName": "PreToolUse",
@@ -171,7 +171,7 @@ if [[ -n "$violation" ]]; then
         "comemory stores memories across multiple repos. Without --repo, search/save/context/search-code/index-code/graph leak across repos.\n\n" +
         "Fix one of:\n" +
         "  1. Prefer the wrapper (auto-scopes):\n" +
-        "       " + $wrapper + " comemory <subcmd> …\n" +
+        "       " + $wrapper + " <subcmd> …\n" +
         "  2. Add --repo <name> to the raw call:\n" +
         "       comemory <subcmd> … --repo <name>"
       )

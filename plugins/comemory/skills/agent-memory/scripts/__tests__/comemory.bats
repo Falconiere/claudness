@@ -4,7 +4,6 @@
 # never collide with real project memories, and deletes everything it creates
 # in teardown.
 
-MOD="${BATS_TEST_DIRNAME}/../../mod.sh"
 COMEMORY_SH="${BATS_TEST_DIRNAME}/../comemory.sh"
 
 # Throwaway repo: the wrapper auto-detects the repo from the git toplevel, so
@@ -30,7 +29,7 @@ teardown() {
 
 @test "comemory: save then search round-trips against the real binary" {
   # Save through the wrapper; --json (pass-through flag) emits {"id":...,"path":...}.
-  run bash "$MOD" comemory save "mig-test-title" "mig-test real body" --json
+  run bash "$COMEMORY_SH" save "mig-test-title" "mig-test real body" --json
   [ "$status" -eq 0 ]
   local id
   id=$(echo "$output" | jq -r '.id')
@@ -38,7 +37,7 @@ teardown() {
   [ "$id" != "null" ]
 
   # The saved memory's id must surface in the wrapper's search results.
-  run bash "$MOD" comemory search "mig-test-title"
+  run bash "$COMEMORY_SH" search "mig-test-title"
   [ "$status" -eq 0 ]
   [[ "$output" == *"$id"* ]]
 }
@@ -46,7 +45,7 @@ teardown() {
 @test "comemory: summary saves a session-summary and accepts a --kind override without flag collision" {
   # summary must not hardcode --kind, so a caller-supplied --kind reaches
   # comemory cleanly (clap rejects a duplicate single-value flag).
-  run bash "$MOD" comemory summary "wrapped up the migration" --kind decision --json
+  run bash "$COMEMORY_SH" summary "wrapped up the migration" --kind decision --json
   [ "$status" -eq 0 ]
   local id
   id=$(echo "$output" | jq -r '.id')
@@ -63,14 +62,14 @@ teardown() {
   # injected its own --tags session-summary, comemory/clap would reject the
   # duplicate single-value flag and the save would fail. status 0 proves the
   # wrapper suppressed its default tag in favour of the caller's.
-  run bash "$MOD" comemory summary "custom tagged summary" --tags "release,notes" --json
+  run bash "$COMEMORY_SH" summary "custom tagged summary" --tags "release,notes" --json
   [ "$status" -eq 0 ]
   local id
   id=$(echo "$output" | jq -r '.id')
   [ -n "$id" ]
   [ "$id" != "null" ]
   # The memory really persisted (the save was not silently partial).
-  run bash "$MOD" comemory list --json
+  run bash "$COMEMORY_SH" list --json
   [ "$status" -eq 0 ]
   [[ "$output" == *"$id"* ]]
 }
@@ -86,7 +85,7 @@ _stub_argv() {
 
 @test "comemory: wrapper injects --repo <repo> and guards the positional with -- (behavioral argv)" {
   _stub_argv
-  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search "hello"
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" search "hello"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -cx -- '--repo')" -eq 1 ]
   printf '%s\n' "$output" | grep -qx 'behave'
@@ -96,7 +95,7 @@ _stub_argv() {
 
 @test "comemory: caller --repo suppresses the wrapper's injection — no duplicate (behavioral argv)" {
   _stub_argv
-  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search "hi" --repo caller
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" search "hi" --repo caller
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -cx -- '--repo')" -eq 1 ]
   printf '%s\n' "$output" | grep -qx 'caller'
@@ -105,11 +104,11 @@ _stub_argv() {
 
 @test "comemory: search-code/index-code/graph carry --repo (behavioral argv)" {
   _stub_argv
-  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory search-code "sym"
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" search-code "sym"
   [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'; printf '%s\n' "$output" | grep -qx 'behave'
-  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory graph
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" graph
   [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'
-  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$MOD" comemory index-code --path /tmp/x
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" index-code --path /tmp/x
   [ "$status" -eq 0 ]; printf '%s\n' "$output" | grep -qx -- '--repo'
 }
 
@@ -119,7 +118,7 @@ _stub_argv() {
 
 @test "comemory: save with a leading-dash title is not parsed as a flag (real binary)" {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-dash"
-  run bash "$MOD" comemory save "--dashy-title" "real body" --json
+  run bash "$COMEMORY_SH" save "--dashy-title" "real body" --json
   [ "$status" -eq 0 ]
   local id
   id=$(echo "$output" | jq -r '.id')
@@ -128,7 +127,7 @@ _stub_argv() {
 
 @test "comemory: search-code runs against the real binary (lexical, empty index → no results, exit 0)" {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-sc"
-  run bash "$MOD" comemory search-code "nonexistent_symbol_xyz"
+  run bash "$COMEMORY_SH" search-code "nonexistent_symbol_xyz"
   [ "$status" -eq 0 ]
 }
 
@@ -147,7 +146,7 @@ _stub_argv() {
   # Isolated data dir so prune --apply / gc never touch the real store.
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-maint"
   mkdir -p "$COMEMORY_DATA_DIR"
-  run bash "$MOD" comemory maintain
+  run bash "$COMEMORY_SH" maintain
   [ "$status" -eq 0 ]
 }
 
@@ -155,7 +154,7 @@ _stub_argv() {
   # The wrapper must NOT also inject --repo when the caller passed one; a second
   # --repo would clap-collide and exit non-zero.
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-repo"
-  run bash "$MOD" comemory save "ovr-title" "ovr body" --repo custom-scope --json
+  run bash "$COMEMORY_SH" save "ovr-title" "ovr body" --repo custom-scope --json
   [ "$status" -eq 0 ]
   local id
   id=$(echo "$output" | jq -r '.id')
@@ -167,7 +166,7 @@ _stub_argv() {
 
 @test "comemory: flag-like MY_CLAUDE_COMEMORY_REPO falls back to unknown (no flag injection)" {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-flag"
-  MY_CLAUDE_COMEMORY_REPO="-evil" run bash "$MOD" comemory list --json
+  MY_CLAUDE_COMEMORY_REPO="-evil" run bash "$COMEMORY_SH" list --json
   [ "$status" -eq 0 ]
 }
 
@@ -192,7 +191,7 @@ _make_repo_with_worktree() {
   _make_repo_with_worktree
   # MY_CLAUDE_COMEMORY_REPO is exported suite-wide; unset it so auto-detection runs.
   cd "$WT_DIR"
-  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$COMEMORY_SH" search "hi"
   [ "$status" -eq 0 ]
   local repo_val
   repo_val=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
@@ -204,12 +203,12 @@ _make_repo_with_worktree() {
   _stub_argv
   _make_repo_with_worktree
   cd "$REPO_DIR"
-  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$COMEMORY_SH" search "hi"
   [ "$status" -eq 0 ]
   local from_main
   from_main=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
   cd "$WT_DIR"
-  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$MOD" comemory search "hi"
+  run env -u MY_CLAUDE_COMEMORY_REPO PATH="$STUB:$PATH" bash "$COMEMORY_SH" search "hi"
   [ "$status" -eq 0 ]
   local from_wt
   from_wt=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
@@ -221,17 +220,17 @@ _make_repo_with_worktree() {
   export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-fb"
   mkdir -p "$COMEMORY_DATA_DIR"
   # Save a memory, then search --json to obtain the query_id the loop feeds back.
-  run bash "$MOD" comemory save "fb-title" "fb body content" --json
+  run bash "$COMEMORY_SH" save "fb-title" "fb body content" --json
   [ "$status" -eq 0 ]
   local mem_id qid
   mem_id=$(echo "$output" | jq -r '.id')
   [ -n "$mem_id" ] && [ "$mem_id" != "null" ]
-  run bash "$MOD" comemory search "fb-title" --json
+  run bash "$COMEMORY_SH" search "fb-title" --json
   [ "$status" -eq 0 ]
   qid=$(echo "$output" | jq -r '.query_id // .queryId // empty')
   if [ -z "$qid" ]; then
     skip "comemory search --json did not expose a query_id field in this version"
   fi
-  run bash "$MOD" comemory feedback "$qid" --used "$mem_id" --json
+  run bash "$COMEMORY_SH" feedback "$qid" --used "$mem_id" --json
   [ "$status" -eq 0 ]
 }
