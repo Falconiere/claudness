@@ -83,3 +83,12 @@ jobs:
             exit 1
           fi
           bats "${suites[@]}"
+
+      - name: Context budget guard
+        run: |
+          set -euo pipefail
+          # Cap the harness's own injected-context footprint: word ceilings on the
+          # Session Protocol + per-language docs and on every skill `description`.
+          # Fails the build if any surface exceeds budget or drops a required
+          # trigger phrase, so the baseline cannot silently regrow.
+          bash plugins/claudness/scripts/context-budget.sh

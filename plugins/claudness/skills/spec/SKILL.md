@@ -1,6 +1,6 @@
 ---
 name: spec
-description: "Use AFTER a design is agreed (brainstorm done) and BEFORE planning, when the work is big enough to deserve a written contract — a new system, a cross-cutting feature, anything multiple people or sessions will build against. Tells: \"write the spec\", \"spec this out\", \"document the design\", \"what exactly are we building\", \"pin down the requirements\". Produces a concise design spec (problem, non-goals, architecture, interfaces, acceptance criteria) saved under docs/claudness/specs/. Second phase of the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow. Skip for mechanical work and for anything already specced."
+description: "Use AFTER a design is agreed (brainstorm done) and BEFORE planning, when the work deserves a written contract — a new system, a cross-cutting feature, anything multiple sessions build against. Tells: \"write the spec\", \"spec this out\", \"document the design\", \"pin down the requirements\". Produces a concise design spec (problem, non-goals, architecture, interfaces, acceptance criteria) under docs/claudness/specs/. Spec phase of the claudness workflow. Skip for mechanical or already-specced work."
 ---
 
 # Spec

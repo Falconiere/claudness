@@ -1,6 +1,6 @@
 ---
 name: spec-review
-description: "Use to review a design spec BEFORE planning or building it — check it's complete, unambiguous, scoped, and testable. Tells: \"review the spec\", \"is this spec ready\", \"audit the design\", \"poke holes in this spec\", \"did we miss anything\". Pairs with the `spec` skill; reviews specs under docs/claudness/specs/. Catches gaps while they're cheap (a paragraph) instead of expensive (a rewrite). Part of the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow."
+description: "Use to review a design spec BEFORE planning or building — check it's complete, unambiguous, scoped, testable. Tells: \"review the spec\", \"is this spec ready\", \"audit the design\", \"poke holes in this spec\". Pairs with the `spec` skill; reviews specs under docs/claudness/specs/. Catches gaps while cheap (a paragraph) not expensive (a rewrite). spec-review phase of the claudness workflow."
 ---
 
 # Spec Review
