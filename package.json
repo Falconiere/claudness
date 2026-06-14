@@ -1,6 +1,6 @@
 {
   "name": "toolu",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Engineering discipline for coding agents — now packaged for Pi too.",
   "type": "module",
   "license": "MIT",
