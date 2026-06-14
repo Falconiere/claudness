@@ -4,7 +4,7 @@ An optional Claude Code statusline. One line, assembled defensively from the
 statusline JSON Claude Code sends on stdin:
 
 ```
-model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-folder | main | [mem:42] | [CAVEMAN]
+model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-folder | main | [COMEMORY:42] | [CAVEMAN]
 ```
 
 | Segment | Source | Shows when |
@@ -15,7 +15,7 @@ model | effort:high | ctx:45k/200k (22%) | wk:13.7M | ✗ gate:failing | my-fold
 | `wk:` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline/usage/<week>/*.json` | any token usage has been recorded this week |
 | `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `toolu` plugins) marks the gate failing |
 | folder + branch | git, from the workspace dir | inside a git repo |
-| `[mem:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **code-intel** plugin published a memory count this session |
+| `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
 | `[CAVEMAN]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.caveman-active` | the **caveman** plugin is active |
 
 The gate, usage, comemory, and caveman segments degrade gracefully — if the file
@@ -49,7 +49,7 @@ SessionStart hook symlinks the script to a stable, version-independent path:
 1. Install the plugin:
 
    ```
-   /plugin install statusline@falconiere
+   /plugin install statusline@toolu
    ```
 
 2. Wire it once. Easiest — run the bundled command:
@@ -84,7 +84,7 @@ SessionStart hook symlinks the script to a stable, version-independent path:
 The statusline used to ship inside the `toolu` plugin and auto-symlinked to
 `~/.claude/toolu/statusline.sh`. It now lives here. To keep your statusline:
 
-- `/plugin install statusline@falconiere`, and
+- `/plugin install statusline@toolu`, and
 - re-point `settings.json` from `~/.claude/toolu/statusline.sh` to
   `~/.claude/statusline/statusline.sh` — `/statusline:setup --force` does this
   for you (the old path is a custom value to it, so plain `/statusline:setup`

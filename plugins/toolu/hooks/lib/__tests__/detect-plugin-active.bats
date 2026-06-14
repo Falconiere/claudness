@@ -29,19 +29,19 @@ _write_installed() {
 }
 
 @test "active: returns 0 when plugin present in installed_plugins.json" {
-  _write_installed '{"plugins":{"comemory@falconiere":{}}}'
-  run toolu_plugin_active comemory@falconiere
+  _write_installed '{"plugins":{"comemory@toolu":{}}}'
+  run toolu_plugin_active comemory@toolu
   [ "$status" -eq 0 ]
 }
 
 @test "active: returns 1 when plugin absent" {
-  _write_installed '{"plugins":{"other@falconiere":{}}}'
-  run toolu_plugin_active comemory@falconiere
+  _write_installed '{"plugins":{"other@toolu":{}}}'
+  run toolu_plugin_active comemory@toolu
   [ "$status" -eq 1 ]
 }
 
 @test "active: indeterminate (no manifest) defaults to active (fail-open)" {
   rm -f "$TMP/.claude/plugins/installed_plugins.json"
-  run toolu_plugin_active comemory@falconiere
+  run toolu_plugin_active comemory@toolu
   [ "$status" -eq 0 ]
 }

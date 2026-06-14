@@ -23,7 +23,7 @@ _run_entry() {
 
 @test "mandate: comemory plugin installed + binary present emits a proactive recall/save mandate" {
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  printf '%s' '{"plugins":{"comemory@falconiere":{}}}' > "$REG"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "MANDATORY"
@@ -33,7 +33,7 @@ _run_entry() {
 
 @test "mandate: ast-grep plugin installed + binary present emits a structural-search mandate" {
   command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
-  printf '%s' '{"plugins":{"ast-grep@falconiere":{}}}' > "$REG"
+  printf '%s' '{"plugins":{"ast-grep@toolu":{}}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "MANDATORY"
@@ -58,7 +58,7 @@ _run_entry() {
 @test "mandate: both plugins installed emit both mandates under one MANDATORY header" {
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
   command -v ast-grep >/dev/null 2>&1 || command -v sg >/dev/null 2>&1 || skip "ast-grep binary not installed"
-  printf '%s' '{"plugins":{"comemory@falconiere":{},"ast-grep@falconiere":{}}}' > "$REG"
+  printf '%s' '{"plugins":{"comemory@toolu":{},"ast-grep@toolu":{}}}' > "$REG"
   run _run_entry
   [ "$status" -eq 0 ]
   [ "$(echo "$output" | grep -c "MANDATORY — proactive plugin use")" -eq 1 ]

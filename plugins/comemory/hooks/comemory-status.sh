@@ -3,7 +3,7 @@
 #
 # Counts memories for the MAIN-repo key on each session start (startup/resume/
 # clear/compact) and writes a small marker
-# the statusline reads to render a [mem:N] badge. The key is derived from
+# the statusline reads to render a [COMEMORY:N] badge. The key is derived from
 # git-common-dir so worktrees share the main repo's memory scope (a bare worktree
 # toplevel basename would mis-scope to the worktree name and read 0).
 #

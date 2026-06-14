@@ -113,8 +113,8 @@ if [ -n "$_usage_sum" ] && [ "$_usage_sum" -gt 0 ] 2>/dev/null; then
   usage_seg="${BOLD}wk:$(format_tokens "$_usage_sum")${RESET}"
 fi
 
-# --- Comemory memory count ([mem:N]): per-project, main-repo scoped ---
-# Read the marker written by code-intel's comemory-status SessionStart hook.
+# --- Comemory memory count ([COMEMORY:N]): per-project, main-repo scoped ---
+# Read the marker written by comemory's comemory-status SessionStart hook.
 # The key derivation MUST match that hook (git-common-dir → main-repo basename)
 # so a worktree resolves to the same scope as its main checkout.
 comemory_seg=""
@@ -129,7 +129,7 @@ if [ -n "$cwd" ]; then
       _cfile="${CFG}/comemory-status/$(basename "$(dirname "$_ck")").json"
       if [ -f "$_cfile" ]; then
         _cn=$(jq -r '.count // empty' "$_cfile" 2>/dev/null)
-        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[mem:${_cn}]${RESET}"
+        [ -n "$_cn" ] && comemory_seg="${BOLD}${GREEN}[COMEMORY:${_cn}]${RESET}"
       fi
     fi
   fi

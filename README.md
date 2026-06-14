@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-568%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-618%20passing-brightgreen)](#testing)
 [![Built for Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://claude.com/claude-code)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -41,18 +41,18 @@ Install from the public marketplace in any Claude Code session:
 
 # 2. Add this marketplace and install the core bundle
 /plugin marketplace add Falconiere/toolu
-/plugin install toolu@falconiere
+/plugin install toolu@toolu
 ```
 
 Add the language gates, search, and docs tooling too:
 
 ```text
-/plugin install rust-quality@falconiere   # Rust quality gates
-/plugin install ts-quality@falconiere     # TypeScript quality gates
-/plugin install ast-grep@falconiere       # structural code search & rewrite
-/plugin install comemory@falconiere       # persistent cross-session memory
-/plugin install context7@falconiere       # live library documentation lookup
-/plugin install exa-search@falconiere     # web / code / URL search + research
+/plugin install rust-quality@toolu   # Rust quality gates
+/plugin install ts-quality@toolu     # TypeScript quality gates
+/plugin install ast-grep@toolu       # structural code search & rewrite
+/plugin install comemory@toolu       # persistent cross-session memory
+/plugin install context7@toolu       # live library documentation lookup
+/plugin install exa-search@toolu     # web / code / URL search + research
 ```
 
 > **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `toolu` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
@@ -229,7 +229,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by **568 [bats](https://github.com/bats-core/bats-core) tests** across 55 suites, run in CI on every push:
+The hook engine and language gates are covered by **618 [bats](https://github.com/bats-core/bats-core) tests** across 60 suites, run in CI on every push:
 
 ```sh
 bats -r plugins

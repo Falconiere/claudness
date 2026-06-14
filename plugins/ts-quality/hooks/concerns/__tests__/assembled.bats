@@ -24,7 +24,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  ASSEMBLED="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@falconiere__ts-quality.sh"
+  ASSEMBLED="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@toolu__ts-quality.sh"
 
   PROJ="$TMP/proj"
   mkdir -p "$PROJ"

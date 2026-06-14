@@ -3,7 +3,7 @@
 # <spec>__rust-quality.sh under $CLAUDE_CONFIG_DIR/toolu/post-tools.d/,
 # prunes its own stale entries + tmp residue, and never touches other plugins.
 
-SPEC="rust-quality@falconiere"
+SPEC="rust-quality@toolu"
 MODULE="${SPEC}__rust-quality.sh"
 
 setup() {
@@ -107,7 +107,7 @@ _rust_dispatch_project() {
   _rust_dispatch_project
   bash "$REGISTER" </dev/null
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
-  printf '%s' '{"plugins":{"rust-quality@falconiere":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"rust-quality@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run bash -c 'cd "'"$proj"'" && env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="'"$CLAUDE_CONFIG_DIR"'" HOME="'"$TMP"'" bash "'"$CORE_MOD"'" <<<'"'"'{"tool_name":"Edit","tool_input":{"file_path":"'"$proj"'/src/bad.rs"},"tool_response":{}}'"'"''
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "Forbidden lint suppression"

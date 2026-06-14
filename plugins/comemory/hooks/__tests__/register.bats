@@ -17,7 +17,7 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   for src in "$SRC_DIR"/*.sh; do
     name=$(basename "$src")
-    dst="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d/comemory@falconiere__${name}"
+    dst="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d/comemory@toolu__${name}"
     [ -f "$dst" ]
     cmp -s "$src" "$dst"
   done
@@ -26,34 +26,21 @@ teardown() { rm -rf "$TMP"; }
 @test "register: prunes its own stale entries but not other plugins'" {
   regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
-  echo '#!/usr/bin/env bash' > "$regdir/comemory@falconiere__removed-module.sh"
+  echo '#!/usr/bin/env bash' > "$regdir/comemory@toolu__removed-module.sh"
   echo '#!/usr/bin/env bash' > "$regdir/other@market__keep.sh"
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
-  [ ! -f "$regdir/comemory@falconiere__removed-module.sh" ]
-  [ -f "$regdir/other@market__keep.sh" ]
-}
-
-@test "register: prunes legacy code-intel@falconiere residue from the former bundled plugin" {
-  regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
-  mkdir -p "$regdir"
-  echo '#!/usr/bin/env bash' > "$regdir/code-intel@falconiere__search-nudge.sh"
-  echo '#!/usr/bin/env bash' > "$regdir/code-intel@falconiere__comemory-scope.sh"
-  echo '#!/usr/bin/env bash' > "$regdir/other@market__keep.sh"
-  run bash "$REGISTER" <<<'{}'
-  [ "$status" -eq 0 ]
-  [ ! -f "$regdir/code-intel@falconiere__search-nudge.sh" ]
-  [ ! -f "$regdir/code-intel@falconiere__comemory-scope.sh" ]
+  [ ! -f "$regdir/comemory@toolu__removed-module.sh" ]
   [ -f "$regdir/other@market__keep.sh" ]
 }
 
 @test "register: refreshes a registry copy that drifted from source" {
   regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
-  echo 'stale content' > "$regdir/comemory@falconiere__comemory-scope.sh"
+  echo 'stale content' > "$regdir/comemory@toolu__comemory-scope.sh"
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
-  cmp -s "$SRC_DIR/comemory-scope.sh" "$regdir/comemory@falconiere__comemory-scope.sh"
+  cmp -s "$SRC_DIR/comemory-scope.sh" "$regdir/comemory@toolu__comemory-scope.sh"
 }
 
 @test "register: idempotent (second run changes nothing, exits 0)" {
@@ -82,7 +69,7 @@ teardown() { rm -rf "$TMP"; }
   CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
   bash "$REGISTER" <<<'{}'
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
-  printf '%s' '{"plugins":{"comemory@falconiere":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"comemory@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" HOME="$TMP" \
     bash "$CORE_MOD" <<<'{"tool_name":"Bash","tool_input":{"command":"comemory search foo"}}'
   [ "$status" -eq 0 ]
@@ -104,16 +91,16 @@ teardown() { rm -rf "$TMP"; }
   regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
   # Aged orphan (ours): from a crashed run — must be removed.
-  echo 'partial' > "$regdir/comemory@falconiere__comemory-scope.sh.tmp.12345"
-  touch -t 202601010000 "$regdir/comemory@falconiere__comemory-scope.sh.tmp.12345"
+  echo 'partial' > "$regdir/comemory@toolu__comemory-scope.sh.tmp.12345"
+  touch -t 202601010000 "$regdir/comemory@toolu__comemory-scope.sh.tmp.12345"
   # Fresh tmp (ours): a concurrent SessionStart mid-write — must survive.
-  echo 'partial' > "$regdir/comemory@falconiere__fresh-module.sh.tmp.777"
+  echo 'partial' > "$regdir/comemory@toolu__fresh-module.sh.tmp.777"
   # Foreign tmp: never ours to touch, fresh or aged.
   echo 'partial' > "$regdir/other@market__keep.sh.tmp.99"
   touch -t 202601010000 "$regdir/other@market__keep.sh.tmp.99"
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
-  [ ! -f "$regdir/comemory@falconiere__comemory-scope.sh.tmp.12345" ]
-  [ -f "$regdir/comemory@falconiere__fresh-module.sh.tmp.777" ]
+  [ ! -f "$regdir/comemory@toolu__comemory-scope.sh.tmp.12345" ]
+  [ -f "$regdir/comemory@toolu__fresh-module.sh.tmp.777" ]
   [ -f "$regdir/other@market__keep.sh.tmp.99" ]
 }

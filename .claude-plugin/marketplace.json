@@ -1,5 +1,5 @@
 {
-  "name": "falconiere",
+  "name": "toolu",
   "owner": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io",
@@ -47,7 +47,7 @@
       "keywords": ["comemory", "memory", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "toolu", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "toolu" }
       ]
     },
     {
@@ -59,7 +59,7 @@
       "keywords": ["rust", "quality", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "toolu", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "toolu" }
       ]
     },
     {
@@ -71,7 +71,7 @@
       "keywords": ["typescript", "quality", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "toolu", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "toolu" }
       ]
     },
     {
@@ -101,7 +101,7 @@
       "keywords": ["pr", "review", "ci", "automation"],
       "license": "MIT",
       "dependencies": [
-        { "name": "toolu", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "toolu" }
       ]
     },
     {

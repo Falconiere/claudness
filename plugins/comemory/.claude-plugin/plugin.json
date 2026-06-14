@@ -11,6 +11,6 @@
   "license": "MIT",
   "keywords": ["claude-code", "comemory", "memory", "hooks"],
   "dependencies": [
-    { "name": "toolu", "marketplace": "falconiere" }
+    { "name": "toolu", "marketplace": "toolu" }
   ]
 }

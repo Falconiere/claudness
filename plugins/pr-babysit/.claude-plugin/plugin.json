@@ -8,6 +8,6 @@
   "license": "MIT",
   "keywords": ["claude-code", "pr", "review", "ci", "automation"],
   "dependencies": [
-    { "name": "toolu", "marketplace": "falconiere" }
+    { "name": "toolu", "marketplace": "toolu" }
   ]
 }

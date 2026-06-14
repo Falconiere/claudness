@@ -88,7 +88,7 @@ the rust-quality / ts-quality hooks write. Install it and wire `settings.json` p
 `plugins/statusline/README.md`:
 
 ```
-/plugin install statusline@falconiere
+/plugin install statusline@toolu
 ```
 
 ```json

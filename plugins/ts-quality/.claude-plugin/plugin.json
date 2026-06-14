@@ -8,6 +8,6 @@
   "license": "MIT",
   "keywords": ["claude-code", "typescript", "quality", "hooks"],
   "dependencies": [
-    { "name": "toolu", "marketplace": "falconiere" }
+    { "name": "toolu", "marketplace": "toolu" }
   ]
 }

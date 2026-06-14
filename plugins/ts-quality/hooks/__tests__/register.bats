@@ -3,7 +3,7 @@
 # <spec>__ts-quality.sh under $CLAUDE_CONFIG_DIR/toolu/post-tools.d/,
 # prunes its own stale entries + tmp residue, and never touches other plugins.
 
-SPEC="ts-quality@falconiere"
+SPEC="ts-quality@toolu"
 MODULE="${SPEC}__ts-quality.sh"
 
 setup() {
@@ -101,7 +101,7 @@ _ts_dispatch_project() {
   _ts_dispatch_project
   bash "$REGISTER" </dev/null
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
-  printf '%s' '{"plugins":{"ts-quality@falconiere":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
+  printf '%s' '{"plugins":{"ts-quality@toolu":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
   run bash -c 'cd "'"$proj"'" && env -u CLAUDE_PLUGINS_REGISTRY CLAUDE_CONFIG_DIR="'"$CLAUDE_CONFIG_DIR"'" HOME="'"$TMP"'" bash "'"$CORE_MOD"'" <<<'"'"'{"tool_name":"Edit","tool_input":{"file_path":"'"$proj"'/src/bad.ts"},"tool_response":{}}'"'"''
   [ "$status" -eq 0 ]
   echo "$output" | grep -q "non-Error literal"

@@ -175,10 +175,10 @@ fi
 # from turn one. Aggressive by design; the per-skill opt-out (toolu_enabled
 # skills <key> = false) is the escape hatch for a user who wants it off.
 mandates=()
-if [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_plugin_active comemory@falconiere; then
+if [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && toolu_plugin_active comemory@toolu; then
   mandates+=("comemory (persistent memory) — you MUST, without being asked: (1) at the START of a task and BEFORE reading files, run \`comemory.sh search \"<topic>\"\` to recall prior decisions, bugs, and file-maps; (2) the MOMENT you make a decision, fix a bug, or learn something reusable, run \`comemory.sh save …\`. Treat recall+save as part of the task, never an optional extra, never something to ask permission for.")
 fi
-if [ "$HAS_ASTGREP" = "ast-grep" ] && toolu_enabled skills ast-grep && toolu_plugin_active ast-grep@falconiere; then
+if [ "$HAS_ASTGREP" = "ast-grep" ] && toolu_enabled skills ast-grep && toolu_plugin_active ast-grep@toolu; then
   mandates+=("ast-grep (structural search) — for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for \`ast-grep run --pattern …\` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY — use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.")
 fi
 if [ "${#mandates[@]}" -gt 0 ]; then

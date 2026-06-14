@@ -17,7 +17,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/rust-quality@falconiere__rust-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/rust-quality@toolu__rust-quality.sh"
 
   # Real project root for fixtures (replaces the monolith suite's flat $TMP).
   TMP_PROJ="$TMP/proj"

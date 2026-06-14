@@ -113,17 +113,17 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   [[ "$plain" == *"wk:1.0M"* ]]
 }
 
-@test "statusline: mem: renders the count from the comemory marker" {
+@test "statusline: comemory:renders the count from the comemory marker" {
   ( cd "$TMP" && git init -q )
   key=$(basename "$TMP")
   mkdir -p "$TMP/cfg/comemory-status"
   printf '{"repo":"%s","count":7}' "$key" > "$TMP/cfg/comemory-status/$key.json"
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
   plain=$(_plain "$out")
-  [[ "$plain" == *"[mem:7]"* ]]
+  [[ "$plain" == *"[COMEMORY:7]"* ]]
 }
 
-@test "statusline: mem: worktree resolves to the main-repo key" {
+@test "statusline: comemory:worktree resolves to the main-repo key" {
   main="$TMP/main"; mkdir -p "$main"
   ( cd "$main" && git init -q && git -c user.email=t@t -c user.name=t commit --allow-empty -qm init )
   git -C "$main" worktree add -q "$TMP/wt" >/dev/null 2>&1
@@ -132,12 +132,12 @@ _plain() { printf '%s' "$1" | sed $'s/\033\\[[0-9;]*m//g'; }
   printf '{"repo":"%s","count":5}' "$key" > "$TMP/cfg/comemory-status/$key.json"
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'/wt"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
   plain=$(_plain "$out")
-  [[ "$plain" == *"[mem:5]"* ]]
+  [[ "$plain" == *"[COMEMORY:5]"* ]]
 }
 
-@test "statusline: mem: omitted when there is no marker" {
+@test "statusline: comemory:omitted when there is no marker" {
   ( cd "$TMP" && git init -q )
   out=$(printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$TMP"'"},"context_window":{"context_window_size":200000,"total_input_tokens":1000}}' | CLAUDE_CONFIG_DIR="$TMP/cfg" bash "$SL")
   plain=$(_plain "$out")
-  [[ "$plain" != *"[mem:"* ]]
+  [[ "$plain" != *"[COMEMORY:"* ]]
 }
