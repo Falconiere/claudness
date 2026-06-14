@@ -56,7 +56,7 @@ fi
 
 # --- Findings: only the `### Findings` … next `### ` block, lines of the form
 #     `path[:line]`: severity: text
-_sha1() { (sha1sum 2>/dev/null || shasum 2>/dev/null) | cut -c1-8; }
+_sha1() { (sha1sum 2>/dev/null || shasum 2>/dev/null || echo nohash) | cut -c1-8; }
 findings_block=$(printf '%s\n' "$input" | awk '/^### Findings[[:space:]]*$/{f=1;next} /^### /{f=0} f')
 findings_json="[]"
 while IFS= read -r line; do
