@@ -101,7 +101,7 @@ main_doc=$(render_doc "$HOOK_DIR/docs/session-start.md")
 
 case "$event" in
   startup)
-    title="Session started"
+    title="Claudness is on!"
     [ -n "$main_doc" ] && parts+=("$main_doc")
     ;;
   resume)
@@ -165,6 +165,31 @@ if [ "${#missing_tools[@]}" -gt 0 ]; then
   • $t"
   done
   parts+=("$warn")
+fi
+
+# ── Mandatory proactive tool use ────────────────────────────────────────────
+# When the comemory / ast-grep plugins are INSTALLED and their underlying tool
+# is on PATH, front-load a hard, proactive mandate into session context. The
+# skills are ALWAYS-ACTIVE, but their bodies only load on trigger and the agent
+# tends to wait to be asked — this injection makes the requirement unmissable
+# from turn one. Aggressive by design; the per-skill opt-out (claudness_enabled
+# skills <key> = false) is the escape hatch for a user who wants it off.
+mandates=()
+if [ "$HAS_COMEMORY" = "comemory" ] && claudness_enabled skills comemory && claudness_plugin_active comemory@falconiere; then
+  mandates+=("comemory (persistent memory) — you MUST, without being asked: (1) at the START of a task and BEFORE reading files, run \`comemory.sh search \"<topic>\"\` to recall prior decisions, bugs, and file-maps; (2) the MOMENT you make a decision, fix a bug, or learn something reusable, run \`comemory.sh save …\`. Treat recall+save as part of the task, never an optional extra, never something to ask permission for.")
+fi
+if [ "$HAS_ASTGREP" = "ast-grep" ] && claudness_enabled skills ast-grep && claudness_plugin_active ast-grep@falconiere; then
+  mandates+=("ast-grep (structural search) — for ANY search by code shape (signatures, call sites, impls, trait/interface usage, patterns) you MUST reach for \`ast-grep run --pattern …\` FIRST. Grep/ripgrep/sed are a FALLBACK ONLY — use them for plain-text literals in non-code files, or when a query genuinely cannot be expressed structurally. Never reach for them first on code.")
+fi
+if [ "${#mandates[@]}" -gt 0 ]; then
+  mwarn="MANDATORY — proactive plugin use (installed + available; NOT optional, do NOT ask permission):"
+  for m in "${mandates[@]}"; do
+    mwarn+="
+  • $m"
+  done
+  mwarn+="
+  • Propagation: these mandates bind EVERY agent in this session, not just the main thread. When you delegate via Task/subagents (nested ones too), carry the same requirement into the subagent's prompt — recall/save via comemory, ast-grep first with Grep/sed as fallback. Delegation never exempts the work."
+  parts+=("$mwarn")
 fi
 
 # Verify required plugin dependencies declared in plugin.json `dependencies`
