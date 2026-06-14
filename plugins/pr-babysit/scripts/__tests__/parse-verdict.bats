@@ -85,6 +85,14 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
   [ "$(jq -r '.findings[0].path' <<<"$out")" = "a/b.sh" ]
 }
 
+@test "parse-verdict: a clean 'None' findings section is zero findings + approved" {
+  body=$'### Code Review — x\n\n- [x] Reviewed\n\n### Findings\n\nNone — no blocking issues.\n\n**Approved** (`agent-merge-approved`)'
+  out=$(bash "$PV" <<<"$body")
+  [ "$(jq -r .state <<<"$out")" = "complete" ]
+  [ "$(jq -r .verdict <<<"$out")" = "approved" ]
+  [ "$(jq '.findings | length' <<<"$out")" -eq 0 ]
+}
+
 @test "parse-verdict: empty input is handled" {
   out=$(printf '' | bash "$PV")
   [ "$(jq -r .is_review_comment <<<"$out")" = "false" ]
