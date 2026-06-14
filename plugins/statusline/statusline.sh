@@ -101,16 +101,34 @@ if [ -f "$caveman_flag" ] && [ ! -L "$caveman_flag" ]; then
   esac
 fi
 
-# --- Weekly token usage (wk): account-wide Mon–Sun consumption ---
+# --- Weekly usage (wk): account-wide Mon–Sun tokens, cost, and cache-hit% ---
 # Sum the per-(week,session) files the token-ledger Stop hook writes for the
 # current local ISO week. Read-only and cheap (a handful of small files) — the
 # expensive transcript parse lives in the hook, never on this render path.
+# One jq pass yields the four sums; cost ($) and cache:NN% are appended only
+# when the files carry the newer fields (legacy token-only files show wk: alone).
 CFG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 usage_seg=""
 _usage_dir="${CFG}/statusline/usage/$(date +%G-W%V 2>/dev/null)"
-_usage_sum=$(cat "$_usage_dir"/*.json 2>/dev/null | jq -s 'map((.tokens // 0) | numbers) | add // 0' 2>/dev/null)
-if [ -n "$_usage_sum" ] && [ "$_usage_sum" -gt 0 ] 2>/dev/null; then
-  usage_seg="${BOLD}wk:$(format_tokens "$_usage_sum")${RESET}"
+{
+  IFS= read -r _wk_tokens
+  IFS= read -r _wk_cost
+  IFS= read -r _wk_cr
+  IFS= read -r _wk_inp
+} < <(cat "$_usage_dir"/*.json 2>/dev/null | jq -rs '
+  (map(.tokens // 0     | numbers) | add // 0),
+  (map(.cost // 0       | numbers) | add // 0),
+  (map(.cache_read // 0 | numbers) | add // 0),
+  (map(.input // 0      | numbers) | add // 0)' 2>/dev/null)
+if [ -n "$_wk_tokens" ] && [ "$_wk_tokens" -gt 0 ] 2>/dev/null; then
+  usage_seg="${BOLD}wk:$(format_tokens "$_wk_tokens")"
+  _cost_fmt=$(printf '%.2f' "${_wk_cost:-0}" 2>/dev/null)
+  [ -n "$_cost_fmt" ] && [ "$_cost_fmt" != "0.00" ] && usage_seg="${usage_seg} \$${_cost_fmt}"
+  # cache-hit% = cache_read / (cache_read + fresh input); integer math, both are token counts.
+  if [ -n "$_wk_cr" ] && [ -n "$_wk_inp" ] && [ "$(( _wk_cr + _wk_inp ))" -gt 0 ] 2>/dev/null; then
+    usage_seg="${usage_seg} cache:$(( _wk_cr * 100 / (_wk_cr + _wk_inp) ))%"
+  fi
+  usage_seg="${usage_seg}${RESET}"
 fi
 
 # --- Comemory memory count ([COMEMORY:N]): per-project, main-repo scoped ---

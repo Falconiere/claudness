@@ -140,6 +140,37 @@ teardown() {
   ! echo "$ctx" | grep -qF '{{project_name}}'
 }
 
+@test "session-start: git context is branch-only (no volatile dirty count)" {
+  # Cache discipline: the SessionStart additionalContext lands in the cached
+  # prefix, so it must depend only on stable inputs. A live uncommitted-file
+  # count goes stale immediately and differs every session — keep branch only.
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  echo dirty > file.txt   # working tree is now dirty
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -re '.hookSpecificOutput.additionalContext')
+  branch=$(git -C "$TMP" symbolic-ref --short HEAD)
+  echo "$ctx" | grep -qF "Branch: $branch"
+  ! echo "$ctx" | grep -qiE 'uncommitted|[0-9]+ files'
+}
+
+@test "session-start: failing quality gate is not injected into the cached prefix" {
+  # The failing gate is surfaced live (statusline) and per-prompt
+  # (user-prompt-submit). Re-injecting it into the once-cached SessionStart
+  # prefix is redundant and volatile, so it must not appear here.
+  cd "$TMP"
+  git init -q
+  git -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
+  mkdir -p "$TMP/.claude/tmp"
+  printf '%s' '{"status":"failing","reason":"boom"}' > "$TMP/.claude/tmp/quality-gate-status.json"
+  run bash "$HOOK" <<<'{"source":"startup"}'
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -re '.hookSpecificOutput.additionalContext')
+  ! echo "$ctx" | grep -qiE 'quality gate failing|boom'
+}
+
 @test "session-start: toolchain block emits when TOOLU_VERBOSE=1 and detected" {
   cd "$TMP"
   git init -q
