@@ -9,7 +9,8 @@
 
 # claudness_registry_root -> prints the registry root dir (not created).
 claudness_registry_root() {
-  printf '%s/claudness' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  local agent_dir="${CLAUDNESS_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-${PI_CODING_AGENT_DIR:-$HOME/.claude}}}"
+  printf '%s/claudness' "$agent_dir"
 }
 
 # claudness_registry_event_dir EVENT -> prints "<root>/<event-slug>.d".

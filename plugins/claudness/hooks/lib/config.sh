@@ -2,8 +2,12 @@
 # Claudness runtime config loader.
 #
 # Reads two layers of JSON config and merges them (project override wins):
-#   1. ~/.claude/claudness.config.json
-#   2. $CLAUDE_PROJECT_DIR/.claude/claudness.config.json
+#   1. <agent-config-dir>/claudness.config.json
+#   2. <project-root>/<project-config-dir>/claudness.config.json
+#
+# Defaults are Claude Code-compatible (~/.claude + .claude/), but callers can
+# point them at pi-style roots via CLAUDNESS_CONFIG_DIR and
+# CLAUDNESS_PROJECT_CONFIG_DIRNAME.
 #
 # Public API:
 #   claudness_load_config          - load + cache the merged config
@@ -26,15 +30,37 @@ _claudness_warn() {
   printf 'claudness-config: %s\n' "$1" >&2
 }
 
+_claudness_agent_dir() {
+  if [ -n "${CLAUDNESS_CONFIG_DIR:-}" ]; then
+    printf '%s' "$CLAUDNESS_CONFIG_DIR"
+  elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+    printf '%s' "$CLAUDE_CONFIG_DIR"
+  elif [ -n "${PI_CODING_AGENT_DIR:-}" ]; then
+    printf '%s' "$PI_CODING_AGENT_DIR"
+  else
+    printf '%s/.claude' "$HOME"
+  fi
+}
+
+_claudness_project_cfg_dirname() {
+  printf '%s' "${CLAUDNESS_PROJECT_CONFIG_DIRNAME:-.claude}"
+}
+
 _claudness_user_cfg() {
-  printf '%s/.claude/claudness.config.json' "$HOME"
+  local agent_dir
+  agent_dir=$(_claudness_agent_dir)
+  if [ "$agent_dir" = "$HOME/.claude" ]; then
+    printf '%s/.claude/claudness.config.json' "$HOME"
+  else
+    printf '%s/claudness.config.json' "$agent_dir"
+  fi
 }
 
 _claudness_project_cfg() {
-  local root="${CLAUDE_PROJECT_DIR:-}"
+  local root="${CLAUDNESS_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
   [ -z "$root" ] && root=$(git rev-parse --show-toplevel 2>/dev/null || true)
   [ -z "$root" ] && return 0
-  printf '%s/.claude/claudness.config.json' "$root"
+  printf '%s/%s/claudness.config.json' "$root" "$(_claudness_project_cfg_dirname)"
 }
 
 claudness_load_config() {

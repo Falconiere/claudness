@@ -5,6 +5,7 @@ setup() {
   TMP=$(mktemp -d)
   export HOME="$TMP/home"
   export CLAUDE_PROJECT_DIR="$TMP/project"
+  unset CLAUDNESS_CONFIG_DIR CLAUDNESS_PROJECT_DIR CLAUDNESS_PROJECT_CONFIG_DIRNAME PI_CODING_AGENT_DIR
   mkdir -p "$HOME/.claude" "$CLAUDE_PROJECT_DIR/.claude"
 
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
@@ -56,6 +57,31 @@ teardown() {
   run claudness_comemory_state
   [ "$status" -eq 0 ]
   [ "$output" = "disabled" ]
+}
+
+@test "user cfg path honors PI_CODING_AGENT_DIR" {
+  run env PI_CODING_AGENT_DIR="$TMP/pi" bash -c '
+    . '"$REPO_ROOT/hooks/lib/config.sh"'; _claudness_user_cfg
+  '
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TMP/pi/claudness.config.json" ]
+}
+
+@test "user cfg path honors CLAUDNESS_CONFIG_DIR over PI_CODING_AGENT_DIR" {
+  run env CLAUDNESS_CONFIG_DIR="$TMP/cfg" PI_CODING_AGENT_DIR="$TMP/pi" bash -c '
+    . '"$REPO_ROOT/hooks/lib/config.sh"'; _claudness_user_cfg
+  '
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TMP/cfg/claudness.config.json" ]
+}
+
+@test "project cfg path honors CLAUDNESS_PROJECT_CONFIG_DIRNAME" {
+  mkdir -p "$CLAUDE_PROJECT_DIR/.pi"
+  echo '{"version":1,"skills":{"comemory":false}}' > "$CLAUDE_PROJECT_DIR/.pi/claudness.config.json"
+  run env CLAUDNESS_PROJECT_CONFIG_DIRNAME=".pi" bash -c '
+    . '"$REPO_ROOT/hooks/lib/config.sh"'; claudness_enabled skills comemory
+  '
+  [ "$status" -eq 1 ]
 }
 
 @test "comemory_state returns 'missing' when enabled but CLI absent" {
