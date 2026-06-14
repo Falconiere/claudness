@@ -36,7 +36,18 @@ SessionStart hook symlinks the script to a stable, version-independent path:
    /plugin install statusline@falconiere
    ```
 
-2. Wire it once in your `settings.json`:
+2. Wire it once. Easiest — run the bundled command:
+
+   ```
+   /statusline:setup
+   ```
+
+   It adds the `statusLine` key below to your `settings.json` idempotently:
+   it backs the file up first, never clobbers an existing custom statusLine
+   (re-run `/statusline:setup --force` if you do want to replace one), and is a
+   no-op once wired. Restart the session afterwards for the bar to appear.
+
+   Or wire it by hand:
 
    ```json
    {
@@ -59,7 +70,9 @@ The statusline used to ship inside the `claudness` plugin and auto-symlinked to
 
 - `/plugin install statusline@falconiere`, and
 - re-point `settings.json` from `~/.claude/claudness/statusline.sh` to
-  `~/.claude/statusline/statusline.sh`.
+  `~/.claude/statusline/statusline.sh` — `/statusline:setup --force` does this
+  for you (the old path is a custom value to it, so plain `/statusline:setup`
+  would refuse).
 
 Claudness no longer creates the old symlink and sweeps away the dangling one it
 used to own, so an un-migrated `settings.json` will fail loudly (missing file)
