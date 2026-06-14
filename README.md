@@ -54,13 +54,19 @@ Add the language gates and structural-search tooling too:
 
 > **Note** — `code-intel`, `rust-quality`, and `ts-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
+## New in v1.9.0
+
+- **Language gates are now split by language** — install `rust-quality` for Rust and `ts-quality` for TypeScript instead of one combined quality plugin.
+- **The split is structural, not behavioral** — each language gate is now authored as ordered concern fragments and assembled at `SessionStart`, so installs are leaner without changing the gate's actual checks.
+- **Upgrade path:** if you previously used `lang-quality`, replace it with whichever of `rust-quality` and `ts-quality` you need.
+
 ## What's inside
 
 Seven plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.8.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`claudness`** | `1.9.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
 | **`code-intel`** | `0.2.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules. |
