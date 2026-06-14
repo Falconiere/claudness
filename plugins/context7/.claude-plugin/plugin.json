@@ -6,8 +6,8 @@
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
   },
-  "homepage": "https://github.com/falconiere/claudness",
-  "repository": "https://github.com/falconiere/claudness.git",
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
   "keywords": ["claude-code", "context7", "documentation", "skills"]
 }

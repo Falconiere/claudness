@@ -1,19 +1,19 @@
 #!/usr/bin/env bats
 # Concern: gating — 00-preamble / 99-finalize entry and exit guards: no-op
 # outside a TS project, no-op when no package manager is detected, and fail-soft
-# (silent exit 0) when CLAUDNESS_LIB_DIR is unset. Ported VERBATIM from the
+# (silent exit 0) when TOOLU_LIB_DIR is unset. Ported VERBATIM from the
 # deleted monolith per-rule suite; only change: drive the ASSEMBLED registry
 # module.
 
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/ts-quality@falconiere__ts-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@falconiere__ts-quality.sh"
 
   TMP_PROJ="$TMP/proj"
   mkdir -p "$TMP_PROJ"
@@ -48,9 +48,9 @@ teardown() {
   [ -z "$output" ]
 }
 
-@test "ts-quality: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+@test "ts-quality: exits 0 silently when TOOLU_LIB_DIR is unset (fail soft)" {
   payload='{"tool_input":{"file_path":"'"$TMP"'/src/index.ts"}}'
-  run env -u CLAUDNESS_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP" bash "$HOOK"
+  run env -u TOOLU_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP" bash "$HOOK"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

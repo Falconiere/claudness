@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# write-state.sh — write the push-review state file the claudness push-review
+# write-state.sh — write the push-review state file the toolu push-review
 # gate validates (.claude/tmp/push-review/<branch-slug>.json).
 #
 # The review JUDGMENT (which findings exist) belongs to the caller — the
@@ -8,9 +8,9 @@
 # write the JSON atomically.
 #
 # The base / diff_sha / slug recipes are MIRRORS of the gate in
-# plugins/claudness/hooks/pre-tools/modules/push-review.sh — the cross-check in
+# plugins/toolu/hooks/pre-tools/modules/push-review.sh — the cross-check in
 # scripts/__tests__/state-writer.bats asserts they produce identical SHAs, so a
-# drift in either recipe fails CI. Harmless no-op when the claudness gate is not
+# drift in either recipe fails CI. Harmless no-op when the toolu gate is not
 # installed (the file is simply never read).
 #
 # Usage: write-state.sh --findings-count N [--reviewers JSON] [--findings JSON]

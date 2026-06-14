@@ -8,11 +8,11 @@
 set -euo pipefail
 
 # Self-contained project detection — no cross-plugin source path (this plugin
-# may be installed without a claudness checkout next to it). detect_project_name
+# may be installed without a toolu checkout next to it). detect_project_name
 # uses an if-block (not a bare `[ -n ] && basename`) so it exits 0 outside a
 # git repo and `set -e` reaches the REPO="unknown" fallback below.
 #
-# Unlike the claudness core's hooks/lib/detect.sh (which resolves the per-worktree
+# Unlike the toolu core's hooks/lib/detect.sh (which resolves the per-worktree
 # --show-toplevel — correct for per-worktree gate state), memory scope must be
 # the CANONICAL repo root, SHARED across every git worktree: --show-toplevel is
 # the worktree path, so each worktree would otherwise mint a separate `--repo`

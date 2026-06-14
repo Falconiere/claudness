@@ -44,7 +44,7 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 
    `write-state.sh` computes the gate's exact `diff_sha`/`base`/`slug`, bumps
    `review_round`, and writes `.claude/tmp/push-review/<branch-slug>.json`
-   atomically. It is a harmless no-op when the claudness push-review gate is not
+   atomically. It is a harmless no-op when the toolu push-review gate is not
    installed (the file simply goes unread).
 
 If findings remain that you cannot fix (e.g. needs a human decision), record them

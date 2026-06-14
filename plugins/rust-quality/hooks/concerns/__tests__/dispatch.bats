@@ -4,10 +4,10 @@
 # write/clear) concerns. Drives the ASSEMBLED registry module — register.sh
 # concatenates concerns/[0-9][0-9]-*.sh into one runtime script.
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# Core lib lives in the sibling toolu plugin; the dispatcher provides this
 # env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
@@ -17,7 +17,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/rust-quality@falconiere__rust-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/rust-quality@falconiere__rust-quality.sh"
 
   # Real project root for fixtures (replaces the monolith suite's flat $TMP).
   TMP_PROJ="$TMP/proj"
@@ -97,9 +97,9 @@ EOF
   jq -e '.source == "rust-quality-hook"' "$TMP_PROJ/.claude/tmp/quality-gate-status.json"
 }
 
-@test "rust-quality: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+@test "rust-quality: exits 0 silently when TOOLU_LIB_DIR is unset (fail soft)" {
   payload='{"tool_input":{"file_path":"'"$TMP_PROJ"'/src/main.rs"}}'
-  run env -u CLAUDNESS_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" bash "$HOOK"
+  run env -u TOOLU_LIB_DIR tool_name=Write input="$payload" PROJECT_ROOT="$TMP_PROJ" bash "$HOOK"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

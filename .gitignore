@@ -3,7 +3,7 @@
 *.tmp.*
 
 # Local workflow artifacts (specs/plans) — not shipped
-docs/claudness/
+docs/toolu/
 
 # Dependencies
 node_modules/

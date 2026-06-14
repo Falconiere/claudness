@@ -91,4 +91,4 @@ jobs:
           # Session Protocol + per-language docs and on every skill `description`.
           # Fails the build if any surface exceeds budget or drops a required
           # trigger phrase, so the baseline cannot silently regrow.
-          bash plugins/claudness/scripts/context-budget.sh
+          bash plugins/toolu/scripts/context-budget.sh

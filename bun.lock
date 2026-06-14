@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "claudness",
+      "name": "toolu",
       "devDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@types/node": "^25.9.3",

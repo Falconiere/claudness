@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Statusline — the claudness statusline.
+# Statusline — the toolu statusline.
 # Reads the Claude Code statusline JSON on stdin and prints a single status line:
 #   model | effort | ctx | <gate> | folder | branch | <caveman>
 # The signature segment is the quality-gate marker: when this project's
 # PostToolUse gate is failing, it shows a loud red marker so you can't miss it.
-# (Lights up only when a gate writer — e.g. rust-quality/ts-quality/claudness — is present.)
+# (Lights up only when a gate writer — e.g. rust-quality/ts-quality/toolu — is present.)
 #
 # Wire it up (settings.json) after the SessionStart hook has symlinked it to a
 # stable path:
@@ -23,7 +23,7 @@ MAGENTA=$'\033[35m'; BLUE=$'\033[34m'; RED=$'\033[31m'
 DIM=$'\033[2m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
 
 # Without jq we cannot parse the payload — emit nothing rather than garbage.
-command -v jq >/dev/null 2>&1 || { printf 'claudness'; exit 0; }
+command -v jq >/dev/null 2>&1 || { printf 'toolu'; exit 0; }
 
 # One jq pass extracts every field — a statusline renders on every prompt, so
 # six separate jq spawns would be wasteful. One value per line (not @tsv: tab is
@@ -65,7 +65,7 @@ else
   tokens_seg="${ctx_used_fmt}/${ctx_size_fmt}"
 fi
 
-# --- Quality gate (claudness): red marker only when failing ---
+# --- Quality gate (toolu): red marker only when failing ---
 # Resolve the gate file at the git root (where the rust-quality / ts-quality hooks write it
 # via $PROJECT_ROOT), not at $cwd — a subdir-launched session or worktree has
 # cwd != project root, which would silently miss the marker.

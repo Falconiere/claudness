@@ -1,5 +1,5 @@
 {
-  "name": "claudness",
+  "name": "toolu",
   "version": "1.12.0",
   "description": "Engineering discipline for coding agents — now packaged for Pi too.",
   "type": "module",
@@ -30,7 +30,7 @@
       "./pi/extensions"
     ],
     "skills": [
-      "./plugins/claudness/skills",
+      "./plugins/toolu/skills",
       "./plugins/ast-grep/skills",
       "./plugins/comemory/skills",
       "./plugins/code-review/skills",
@@ -38,7 +38,7 @@
       "./plugins/exa-search/skills"
     ],
     "prompts": [
-      "./plugins/claudness/commands",
+      "./plugins/toolu/commands",
       "./plugins/pr-babysit/commands"
     ]
   }

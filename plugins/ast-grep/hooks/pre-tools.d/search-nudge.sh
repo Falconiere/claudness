@@ -13,15 +13,15 @@
 : "${tool_name:=}"
 : "${input:=}"
 
-# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
-# plugins/claudness/hooks/pre-tools/mod.sh before registry dispatch). Outside
+# Core lib comes from the toolu dispatcher via TOOLU_LIB_DIR (set by
+# plugins/toolu/hooks/pre-tools/mod.sh before registry dispatch). Outside
 # that pipeline there is no relative path to it — fail SOFT: this module is
 # an advisory extra and must never break tool calls by erroring.
-[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] && [ -f "$CLAUDNESS_LIB_DIR/config.sh" ] || exit 0
-# shellcheck source=../../../claudness/hooks/lib/detect.sh
-. "$CLAUDNESS_LIB_DIR/detect.sh"
-# shellcheck source=../../../claudness/hooks/lib/config.sh
-. "$CLAUDNESS_LIB_DIR/config.sh"
+[ -n "${TOOLU_LIB_DIR:-}" ] && [ -f "$TOOLU_LIB_DIR/detect.sh" ] && [ -f "$TOOLU_LIB_DIR/config.sh" ] || exit 0
+# shellcheck source=../../../toolu/hooks/lib/detect.sh
+. "$TOOLU_LIB_DIR/detect.sh"
+# shellcheck source=../../../toolu/hooks/lib/config.sh
+. "$TOOLU_LIB_DIR/config.sh"
 
 # Decide ast-grep state lazily: config + CLI detection are only consulted when
 # a structural pattern or grep/rg invocation is actually matched, so the
@@ -29,7 +29,7 @@
 ASTGREP_STATE=""
 astgrep_state() {
   if [ -z "$ASTGREP_STATE" ]; then
-    if ! claudness_enabled skills ast-grep; then
+    if ! toolu_enabled skills ast-grep; then
       ASTGREP_STATE="opt-out"
     elif [ "$(detect_ast_grep)" = "ast-grep" ]; then
       ASTGREP_STATE="available"

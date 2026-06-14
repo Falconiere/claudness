@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Real-data tests for write-state.sh. No mocks — real temp git repos. The core
-# guarantee: the script's diff_sha/base/slug match the claudness push-review
+# guarantee: the script's diff_sha/base/slug match the toolu push-review
 # gate's recipe, so a state file it writes is accepted (not rejected as stale).
 
 WS="${BATS_TEST_DIRNAME}/../write-state.sh"

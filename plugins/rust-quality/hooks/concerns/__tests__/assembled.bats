@@ -7,10 +7,10 @@
 # BOTH on real git-init'd Rust projects and diff the resulting gate JSON, so a
 # fragment reorder / clobber / dropped-suppression regression fails here.
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# Core lib lives in the sibling toolu plugin; the dispatcher provides this
 # env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 # The pre-split monolith — the behavioral oracle.
 # Built from the existing plugins/ dir so it resolves even after lang-quality is
@@ -25,7 +25,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  ASSEMBLED="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/rust-quality@falconiere__rust-quality.sh"
+  ASSEMBLED="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/rust-quality@falconiere__rust-quality.sh"
 
   # Real project root for fixtures.
   PROJ="$TMP/proj"
@@ -55,7 +55,7 @@ _run_gate() {
   local hook="$1" file="$2"
   rm -rf "$PROJ/.claude/tmp"
   local payload='{"tool_input":{"file_path":"'"$file"'"}}'
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Write input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Write input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$hook" >/dev/null 2>&1
   local gate="$PROJ/.claude/tmp/quality-gate-status.json"
   if [ -f "$gate" ]; then cat "$gate"; fi
@@ -81,7 +81,7 @@ _gate_canon() {
   [ -f "$MONOLITH" ] || skip "monolith removed post-split; equivalence proven pre-delete"
   _rust_project
   mkdir -p "$PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFileLines":5}}}' > "$PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFileLines":5}}}' > "$PROJ/.claude/toolu.config.json"
   {
     echo 'fn main() {'
     echo '    let x = thing().unwrap();'
@@ -115,7 +115,7 @@ _gate_canon() {
   command -v ast-grep >/dev/null 2>&1 || skip "ast-grep not installed"
   _rust_project
   mkdir -p "$PROJ/.claude"
-  echo '{"lang":{"rust":{"maxFileLines":5}}}' > "$PROJ/.claude/claudness.config.json"
+  echo '{"lang":{"rust":{"maxFileLines":5}}}' > "$PROJ/.claude/toolu.config.json"
   {
     echo 'fn main() {'
     echo '    let x = thing().unwrap();'
@@ -199,14 +199,14 @@ EOF
 
   # Phase 1: a violating file records a failing gate (do NOT wipe between phases).
   printf '#[allow(dead_code)]\nfn helper() {}\n' > "$PROJ/src/x.rs"
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Edit input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$ASSEMBLED" >/dev/null 2>&1
   jq -e '.status == "failing"' "$GATE"
   jq -e '.source == "rust-quality-hook"' "$GATE"
 
   # Phase 2: same file goes clean → the assembled module clears it → passing.
   printf 'fn helper() {}\n' > "$PROJ/src/x.rs"
-  CLAUDNESS_LIB_DIR="$CLAUDNESS_LIB_DIR" tool_name=Edit input="$payload" \
+  TOOLU_LIB_DIR="$TOOLU_LIB_DIR" tool_name=Edit input="$payload" \
     PROJECT_ROOT="$PROJ" bash "$ASSEMBLED" >/dev/null 2>&1
   jq -e '.status == "passing"' "$GATE"
   jq -e '.source == "rust-quality-hook"' "$GATE"

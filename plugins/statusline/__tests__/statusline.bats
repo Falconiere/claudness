@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for the claudness statusline. Real JSON payloads on stdin, no mocks.
+# Tests for the toolu statusline. Real JSON payloads on stdin, no mocks.
 
 SL="${BATS_TEST_DIRNAME}/../statusline.sh"
 

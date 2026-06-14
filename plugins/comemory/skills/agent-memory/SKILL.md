@@ -9,7 +9,7 @@ This protocol is **MANDATORY and ALWAYS ACTIVE**.
 ## Hard Constraints (Always)
 - Memory is required for recall and save.
 - **EVERY save/recall MUST be scoped to a repo.** The wrapper auto-detects the current repo via `detect_project_name` (git toplevel basename) and injects `--repo`. Raw `comemory` calls without `--repo` are blocked by the `comemory-scope` pre-tool hook.
-- Before ANY save or recall, the agent MUST state which repo it is scoping (e.g. `Scope: claudness`). Wrong scope = wrong memories = wasted tokens or contaminated context.
+- Before ANY save or recall, the agent MUST state which repo it is scoping (e.g. `Scope: toolu`). Wrong scope = wrong memories = wasted tokens or contaminated context.
 - Global quality gate is blocking — do not switch tasks while any errors/warnings/tests fail (even unrelated).
 - Test policy — NO mock-data tests. Use real-world data/integration paths.
 - Keep memory entries compact, structured, and searchable.
@@ -23,7 +23,7 @@ This protocol is **MANDATORY and ALWAYS ACTIVE**.
 | Not in a git repo | Wrapper falls back to `unknown` — set `MY_CLAUDE_COMEMORY_REPO` explicitly |
 
 Announce the scope in user-facing text before performing the operation. Example:
-> Scoping comemory to **claudness** for recall on "error handling rules".
+> Scoping comemory to **toolu** for recall on "error handling rules".
 
 ## CLI Reference — Use the Wrapper
 
@@ -60,7 +60,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh stats
 Reports data-directory + index health (maps to `comemory doctor`).
 
 ## Retrieval-quality loop (autonomous)
-The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `maintain`) are **LOCAL and token-free** — no LLM, no API, no `--repo`. They run **automatically once per day via the claudness SessionEnd hook**, so you rarely invoke them by hand.
+The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `maintain`) are **LOCAL and token-free** — no LLM, no API, no `--repo`. They run **automatically once per day via the toolu SessionEnd hook**, so you rarely invoke them by hand.
 
 The one verb you SHOULD call yourself: after you actually **use** a recalled memory, close the loop so future recall sharpens.
 ```bash
@@ -159,7 +159,7 @@ If a memory updates an outdated one, pass `--supersedes <id>` to replace it (com
 **Learned**: Gotchas, edge cases (omit if none)
 ```
 ### Example save (with explicit scope announcement)
-> Scoping comemory to **claudness** for save: decision / auth-middleware.
+> Scoping comemory to **toolu** for save: decision / auth-middleware.
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
 ```

@@ -7,7 +7,7 @@
 #   ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline/statusline.sh
 # The symlink is refreshed every session, so plugin updates are picked up with
 # no settings change. statusline is self-contained — this hook sources no
-# claudness libs; the registry root is just the config dir + /statusline.
+# toolu libs; the registry root is just the config dir + /statusline.
 #
 # Silent on success; every step is non-fatal (a failed symlink means the
 # statusline is stale, not that the session breaks).

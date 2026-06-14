@@ -23,10 +23,10 @@ FIX="${BATS_TEST_DIRNAME}/fixtures"
 @test "parse-verdict: PR#31 parses path + line + key correctly" {
   out=$(bash "$PV" < "$FIX/pr31-verdict.txt")
   # first finding: session-start.sh line 17
-  [ "$(jq -r '.findings[0].path' <<<"$out")" = "plugins/claudness/hooks/session-start.sh" ]
+  [ "$(jq -r '.findings[0].path' <<<"$out")" = "plugins/toolu/hooks/session-start.sh" ]
   [ "$(jq -r '.findings[0].line' <<<"$out")" = "17" ]
   # the bats finding has NO line number → null
-  [ "$(jq -r '.findings[2].path' <<<"$out")" = "plugins/claudness/hooks/__tests__/session-start.bats" ]
+  [ "$(jq -r '.findings[2].path' <<<"$out")" = "plugins/toolu/hooks/__tests__/session-start.bats" ]
   [ "$(jq -r '.findings[2].line' <<<"$out")" = "null" ]
   # keys are present and unique
   [ "$(jq -r '[.findings[].key] | length' <<<"$out")" -eq 6 ]

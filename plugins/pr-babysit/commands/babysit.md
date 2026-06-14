@@ -35,7 +35,7 @@ No PR for branch → report + exit.
 Skip this step if invocation is a cron tick (`--tick` marker, see below). Else:
 
 1. Snapshot: `gh pr view ... --json number,title,headRefName,statusCheckRollup,mergeable,reviewDecision,url,headRefOid`.
-2. Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` (e.g. `falconiere-claudness-42`). State: `/tmp/pr-babysit-${SLOT}.json`. Cron name: `pr-babysit:${SLOT}`. One slot per agent — see **Isolation invariants**.
+2. Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` (e.g. `falconiere-toolu-42`). State: `/tmp/pr-babysit-${SLOT}.json`. Cron name: `pr-babysit:${SLOT}`. One slot per agent — see **Isolation invariants**.
 3. Collision check: `CronList`, look for entry whose `name` == `pr-babysit:${SLOT}` exactly. Boolean for that one name only. **Do NOT enumerate/log/reason about other entries** — other slots = other agents. Exists → refuse:
    > "PR #N already being babysat by another session. Say `/pr-babysit:babysit stop` from inside this repo to cancel that one first."
 4. `CronCreate`: expr `*/3 * * * *` (base 3 min, adaptive — see **Backoff**), name `pr-babysit:${SLOT}`. Prompt = minimal tick form ONLY: `/pr-babysit:babysit --tick <OWNER>/<REPO>#<NUMBER>`. Must be plugin-namespaced — bare `/pr-babysit` fails "Unknown command". Slot/branch derivable from PR id at tick time — don't pass them (redundant + leaks orchestration internals).
@@ -191,7 +191,7 @@ One logical change at a time. Stay in PR's changed-file set — fix touches unre
 
 Babysit is autonomous: **use `EnterWorktree`** so user's main dir isn't disturbed while cron runs. Check out PR branch in worktree → work → push from there → `ExitWorktree`.
 
-Reproduce + verify locally before push. Run pre-push gate (claudness: `bats -r plugins/` + tests for touched files).
+Reproduce + verify locally before push. Run pre-push gate (toolu: `bats -r plugins/` + tests for touched files).
 
 ---
 
@@ -351,14 +351,14 @@ State at `/tmp/pr-babysit-${SLOT}.json` (one file per slot — keeps parallel ag
 
 ```json
 {
-  "slot": "falconiere-claudness-42",
-  "cronName": "pr-babysit:falconiere-claudness-42",
+  "slot": "falconiere-toolu-42",
+  "cronName": "pr-babysit:falconiere-toolu-42",
   "lastUpdate": "2026-05-17T22:00:00Z",
   "totalTicks": 7,
   "idleStreak": 0,
   "currentInterval": 3,
   "pr": {
-    "key": "falconiere/claudness#42",
+    "key": "falconiere/toolu#42",
     "ciStatus": "pass",
     "reviewDecision": "APPROVED",
     "mergeable": "MERGEABLE",

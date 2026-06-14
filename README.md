@@ -1,12 +1,12 @@
 <div align="center">
 
-# claudness
+# toolu
 
 ### Engineering discipline, wired into Claude Code.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **claudness** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce a design → review → build → review → test cadence, and a plugin registry so language-specific rules ride along automatically.
 
-[![Release](https://img.shields.io/github/v/release/Falconiere/claudness?sort=semver&color=d97757)](https://github.com/Falconiere/claudness/releases)
+[![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Tests](https://img.shields.io/badge/tests-568%20passing-brightgreen)](#testing)
 [![Built for Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://claude.com/claude-code)
@@ -22,7 +22,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 Claude Code is a superb pair-programmer, but left alone it optimizes for *getting the change in*, not for the conventions that make a change safe to keep. You end up re-typing the same review feedback every session: *split that file, don't swallow that error, that test is all mocks, document the export, don't push that unreviewed.*
 
-claudness moves those rules out of your head and into the tool:
+toolu moves those rules out of your head and into the tool:
 
 - **Hooks enforce on every edit** — a `PostToolUse` quality gate checks each file Claude touches and **blocks the session from moving on while any error, warning, or test failure exists** — even in unrelated files.
 - **Skills enforce a process** — an opinionated 8-phase workflow with a write/review checkpoint at every step, so design happens before code and review happens before "done."
@@ -40,8 +40,8 @@ Install from the public marketplace in any Claude Code session:
 /plugin marketplace add JuliusBrussee/caveman
 
 # 2. Add this marketplace and install the core bundle
-/plugin marketplace add Falconiere/claudness
-/plugin install claudness@falconiere
+/plugin marketplace add Falconiere/toolu
+/plugin install toolu@falconiere
 ```
 
 Add the language gates, search, and docs tooling too:
@@ -55,21 +55,21 @@ Add the language gates, search, and docs tooling too:
 /plugin install exa-search@falconiere     # web / code / URL search + research
 ```
 
-> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `claudness`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `toolu` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 ## Pi
 
-claudness is also installable as a **pi package**:
+toolu is also installable as a **pi package**:
 
 ```bash
-pi install https://github.com/Falconiere/claudness
+pi install https://github.com/Falconiere/toolu
 ```
 
 That package exposes:
 
-- the claudness workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, etc.)
+- the toolu workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, etc.)
 - the ast-grep, agent-memory, code-review, context7, and exa-search skills
-- a pi extension that reuses the existing claudness pre/post-tool shell hooks for:
+- a pi extension that reuses the existing toolu pre/post-tool shell hooks for:
   - protected-file and bash-command blocking
   - quality-gate enforcement between steps
   - TS/Rust post-edit checks
@@ -77,8 +77,8 @@ That package exposes:
 
 Pi config locations are:
 
-- user: `~/.pi/agent/claudness.config.json`
-- project: `.pi/claudness.config.json`
+- user: `~/.pi/agent/toolu.config.json`
+- project: `.pi/toolu.config.json`
 
 See [`docs/config.md`](./docs/config.md).
 
@@ -88,7 +88,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.12.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`toolu`** | `1.12.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
 | **`ast-grep`** | `0.1.0` | Structural code search & rewrite (**ast-grep**) — a `Grep → ast-grep` nudge mirrored into the runtime registry. Standalone, no dependencies. |
@@ -144,7 +144,7 @@ flowchart LR
 ```
 
 - **`brainstorm`** surfaces intent, constraints, and prior art before any code.
-- **`spec`** writes a design contract to `docs/claudness/specs/`; **`spec-review`** audits it.
+- **`spec`** writes a design contract to `docs/toolu/specs/`; **`spec-review`** audits it.
 - **`plan`** turns the spec into concrete steps; **`plan-review`** checks it's executable.
 - **`execution`** drives the plan with verification checkpoints; **`execution-review`** is hard-focused on error handling.
 - **`test`** enforces real-data tests (no mocks), colocated by language.
@@ -157,7 +157,7 @@ Plus, from `ast-grep`: **`ast-grep`**, and from `comemory`: **`agent-memory`**. 
 
 - **Gate-aware statusline** — shipped as the optional **`statusline`** plugin: one `jq` pass per render shows the live quality-gate status, resolved at the git root so subdir-launched sessions still see it.
 - **`push-review` gate** — blocks `git push` on a feature branch until the diff has been run through an accepted reviewer (`caveman:cavecrew-reviewer` when installed, the built-in `/code-review xhigh --fix` skill, or the `code-review:review` skill), with a round cap (5) that escalates instead of looping forever.
-- **Slash commands** — `/commit`, `/review-and-commit` (claudness); `/pr-babysit:babysit` (the `pr-babysit` plugin).
+- **Slash commands** — `/commit`, `/review-and-commit` (toolu); `/pr-babysit:babysit` (the `pr-babysit` plugin).
 - **`deep-explore` agent** — structural codebase exploration via ast-grep.
 - **Caveman mode** — ultra-compressed, token-frugal output (via the `caveman` dependency).
 
@@ -167,7 +167,7 @@ Everything a plugin ships lives under its own `plugins/<name>/` directory — no
 
 ```mermaid
 flowchart TD
-    subgraph core["claudness core"]
+    subgraph core["toolu core"]
         D["hook dispatcher<br/>PreToolUse · PostToolUse · SessionStart …"]
     end
     subgraph plugins["domain plugins"]
@@ -176,7 +176,7 @@ flowchart TD
         AG["ast-grep<br/>register.sh"]
         CM["comemory<br/>register.sh"]
     end
-    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>agent config dir/claudness/")]
+    RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>agent config dir/toolu/")]
     TQ -- "one assembled module per language" --> R
     AG -- "namespaced plugin__name.sh" --> R
     CM -- "namespaced plugin__name.sh" --> R
@@ -193,7 +193,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 .
 ├── docs/                       # Runtime config schema, design notes
 └── plugins/
-    ├── claudness/              # Core plugin: hook engine + process gates
+    ├── toolu/              # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # plugin.json manifest
     │   ├── skills/             # brainstorm, spec(+review), plan(+review),
     │   │                       #   execution(+review), test
@@ -216,7 +216,7 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
 
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers without uninstalling anything. In Claude Code, use `~/.claude/claudness.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/claudness.config.json`). In pi, use `~/.pi/agent/claudness.config.json` (or `.pi/claudness.config.json`). Defaults are opt-out — no file required.
+Toggle individual skills, hooks, or MCP servers without uninstalling anything. In Claude Code, use `~/.claude/toolu.config.json` (or `$CLAUDE_PROJECT_DIR/.claude/toolu.config.json`). In pi, use `~/.pi/agent/toolu.config.json` (or `.pi/toolu.config.json`). Defaults are opt-out — no file required.
 
 ```json
 {

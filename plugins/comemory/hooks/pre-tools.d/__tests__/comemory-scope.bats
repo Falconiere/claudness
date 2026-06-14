@@ -3,10 +3,10 @@
 
 HOOK="${BATS_TEST_DIRNAME}/../comemory-scope.sh"
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides
+# Core lib lives in the sibling toolu plugin; the dispatcher provides
 # this env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "${BATS_TEST_DIRNAME}/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "${BATS_TEST_DIRNAME}/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 _mk() {
   jq -n --arg c "$1" '{tool_name:"Bash", tool_input:{command:$c}}'
@@ -49,21 +49,21 @@ _decision() {
 }
 
 @test "comemory-scope: comemory search with --repo is allowed" {
-  payload=$(_mk 'comemory search "x" --repo claudness')
+  payload=$(_mk 'comemory search "x" --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
 }
 
 @test "comemory-scope: comemory save with --repo is allowed" {
-  payload=$(_mk 'comemory save body --kind note --repo claudness')
+  payload=$(_mk 'comemory save body --kind note --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
 }
 
 @test "comemory-scope: comemory search with --repo= form is allowed" {
-  payload=$(_mk 'comemory search "x" --repo=claudness')
+  payload=$(_mk 'comemory search "x" --repo=toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -84,7 +84,7 @@ _decision() {
 }
 
 @test "comemory-scope: comemory search-code with --repo is allowed" {
-  payload=$(_mk 'comemory search-code "fn foo" --repo claudness')
+  payload=$(_mk 'comemory search-code "fn foo" --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -98,7 +98,7 @@ _decision() {
 }
 
 @test "comemory-scope: comemory index-code with --repo is allowed" {
-  payload=$(_mk 'comemory index-code --path /tmp/x --repo claudness')
+  payload=$(_mk 'comemory index-code --path /tmp/x --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -112,7 +112,7 @@ _decision() {
 }
 
 @test "comemory-scope: comemory graph with --repo is allowed" {
-  payload=$(_mk 'comemory graph --rel all --repo claudness')
+  payload=$(_mk 'comemory graph --rel all --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -146,7 +146,7 @@ _decision() {
 }
 
 @test "comemory-scope: comemory list is allowed (global by design)" {
-  payload=$(_mk 'comemory list --repo claudness')
+  payload=$(_mk 'comemory list --repo toolu')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -241,9 +241,9 @@ _decision() {
   [ -f "${BATS_TEST_DIRNAME}/../comemory-scope.sh" ]
 }
 
-@test "comemory-scope: exits 0 silently when CLAUDNESS_LIB_DIR is unset (fail soft)" {
+@test "comemory-scope: exits 0 silently when TOOLU_LIB_DIR is unset (fail soft)" {
   payload=$(_mk 'comemory search "x"')
-  run env -u CLAUDNESS_LIB_DIR tool_name=Bash input="$payload" bash "$HOOK"
+  run env -u TOOLU_LIB_DIR tool_name=Bash input="$payload" bash "$HOOK"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

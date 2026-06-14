@@ -6,10 +6,10 @@
 # VERBATIM from the deleted monolith per-rule suite; the only change is they drive
 # the ASSEMBLED registry module (assembled in setup), not the deleted monolith.
 
-# Core lib lives in the sibling claudness plugin; the dispatcher provides this
+# Core lib lives in the sibling toolu plugin; the dispatcher provides this
 # env var in production, the tests provide it here.
-CLAUDNESS_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../claudness/hooks/lib" && pwd)"
-export CLAUDNESS_LIB_DIR
+TOOLU_LIB_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../../toolu/hooks/lib" && pwd)"
+export TOOLU_LIB_DIR
 
 setup() {
   TMP=$(mktemp -d)
@@ -18,7 +18,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/../.." && pwd)/register.sh"
   bash "$REGISTER" </dev/null
-  HOOK="$CLAUDE_CONFIG_DIR/claudness/post-tools.d/ts-quality@falconiere__ts-quality.sh"
+  HOOK="$CLAUDE_CONFIG_DIR/toolu/post-tools.d/ts-quality@falconiere__ts-quality.sh"
 
   TMP_PROJ="$TMP/proj"
   mkdir -p "$TMP_PROJ"

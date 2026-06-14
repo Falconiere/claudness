@@ -8,9 +8,9 @@
   "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official", "caveman"],
   "plugins": [
     {
-      "name": "claudness",
-      "source": "./plugins/claudness",
-      "description": "claudness workflow core: brainstorm → spec → plan → execution → test skills, agents, slash commands, and the hook engine.",
+      "name": "toolu",
+      "source": "./plugins/toolu",
+      "description": "toolu workflow core: brainstorm → spec → plan → execution → test skills, agents, slash commands, and the hook engine.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
@@ -47,31 +47,31 @@
       "keywords": ["comemory", "memory", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "claudness", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "falconiere" }
       ]
     },
     {
       "name": "rust-quality",
       "source": "./plugins/rust-quality",
-      "description": "Rust PostToolUse quality checks via the claudness registry.",
+      "description": "Rust PostToolUse quality checks via the toolu registry.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["rust", "quality", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "claudness", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "falconiere" }
       ]
     },
     {
       "name": "ts-quality",
       "source": "./plugins/ts-quality",
-      "description": "TypeScript PostToolUse quality checks via the claudness registry.",
+      "description": "TypeScript PostToolUse quality checks via the toolu registry.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["typescript", "quality", "hooks"],
       "license": "MIT",
       "dependencies": [
-        { "name": "claudness", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "falconiere" }
       ]
     },
     {
@@ -86,7 +86,7 @@
     {
       "name": "code-review",
       "source": "./plugins/code-review",
-      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the claudness push-review state so the gate passes. Standalone, no dependencies.",
+      "description": "Project-tuned pre-push code review mirroring the CI review bot's checklist; writes the toolu push-review state so the gate passes. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["code-review", "push-review", "quality", "skills"],
@@ -101,7 +101,7 @@
       "keywords": ["pr", "review", "ci", "automation"],
       "license": "MIT",
       "dependencies": [
-        { "name": "claudness", "marketplace": "falconiere" }
+        { "name": "toolu", "marketplace": "falconiere" }
       ]
     },
     {

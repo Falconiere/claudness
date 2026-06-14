@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # SessionStart registry sync for the ast-grep plugin.
 #
-# Mirrors hooks/pre-tools.d/*.sh into the claudness runtime registry
-# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d/) under the
+# Mirrors hooks/pre-tools.d/*.sh into the toolu runtime registry
+# (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/pre-tools.d/) under the
 # namespaced filename ast-grep@falconiere__<name>.sh, and prunes entries
 # bearing OUR prefix whose source module no longer exists. Other plugins'
-# entries are never touched. The core claudness dispatcher executes the
+# entries are never touched. The core toolu dispatcher executes the
 # synced copies, gated on this plugin being installed.
 #
 # Silent on success (SessionStart stdout becomes context); errors are
@@ -14,7 +14,7 @@
 SPEC="ast-grep@falconiere"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SELF_DIR/pre-tools.d"
-REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d"
+REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/toolu/pre-tools.d"
 
 # Consume stdin so Claude Code's hook IPC never stalls.
 cat > /dev/null 2>&1 || true

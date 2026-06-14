@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # register.sh ASSEMBLES concerns/[0-9][0-9]-*.sh into ONE registry module
-# <spec>__ts-quality.sh under $CLAUDE_CONFIG_DIR/claudness/post-tools.d/,
+# <spec>__ts-quality.sh under $CLAUDE_CONFIG_DIR/toolu/post-tools.d/,
 # prunes its own stale entries + tmp residue, and never touches other plugins.
 
 SPEC="ts-quality@falconiere"
@@ -11,7 +11,7 @@ setup() {
   export CLAUDE_CONFIG_DIR="$TMP/cfg"
   REGISTER="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/register.sh"
   CONCERNS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../concerns" && pwd)"
-  REG_DIR="$CLAUDE_CONFIG_DIR/claudness/post-tools.d"
+  REG_DIR="$CLAUDE_CONFIG_DIR/toolu/post-tools.d"
 }
 teardown() { rm -rf "$TMP"; }
 
@@ -94,7 +94,7 @@ _ts_dispatch_project() {
   ( cd "$proj" && git init -q && echo '{}' > tsconfig.json && echo '{"name":"x"}' > package.json \
     && touch bun.lock && printf 'export function b(){ throw 42; }\n' > src/bad.ts \
     && git add -A && git -c user.email=t@t -c user.name=t commit -q -m s )
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../claudness/hooks/post-tools" && pwd)/mod.sh"
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/post-tools" && pwd)/mod.sh"
 }
 
 @test "register e2e: assembled module fires through the core dispatcher when installed" {

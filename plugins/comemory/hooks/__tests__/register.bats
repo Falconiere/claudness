@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# register.sh syncs this plugin's pre-tools.d modules into the claudness
+# register.sh syncs this plugin's pre-tools.d modules into the toolu
 # runtime registry as <spec>__<name>.sh, prunes its own stale entries, and
 # never touches other plugins' files.
 
@@ -17,14 +17,14 @@ teardown() { rm -rf "$TMP"; }
   [ "$status" -eq 0 ]
   for src in "$SRC_DIR"/*.sh; do
     name=$(basename "$src")
-    dst="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d/comemory@falconiere__${name}"
+    dst="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d/comemory@falconiere__${name}"
     [ -f "$dst" ]
     cmp -s "$src" "$dst"
   done
 }
 
 @test "register: prunes its own stale entries but not other plugins'" {
-  regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
+  regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
   echo '#!/usr/bin/env bash' > "$regdir/comemory@falconiere__removed-module.sh"
   echo '#!/usr/bin/env bash' > "$regdir/other@market__keep.sh"
@@ -35,7 +35,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register: prunes legacy code-intel@falconiere residue from the former bundled plugin" {
-  regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
+  regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
   echo '#!/usr/bin/env bash' > "$regdir/code-intel@falconiere__search-nudge.sh"
   echo '#!/usr/bin/env bash' > "$regdir/code-intel@falconiere__comemory-scope.sh"
@@ -48,7 +48,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register: refreshes a registry copy that drifted from source" {
-  regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
+  regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
   echo 'stale content' > "$regdir/comemory@falconiere__comemory-scope.sh"
   run bash "$REGISTER" <<<'{}'
@@ -58,17 +58,17 @@ teardown() { rm -rf "$TMP"; }
 
 @test "register: idempotent (second run changes nothing, exits 0)" {
   bash "$REGISTER" <<<'{}'
-  before=$(ls "$CLAUDE_CONFIG_DIR/claudness/pre-tools.d" | sort)
+  before=$(ls "$CLAUDE_CONFIG_DIR/toolu/pre-tools.d" | sort)
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
-  after=$(ls "$CLAUDE_CONFIG_DIR/claudness/pre-tools.d" | sort)
+  after=$(ls "$CLAUDE_CONFIG_DIR/toolu/pre-tools.d" | sort)
   [ "$before" = "$after" ]
 }
 
 @test "register: writes are atomic (no *.tmp.* leftovers)" {
   run bash "$REGISTER" <<<'{}'
   [ "$status" -eq 0 ]
-  found=$(find "$CLAUDE_CONFIG_DIR/claudness" -name '*.tmp.*' | wc -l | tr -d ' ')
+  found=$(find "$CLAUDE_CONFIG_DIR/toolu" -name '*.tmp.*' | wc -l | tr -d ' ')
   [ "$found" = "0" ]
 }
 
@@ -79,7 +79,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register e2e: synced comemory-scope denies an unscoped call through the core dispatcher when installed" {
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../claudness/hooks/pre-tools" && pwd)/mod.sh"
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
   bash "$REGISTER" <<<'{}'
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
   printf '%s' '{"plugins":{"comemory@falconiere":{}}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
@@ -90,7 +90,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register e2e: synced modules are gated off when the plugin is definitively absent" {
-  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../claudness/hooks/pre-tools" && pwd)/mod.sh"
+  CORE_MOD="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../../toolu/hooks/pre-tools" && pwd)/mod.sh"
   bash "$REGISTER" <<<'{}'
   mkdir -p "$CLAUDE_CONFIG_DIR/plugins"
   printf '%s' '{"plugins":{}}' > "$CLAUDE_CONFIG_DIR/plugins/installed_plugins.json"
@@ -101,7 +101,7 @@ teardown() { rm -rf "$TMP"; }
 }
 
 @test "register: clears its own AGED orphaned tmp residue, keeps fresh + foreign tmp" {
-  regdir="$CLAUDE_CONFIG_DIR/claudness/pre-tools.d"
+  regdir="$CLAUDE_CONFIG_DIR/toolu/pre-tools.d"
   mkdir -p "$regdir"
   # Aged orphan (ours): from a crashed run — must be removed.
   echo 'partial' > "$regdir/comemory@falconiere__comemory-scope.sh.tmp.12345"

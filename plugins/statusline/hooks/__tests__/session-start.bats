@@ -20,7 +20,7 @@ teardown() {
   [ -L "$dst" ]
   target=$(readlink "$dst")
   # Tight: assert the target lives under the statusline plugin dir, not just any
-  # */statusline.sh (a misrouted symlink to claudness's leftover would else pass).
+  # */statusline.sh (a misrouted symlink to toolu's leftover would else pass).
   [[ "$target" == *"/statusline/statusline.sh" ]]
   [ -f "$target" ]
 }

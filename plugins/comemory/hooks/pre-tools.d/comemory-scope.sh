@@ -30,13 +30,13 @@
 : "${tool_name:=}"
 : "${input:=}"
 
-# Core lib comes from the claudness dispatcher via CLAUDNESS_LIB_DIR (set by
-# plugins/claudness/hooks/pre-tools/mod.sh before registry dispatch). Outside
+# Core lib comes from the toolu dispatcher via TOOLU_LIB_DIR (set by
+# plugins/toolu/hooks/pre-tools/mod.sh before registry dispatch). Outside
 # that pipeline there is no relative path to it — fail SOFT: this module is
 # an enforcement extra and must never break tool calls by erroring.
-[ -n "${CLAUDNESS_LIB_DIR:-}" ] && [ -f "$CLAUDNESS_LIB_DIR/detect.sh" ] || exit 0
-# shellcheck source=../../../claudness/hooks/lib/detect.sh
-. "$CLAUDNESS_LIB_DIR/detect.sh"
+[ -n "${TOOLU_LIB_DIR:-}" ] && [ -f "$TOOLU_LIB_DIR/detect.sh" ] || exit 0
+# shellcheck source=../../../toolu/hooks/lib/detect.sh
+. "$TOOLU_LIB_DIR/detect.sh"
 
 [[ "$tool_name" != "Bash" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
@@ -156,7 +156,7 @@ done < <(split_statements "$cmd_only")
 if [[ -n "$violation" ]]; then
   # Resolve the auto-scoping wrapper. Two levels up from this module is the
   # comemory plugin root — valid in the repo checkout and installed plugin.
-  # When run from the runtime-registry COPY (~/.claude/claudness/pre-tools.d/)
+  # When run from the runtime-registry COPY (~/.claude/toolu/pre-tools.d/)
   # that path does not exist, so fall back to generic wording: the deny text
   # only needs to point the agent at the wrapper, not at an exact path.
   wrapper_root=$(cd "${BASH_SOURCE%/*}/../.." 2>/dev/null && pwd)

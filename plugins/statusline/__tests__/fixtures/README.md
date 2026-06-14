@@ -52,7 +52,7 @@ jq -s '[ .[] | select(.type=="assistant")
 ## Fixtures
 
 ### `straddle.jsonl` — Monday-midnight week straddle
-- **Source:** `~/.claude/projects/-Volumes-Projects-claudness/57723639-b7eb-4965-a312-a354bf8b8b34.jsonl`
+- **Source:** `~/.claude/projects/-Volumes-Projects-toolu/57723639-b7eb-4965-a312-a354bf8b8b34.jsonl`
 - **Span:** `2026-06-07T22:42:23Z` (Sun, W23) → `2026-06-08T01:46:07Z` (Mon, W24).
   June 8 2026 is a Monday, so the messages cross the `2026-06-08 00:00 UTC` ISO-week
   boundary. The ledger jq must emit **exactly two** week lines.
