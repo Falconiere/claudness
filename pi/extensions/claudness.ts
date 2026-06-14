@@ -15,7 +15,8 @@ const packageRoot = resolve(extensionDir, "../..");
 
 const preToolsScript = join(packageRoot, "plugins/claudness/hooks/pre-tools/mod.sh");
 const postToolsScript = join(packageRoot, "plugins/claudness/hooks/post-tools/mod.sh");
-const codeIntelRegister = join(packageRoot, "plugins/code-intel/hooks/register.sh");
+const astGrepRegister = join(packageRoot, "plugins/ast-grep/hooks/register.sh");
+const comemoryRegister = join(packageRoot, "plugins/comemory/hooks/register.sh");
 const tsQualityRegister = join(packageRoot, "plugins/ts-quality/hooks/register.sh");
 const rustQualityRegister = join(packageRoot, "plugins/rust-quality/hooks/register.sh");
 
@@ -30,10 +31,12 @@ type HookOutput = {
   };
 };
 
+/** Resolve the pi coding-agent config dir (`$PI_CODING_AGENT_DIR` or `~/.pi/agent`). */
 export function agentDir(): string {
   return process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
 }
 
+/** Build the child-process env claudness hooks run under, scoping config to the agent dir. */
 export function baseEnv(cwd: string): NodeJS.ProcessEnv {
   const dir = agentDir();
   mkdirSync(dir, { recursive: true });
@@ -48,6 +51,7 @@ export function baseEnv(cwd: string): NodeJS.ProcessEnv {
   };
 }
 
+/** Resolve the git toplevel for `cwd`, falling back to `cwd` when it is not a repo. */
 export function projectRoot(cwd: string): string {
   try {
     return (
@@ -56,15 +60,20 @@ export function projectRoot(cwd: string): string {
         stdio: ["ignore", "pipe", "ignore"],
       }).trim() || cwd
     );
-  } catch {
+  } catch (error) {
+    process.stderr.write(
+      `claudness: projectRoot falling back to cwd, not a git repo (${error instanceof Error ? error.message : String(error)})\n`,
+    );
     return cwd;
   }
 }
 
+/** Path to the project's quality-gate status file under `.claude/tmp`. */
 export function gateFile(cwd: string): string {
   return join(projectRoot(cwd), ".claude", "tmp", "quality-gate-status.json");
 }
 
+/** Map a pi tool name to its Claude Code equivalent, or undefined when unmapped. */
 export function mappedToolName(toolName: string): string | undefined {
   switch (toolName) {
     case "bash":
@@ -85,6 +94,7 @@ export function mappedToolName(toolName: string): string | undefined {
   }
 }
 
+/** Normalize a pi tool event's input into the tool_input shape claudness hooks expect. */
 export function toolInputForEvent(
   event: ToolCallEvent | ToolResultEvent,
 ): Record<string, unknown> {
@@ -124,6 +134,7 @@ export function toolInputForEvent(
   }
 }
 
+/** Serialize a tool_call event into the JSON payload for the pre-tool hook. */
 export function toolCallPayload(event: ToolCallEvent): string {
   return JSON.stringify({
     tool_name: mappedToolName(event.toolName),
@@ -131,6 +142,7 @@ export function toolCallPayload(event: ToolCallEvent): string {
   });
 }
 
+/** Extract a bash command's exit code from a tool_result event, or undefined if absent. */
 export function parseBashExitCode(event: ToolResultEvent): number | undefined {
   if (event.toolName !== "bash") return undefined;
   if (!event.isError) return 0;
@@ -143,6 +155,7 @@ export function parseBashExitCode(event: ToolResultEvent): number | undefined {
   return undefined;
 }
 
+/** Serialize a tool_result event into the JSON payload for the post-tool hook. */
 export function toolResultPayload(event: ToolResultEvent): string {
   const exitCode = parseBashExitCode(event);
   return JSON.stringify({
@@ -153,6 +166,7 @@ export function toolResultPayload(event: ToolResultEvent): string {
   });
 }
 
+/** Run a claudness hook script as a child process, returning its exit code, stdout, and stderr. */
 export async function runHook(
   script: string,
   cwd: string,
@@ -190,15 +204,30 @@ export async function runHook(
   });
 }
 
-export function parseHookOutput(stdout: string): HookOutput | undefined {
-  if (!stdout) return undefined;
-  try {
-    return JSON.parse(stdout) as HookOutput;
-  } catch {
-    return undefined;
-  }
+function isHookOutput(value: unknown): value is HookOutput {
+  return typeof value === "object" && value !== null;
 }
 
+function isGateStatus(value: unknown): value is { status?: string; reason?: string } {
+  return typeof value === "object" && value !== null;
+}
+
+/** Parse a hook's stdout into a HookOutput, or undefined when it is empty or not JSON. */
+export function parseHookOutput(stdout: string): HookOutput | undefined {
+  if (!stdout) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch (error) {
+    process.stderr.write(
+      `claudness: ignoring non-JSON hook output (${error instanceof Error ? error.message : String(error)})\n`,
+    );
+    return undefined;
+  }
+  return isHookOutput(parsed) ? parsed : undefined;
+}
+
+/** Collapse a HookOutput's system message and additional context into display text. */
 export function hookText(output: HookOutput | undefined): string | undefined {
   if (!output) return undefined;
   const parts = [output.systemMessage, output.hookSpecificOutput?.additionalContext].filter(
@@ -208,6 +237,7 @@ export function hookText(output: HookOutput | undefined): string | undefined {
   return parts.join("\n\n");
 }
 
+/** Update the UI status line to reflect the project's current quality-gate state. */
 export function refreshGateStatus(ctx: ExtensionContext) {
   if (!ctx.hasUI) return;
   const theme = ctx.ui.theme;
@@ -217,30 +247,32 @@ export function refreshGateStatus(ctx: ExtensionContext) {
     return;
   }
 
+  let raw: unknown;
   try {
-    const raw = JSON.parse(readFileSync(file, "utf8")) as {
-      status?: string;
-      reason?: string;
-    };
-    if (raw.status === "failing") {
-      const reason = raw.reason ? ` — ${raw.reason}` : "";
-      ctx.ui.setStatus(gateStatusKey, theme.fg("warning", `gate: failing${reason}`));
-      return;
-    }
-  } catch {
+    raw = JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    process.stderr.write(
+      `claudness: gate status unreadable (${error instanceof Error ? error.message : String(error)})\n`,
+    );
     ctx.ui.setStatus(gateStatusKey, theme.fg("warning", "gate: unreadable"));
+    return;
+  }
+  if (isGateStatus(raw) && raw.status === "failing") {
+    const reason = raw.reason ? ` — ${raw.reason}` : "";
+    ctx.ui.setStatus(gateStatusKey, theme.fg("warning", `gate: failing${reason}`));
     return;
   }
 
   ctx.ui.setStatus(gateStatusKey, theme.fg("success", "gate: clear"));
 }
 
+/** Run each installed plugin's register.sh to sync its hook modules into the pi runtime registry. */
 export async function runRegistrySync(cwd: string) {
   const env = baseEnv(cwd);
   mkdirSync(join(agentDir(), "claudness", "pre-tools.d"), { recursive: true });
   mkdirSync(join(agentDir(), "claudness", "post-tools.d"), { recursive: true });
 
-  for (const script of [codeIntelRegister, tsQualityRegister, rustQualityRegister]) {
+  for (const script of [astGrepRegister, comemoryRegister, tsQualityRegister, rustQualityRegister]) {
     if (!existsSync(script)) continue;
     await new Promise<void>((resolve) => {
       const child = spawn("bash", [script], {
@@ -255,6 +287,7 @@ export async function runRegistrySync(cwd: string) {
   }
 }
 
+/** pi extension entry point: wires claudness pre/post-tool hooks and gate status into the agent. */
 export default function claudnessPiExtension(pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     await runRegistrySync(ctx.cwd);

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# SessionStart registry sync for the code-intel plugin.
+# SessionStart registry sync for the ast-grep plugin.
 #
 # Mirrors hooks/pre-tools.d/*.sh into the claudness runtime registry
 # (${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d/) under the
-# namespaced filename code-intel@falconiere__<name>.sh, and prunes entries
+# namespaced filename ast-grep@falconiere__<name>.sh, and prunes entries
 # bearing OUR prefix whose source module no longer exists. Other plugins'
 # entries are never touched. The core claudness dispatcher executes the
 # synced copies, gated on this plugin being installed.
@@ -11,7 +11,7 @@
 # Silent on success (SessionStart stdout becomes context); errors are
 # non-fatal — a failed sync means the registry copy is stale, not broken.
 
-SPEC="code-intel@falconiere"
+SPEC="ast-grep@falconiere"
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SELF_DIR/pre-tools.d"
 REG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/claudness/pre-tools.d"
@@ -51,5 +51,13 @@ for dst in "$REG_DIR/${SPEC}__"*.sh; do
   src="$SRC_DIR/${name#"${SPEC}"__}"
   [ -f "$src" ] || rm -f "$dst"
 done
+
+# One-shot migration: prune residue from the former bundled `code-intel` plugin
+# (split into ast-grep + comemory). The prune loop above only touches OUR own
+# prefix, so the legacy entries would otherwise orphan forever — no successor
+# maps to them. Prefix-scoped + idempotent; runs from whichever successor plugin
+# is installed (both carry this block).
+LEGACY="code-intel@falconiere"
+find "$REG_DIR" -maxdepth 1 \( -name "${LEGACY}__*.sh" -o -name "${LEGACY}__*.sh.tmp.*" \) -delete 2>/dev/null
 
 exit 0

@@ -4,7 +4,7 @@ Reusable Claude Code settings fragments plus data files consumed by hooks.
 
 ## Fragments
 
-- `permissions.fragment.json` — sanitized union of permission allowlists/denylists from the source repos. This is a **dev-mode merge for the repo checkout**; the `code-intel` wrapper allow-rules pin the full `plugins/code-intel/` path (repo-root and `.claude/worktrees/*` variants) so an untrusted temp/checkout directory with a same-named tail cannot satisfy the allowlist. Installed plugins are governed by Claude Code's own plugin permissions, not this fragment.
+- `permissions.fragment.json` — sanitized union of permission allowlists/denylists from the source repos. This is a **dev-mode merge for the repo checkout**; the `ast-grep` and `comemory` wrapper allow-rules pin the full `plugins/ast-grep/` and `plugins/comemory/` paths (repo-root and `.claude/worktrees/*` variants) so an untrusted temp/checkout directory with a same-named tail cannot satisfy the allowlist. Installed plugins are governed by Claude Code's own plugin permissions, not this fragment.
 
 Hook wiring ships in the plugin manifest (`plugins/claudness/hooks/hooks.json`);
 installing the plugin registers all hooks — no manual settings merge needed.
@@ -77,7 +77,7 @@ no per-project `.claude/settings/` lookup — to override per project, point
 |---------------------------|-----------------------------------------|
 | `MY_CLAUDE_SETTINGS_DIR`  | Directory the hooks read data files from |
 | `MY_CLAUDE_QUALITY`       | `off` to disable `quality-gate.sh`       |
-| `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the code-intel wrapper (the code-intel plugin's `skills/code-intel/scripts/modules/comemory.sh`). Defaults to the git project name. Not read by any hook. |
+| `MY_CLAUDE_COMEMORY_REPO` | Overrides the comemory `--repo` scope used by the comemory wrapper (the comemory plugin's `skills/agent-memory/scripts/comemory.sh`). Defaults to the git project name. Not read by any hook. |
 
 ## Statusline
 

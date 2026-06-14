@@ -49,10 +49,11 @@ Add the language gates and structural-search tooling too:
 ```text
 /plugin install rust-quality@falconiere   # Rust quality gates
 /plugin install ts-quality@falconiere     # TypeScript quality gates
-/plugin install code-intel@falconiere     # ast-grep + persistent memory
+/plugin install ast-grep@falconiere       # structural code search & rewrite
+/plugin install comemory@falconiere       # persistent cross-session memory
 ```
 
-> **Note** — `code-intel`, `rust-quality`, and `ts-quality` depend on `claudness`; `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
+> **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `claudness`; `ast-grep` is standalone (zero deps); `claudness` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
 ## Pi
 
@@ -65,7 +66,7 @@ pi install https://github.com/Falconiere/claudness
 That package exposes:
 
 - the claudness workflow skills (`brainstorm`, `spec`, `plan`, `execution`, `test`, etc.)
-- the code-intel and code-review skills
+- the ast-grep, agent-memory, and code-review skills
 - a pi extension that reuses the existing claudness pre/post-tool shell hooks for:
   - protected-file and bash-command blocking
   - quality-gate enforcement between steps
@@ -81,14 +82,15 @@ See [`docs/config.md`](./docs/config.md).
 
 ## What's inside
 
-Seven plugins, one marketplace. Install the core alone, or add the domain plugins.
+Eight plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
 | **`claudness`** | `1.12.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
-| **`code-intel`** | `0.3.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules and a `SessionStart` memory-count publisher for the statusline. |
+| **`ast-grep`** | `0.1.0` | Structural code search & rewrite (**ast-grep**) — a `Grep → ast-grep` nudge mirrored into the runtime registry. Standalone, no dependencies. |
+| **`comemory`** | `0.1.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `PreToolUse` scope-enforcement module and a `SessionStart` memory-count publisher for the statusline. |
 | **`statusline`** | `0.3.0` | Optional gate-aware statusline — `model \| effort \| ctx \| wk \| gate \| folder \| branch \| mem \| caveman`, wired via a stable symlink (`/statusline:setup` to enable). Standalone, no dependencies. |
 | **`pr-babysit`** | `0.1.0` | `/pr-babysit:babysit` — cron-driven PR babysitter that fetches review comments + the CI review-bot verdict, triages, fixes, and chases findings to zero until CI is green. |
 | **`code-review`** | `0.1.0` | `code-review:review` — project-tuned pre-push review mirroring the CI bot's checklist; writes the `push-review` state so the gate passes. Standalone. |
@@ -145,7 +147,7 @@ flowchart LR
 
 Mechanical work (renames, dep bumps, one-liners) skips the ceremony — each skill declares when *not* to fire.
 
-Plus utility skills: **`context7`** (live library docs) and **`exa-search`** (web / code search / crawl), and from `code-intel`: **`ast-grep`**, **`agent-memory`**, **`code-intel`**.
+Plus utility skills: **`context7`** (live library docs) and **`exa-search`** (web / code search / crawl), from `ast-grep`: **`ast-grep`**, and from `comemory`: **`agent-memory`**.
 
 ## More that comes with it
 
@@ -167,16 +169,18 @@ flowchart TD
     subgraph plugins["domain plugins"]
         RQ["rust-quality<br/>register.sh"]
         TQ["ts-quality<br/>register.sh"]
-        CI["code-intel<br/>register.sh"]
+        AG["ast-grep<br/>register.sh"]
+        CM["comemory<br/>register.sh"]
     end
     RQ -- "assemble concern fragments at SessionStart" --> R[("registry<br/>agent config dir/claudness/")]
     TQ -- "one assembled module per language" --> R
-    CI -- "namespaced plugin__name.sh" --> R
+    AG -- "namespaced plugin__name.sh" --> R
+    CM -- "namespaced plugin__name.sh" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `code-intel` mirrors its `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
+At `SessionStart`, each domain plugin's `register.sh` contributes to the registry as `<plugin-spec>__<name>.sh` — `ast-grep` and `comemory` mirror their `hooks/<event>.d/*.sh` one-to-one, while `rust-quality`/`ts-quality` assemble their ordered `hooks/concerns/` fragments into a single module per language. The core executes those copies **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed.
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -194,7 +198,8 @@ At `SessionStart`, each domain plugin's `register.sh` contributes to the registr
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart … + lib/
     │   ├── tooling/            # helper CLIs (context7, exa-search) + bats tests
     │   └── settings/           # reusable settings fragments
-    ├── code-intel/             # ast-grep + comemory skills, registry PreToolUse modules
+    ├── ast-grep/               # ast-grep skill + Grep→ast-grep nudge registry module
+    ├── comemory/               # agent-memory skill + scope-enforcement & memory-count registry modules
     ├── rust-quality/           # Rust PostToolUse quality fragments, assembled at SessionStart
     ├── ts-quality/             # TypeScript PostToolUse quality fragments, assembled at SessionStart
     ├── statusline/            # optional gate-aware statusline + SessionStart symlink hook

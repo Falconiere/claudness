@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Tests for the code-intel plugin's comemory-scope.sh registry module.
+# Tests for the comemory plugin's comemory-scope.sh registry module.
 
 HOOK="${BATS_TEST_DIRNAME}/../comemory-scope.sh"
 
@@ -70,7 +70,7 @@ _decision() {
 }
 
 @test "comemory-scope: wrapper call is allowed (bypass)" {
-  payload=$(_mk 'skills/code-intel/scripts/mod.sh comemory search "x"')
+  payload=$(_mk 'skills/agent-memory/scripts/comemory.sh search "x"')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "allow" ]
@@ -126,20 +126,20 @@ _decision() {
 }
 
 # Regression: the wrapper-skip used to match the WHOLE command, so a single
-# `mod.sh comemory` token short-circuited enforcement for every other segment.
+# `comemory.sh` token short-circuited enforcement for every other segment.
 # Per-segment skipping must still deny an unscoped raw call chained after a
 # legitimate wrapper call.
 @test "comemory-scope: wrapper call chained with a raw unscoped search is denied" {
-  payload=$(_mk 'mod.sh comemory list && comemory search foo')
+  payload=$(_mk 'comemory.sh list && comemory search foo')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "deny" ]
 }
 
-# Regression: a mere mention of `mod.sh comemory` (in an echo / comment) must
+# Regression: a mere mention of `comemory.sh` (in an echo / comment) must
 # not disable enforcement for a real unscoped call in another segment.
-@test "comemory-scope: mod.sh comemory token in echo does not excuse a later raw save" {
-  payload=$(_mk 'echo using mod.sh comemory ; comemory save body --kind note')
+@test "comemory-scope: comemory.sh token in echo does not excuse a later raw save" {
+  payload=$(_mk 'echo using comemory.sh ; comemory save body --kind note')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
   [ "$status" -eq 0 ]
   [ "$(_decision "$output")" = "deny" ]
@@ -215,7 +215,7 @@ _decision() {
 @test "comemory-scope: deny message mentions wrapper path" {
   payload=$(_mk 'comemory search "x"')
   run bash -c "tool_name=Bash input='$payload' bash '$HOOK'"
-  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("mod.sh comemory")'
+  echo "$output" | jq -e '.hookSpecificOutput.permissionDecisionReason | test("comemory.sh")'
 }
 
 @test "comemory-scope: semicolon inside quoted save arg does not falsely deny" {

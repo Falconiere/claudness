@@ -86,7 +86,7 @@ recall=""
 if [[ "$prompt_lower" =~ ${WB}(remember|recall|what\ did|previously|earlier|comemory|architecture|how\ does|where\ is|file-map|prior\ decision|history)${WE} ]]; then
   case "$(claudness_comemory_state)" in
     available)
-      recall="Recall first: \`mod.sh comemory search \"<topic>\"\` before reading files."
+      recall="Recall first: \`comemory.sh search \"<topic>\"\` before reading files."
       ;;
     missing)
       recall="WARN: comemory CLI not installed — persistent memory recall disabled."

@@ -14,8 +14,9 @@
 .env.*
 **/secrets/**
 .git/**
-# Trusted scripts — the hook framework itself and code-intel scripts.
+# Trusted scripts — the hook framework itself and the ast-grep/comemory wrappers.
 # Protecting these prevents bypass-by-edit (security review concern).
 hooks/lib/**
 hooks/**/*.sh
-skills/code-intel/scripts/**
+skills/ast-grep/scripts/**
+skills/agent-memory/scripts/**

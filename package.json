@@ -31,7 +31,8 @@
     ],
     "skills": [
       "./plugins/claudness/skills",
-      "./plugins/code-intel/skills",
+      "./plugins/ast-grep/skills",
+      "./plugins/comemory/skills",
       "./plugins/code-review/skills"
     ],
     "prompts": [

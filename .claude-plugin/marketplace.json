@@ -24,15 +24,27 @@
       ]
     },
     {
-      "name": "code-intel",
-      "source": "./plugins/code-intel",
-      "description": "ast-grep + comemory skills with registry-driven enforcement hooks.",
+      "name": "ast-grep",
+      "source": "./plugins/ast-grep",
+      "description": "Structural code search & rewrite (ast-grep) with a registry-driven Grep→ast-grep nudge hook.",
       "author": {
         "name": "Falconiere Barbosa",
         "email": "hello@falconiere.io"
       },
       "category": "productivity",
-      "keywords": ["ast-grep", "comemory", "memory", "hooks"],
+      "keywords": ["ast-grep", "structural-search", "hooks"],
+      "license": "MIT"
+    },
+    {
+      "name": "comemory",
+      "source": "./plugins/comemory",
+      "description": "Persistent agent memory + code-index search (comemory) with registry-driven scope enforcement and a statusline memory-count publisher.",
+      "author": {
+        "name": "Falconiere Barbosa",
+        "email": "hello@falconiere.io"
+      },
+      "category": "productivity",
+      "keywords": ["comemory", "memory", "hooks"],
       "license": "MIT",
       "dependencies": [
         { "name": "claudness", "marketplace": "falconiere" }

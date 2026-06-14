@@ -53,7 +53,7 @@ detect_comemory() {
 
 # Minimum comemory version claudness targets. The wrapper relies on the full
 # verb surface (search/save/list/summary, the retrieval-quality loop
-# feedback/mine/tune/eval/prune/gc/rebuild, and code-intel search-code/index-code/
+# feedback/mine/tune/eval/prune/gc/rebuild, and comemory search-code/index-code/
 # graph). 0.8.0 is the current release; bump this constant when comemory ships a
 # newer one that claudness should rely on.
 COMEMORY_MIN_VERSION="0.8.0"

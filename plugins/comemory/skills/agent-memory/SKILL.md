@@ -3,7 +3,7 @@ name: agent-memory
 description: "ALWAYS ACTIVE — Persistent memory protocol. You MUST save decisions, conventions, bugs, and discoveries to comemory proactively. Do NOT wait for the user to ask."
 ---
 # Agent Memory-First Protocol
-You have comemory persistent memory accessed through the **scoped wrapper** at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory …`.
+You have comemory persistent memory accessed through the **scoped wrapper** at `${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh …`.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints (Always)
@@ -27,11 +27,11 @@ Announce the scope in user-facing text before performing the operation. Example:
 
 ## CLI Reference — Use the Wrapper
 
-The wrapper at `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory <subcmd>` auto-injects `--repo <current-repo>`. **Never use MCP tools for comemory.** Raw `comemory` invocations are denied by the `comemory-scope` hook unless they include `--repo`.
+The wrapper at `${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh <subcmd>` auto-injects `--repo <current-repo>`. **Never use MCP tools for comemory.** Raw `comemory` invocations are denied by the `comemory-scope` hook unless they include `--repo`.
 
 ### Save a memory
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "<title>" "<body>" --kind KIND --tags "a,b"
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh save "<title>" "<body>" --kind KIND --tags "a,b"
 ```
 - `<title>`: Short, searchable title (required)
 - `<body>`: Structured content (required) — the wrapper folds title + body into one memory
@@ -43,19 +43,19 @@ comemory **auto-warns on near-duplicates**: if a similar memory already exists, 
 
 ### Search memories
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<query>" --kind KIND
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh search "<query>" --kind KIND
 ```
 Query-driven recall — you must supply a natural-language `<query>`. Returns compact ranked results scoped to the current repo. comemory's default candidate window is 12; pass `--k N` to widen it, and `--kind` to filter by memory kind.
 
 ### Browse memories
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory list --kind KIND
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh list --kind KIND
 ```
 Lists the current repo's memories (optionally filtered by `--kind`). Use to browse what's stored when you don't have a specific query.
 
 ### Statistics / health
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory stats
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh stats
 ```
 Reports data-directory + index health (maps to `comemory doctor`).
 
@@ -64,7 +64,7 @@ The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `m
 
 The one verb you SHOULD call yourself: after you actually **use** a recalled memory, close the loop so future recall sharpens.
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory feedback <query_id> --used <id>
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh feedback <query_id> --used <id>
 ```
 - `<query_id>` comes from a prior `search --json` envelope (run search with `--json` to get it).
 - `--used <csv ids>` = memories that helped; `--irrelevant <csv ids>` = memories that didn't.
@@ -80,19 +80,19 @@ State the repo scope before searching. All commands below use the auto-scoping w
 Need to understand something?
 │
 ├─ Architecture/structure question
-│   ├─ mod.sh comemory search "architecture <module>" → past decisions
+│   ├─ comemory.sh search "architecture <module>" → past decisions
 │   ├─ Hit  → use it
 │   └─ Miss → ast-grep on relevant declarations, then Grep on keywords.
-│              Save findings back via `mod.sh comemory save … --kind decision`.
+│              Save findings back via `comemory.sh save … --kind decision`.
 │
 ├─ Where is the code for X?
-│   ├─ mod.sh comemory search "file-map <area>" → cached path
+│   ├─ comemory.sh search "file-map <area>" → cached path
 │   ├─ Hit  → go directly to likely files, verify
 │   └─ Miss → ast-grep for the call/def shape, or Grep for a literal name.
-│              Save mapping via `mod.sh comemory save … --kind discovery`.
+│              Save mapping via `comemory.sh save … --kind discovery`.
 │
 ├─ How does pattern X work?
-│   ├─ mod.sh comemory search "pattern <name>"
+│   ├─ comemory.sh search "pattern <name>"
 │   ├─ Hit  → use/validate
 │   └─ Miss → ast-grep for the pattern shape, Read the hits, then save
 │              (--kind pattern).
@@ -101,7 +101,7 @@ Need to understand something?
 │   └─ ast-grep for the call shape (e.g. `$_.Y($$$)`) or Grep for the symbol.
 │
 └─ What was decided about X?
-    ├─ mod.sh comemory search "decision <topic>"
+    ├─ comemory.sh search "decision <topic>"
     ├─ Hit  → reference and verify in docs/git if needed
     └─ Miss → check docs/git, then save (--kind decision)
 ```
@@ -120,7 +120,7 @@ See also: `skills/ast-grep/SKILL.md` for structural search and rewrite.
 ## 2. Save What You Learn
 After any exploration that yields **reusable knowledge**, save (announce the scope first):
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "<title>" "<body>" --kind KIND --tags "category,key"
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh save "<title>" "<body>" --kind KIND --tags "category,key"
 ```
 ### When to save (mandatory)
 - Architecture or design decision made
@@ -161,14 +161,14 @@ If a memory updates an outdated one, pass `--supersedes <id>` to replace it (com
 ### Example save (with explicit scope announcement)
 > Scoping comemory to **claudness** for save: decision / auth-middleware.
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh save "JWT auth middleware" "**What**: Added JWT validation middleware\n**Why**: API routes needed authentication\n**Where**: src/middleware/auth.ts\n**Learned**: Must set httpOnly flag on cookies" --kind decision --tags "auth,middleware"
 ```
 
 ## 3. Search Protocol (Progressive Disclosure)
 Don't dump everything. Start narrow:
 ```
-1. mod.sh comemory search "keywords"        → ranked candidates (auto-scoped)
-2. mod.sh comemory list --kind KIND         → browse a kind if the query came up short
+1. comemory.sh search "keywords"        → ranked candidates (auto-scoped)
+2. comemory.sh list --kind KIND         → browse a kind if the query came up short
 ```
 Start at layer 1. Only go to `list` if a targeted query isn't enough.
 **When to search:**
@@ -181,14 +181,14 @@ Start at layer 1. Only go to `list` if a targeted query isn't enough.
 ### Session start (recommended)
 At the start of a session, announce the repo scope, then recall with a query for whatever you're about to work on:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<what you're about to work on>"
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh search "<what you're about to work on>"
 ```
 ### Realtime saves (mandatory)
 Save learnings immediately as they happen — after every decision, bugfix, discovery, or pattern. Do NOT defer to session end. Announce scope before each save.
 ### Post-compaction recovery
 If you see a compaction message or "FIRST ACTION REQUIRED":
 1. Announce the repo scope.
-2. Call `${CLAUDE_PLUGIN_ROOT}/skills/code-intel/scripts/mod.sh comemory search "<current task / open thread>"` to recover relevant prior context.
+2. Call `${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh search "<current task / open thread>"` to recover relevant prior context.
 3. Only THEN continue working.
 
 ## 5. Raw CLI Fallback (rare)
