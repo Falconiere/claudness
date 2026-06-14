@@ -161,3 +161,22 @@ User-global disables, project-local re-enable:
 // <repo>/.claude/claudness.config.json
 { "version": 1, "skills": { "ast-grep": true } }
 ```
+
+## Shrink session footprint
+
+Every enabled skill's `description` and the Session Protocol load into the
+model's context at session start — recurring cost that shrinks your usable
+context window. To reclaim it:
+
+- **Disable skills you don't use** (`skills.<name>: false`). A disabled skill's
+  `description` no longer loads, so the session footprint drops directly.
+- **Disable a whole plugin** at the Claude Code plugin level to drop all of its
+  skill descriptions at once.
+- **MCP tools defer natively** — Claude Code loads their schemas on demand via
+  tool search, so an idle connector costs little. Use `mcp.<server>: false` to
+  drop a noisy one entirely.
+
+The harness caps its *own* injected footprint with
+`plugins/claudness/scripts/context-budget.sh` (run in CI): word ceilings on the
+Session Protocol + per-language docs and on every skill `description`, so the
+baseline cannot silently regrow.

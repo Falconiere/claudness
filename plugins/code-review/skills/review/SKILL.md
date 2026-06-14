@@ -1,6 +1,6 @@
 ---
 name: review
-description: Project-tuned pre-push code review that mirrors the CI review bot's checklist so the bot finds nothing on first push — cutting review rework. Reviews the branch diff for correctness, security, performance, test coverage of new behavior, doc/comment accuracy, and tight test assertions, then records a clean push-review state so the gate passes. Use before pushing a feature branch, when asked to "review before push", or when the pr-babysit loop needs a reviewer. Explicit / babysit-invoked — does NOT auto-fire on every edit.
+description: Project-tuned pre-push code review that mirrors the CI review bot's checklist so the bot finds nothing on first push. Reviews the branch diff for correctness, security, performance, test coverage, doc accuracy, and tight assertions, then records a clean push-review state. Use before pushing a feature branch, when asked to "review before push", or when pr-babysit needs a reviewer. Explicit — does NOT auto-fire on edits.
 ---
 
 # code-review:review

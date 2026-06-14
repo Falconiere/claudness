@@ -1,4 +1,4 @@
 ## Rust notes
-- Rust tests must live in `tests/` dir — no inline `#[cfg(test)]`.
-- No `#[allow(...)]` or `#[expect(...)]` in Rust — fix the warning, don't suppress it.
-- Use `cargo nextest run` for tests; never plain `cargo test`.
+- Rust tests live in `tests/` — no inline `#[cfg(test)]`.
+- No `#[allow(...)]`/`#[expect(...)]` — fix the warning, don't suppress.
+- Use `cargo nextest run`; never plain `cargo test`.
