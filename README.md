@@ -79,23 +79,13 @@ Pi config locations are:
 
 See [`docs/config.md`](./docs/config.md).
 
-## New in v1.11.0
-
-- **Pi package support** — claudness is now installable as a pi package (`pi install https://github.com/falconiere/claudness`), exposing workflow skills, code-intel, and a TypeScript extension that reuses the existing pre/post-tool shell hooks for live gate status in pi's footer.
-
-## New in v1.10.0
-
-- **Statusline weekly token usage (`wk:`)** — the `statusline` plugin now shows account-wide tokens consumed this ISO week (Mon–Sun, local time), summed across the main agent and its subagents and deduped by message id. A `Stop` hook does the work off the render hot path; each Monday a fresh bucket starts and prior weeks are kept for future reporting.
-- **Comemory count badge (`[mem:N]`)** — when `code-intel` is installed, the statusline shows the project's memory count, published once per session and worktree-correct so a worktree shares its main repo's scope.
-- **Upgrade path:** no action needed — both segments light up automatically when the relevant plugins are installed, and degrade silently when they're not.
-
 ## What's inside
 
 Seven plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.11.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`claudness`** | `1.12.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`rust-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** — size limits, error-handling rules, test placement, `unsafe`/suppression bans, and more, registered into the core engine. |
 | **`ts-quality`** | `0.1.0` | `PostToolUse` quality gates for **TypeScript** — size limits, error-handling rules, import/type-safety rules, test placement, and more, registered into the core engine. |
 | **`code-intel`** | `0.3.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules and a `SessionStart` memory-count publisher for the statusline. |
