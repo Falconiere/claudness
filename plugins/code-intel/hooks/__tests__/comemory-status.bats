@@ -7,8 +7,8 @@
 HOOK="${BATS_TEST_DIRNAME}/../comemory-status.sh"
 
 setup() {
+  TMP=$(mktemp -d)                        # before skip, so teardown's rm always has a target
   command -v comemory >/dev/null 2>&1 || skip "comemory binary not installed"
-  TMP=$(mktemp -d)
   ( cd "$TMP" && git init -q )            # repo so git-common-dir resolves
   STORE="$TMP/store"; mkdir -p "$STORE"
   KEY=$(basename "$TMP")                  # repo_key for a plain checkout = basename
