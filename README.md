@@ -59,7 +59,7 @@ Six plugins, one marketplace. Install the core alone, or add the domain plugins.
 
 | Plugin | Version | What it does |
 |--------|:-------:|--------------|
-| **`claudness`** | `1.5.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
+| **`claudness`** | `1.6.0` | The core: a registry-driven hook engine, the workflow skill chain, slash commands, and the `deep-explore` agent. |
 | **`lang-quality`** | `0.1.0` | `PostToolUse` quality gates for **Rust** and **TypeScript** — size limits, error-handling rules, test placement, and more, registered into the core engine. |
 | **`code-intel`** | `0.2.0` | Structural code search (**ast-grep**) and persistent cross-session **memory** (**comemory ≥ 0.8.0**), with `PreToolUse` enforcement modules. |
 | **`statusline`** | `0.1.0` | Optional gate-aware statusline — `model \| effort \| ctx \| gate \| folder \| branch \| caveman`, wired via a stable symlink. Standalone, no dependencies. |
