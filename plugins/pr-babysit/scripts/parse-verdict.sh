@@ -29,7 +29,7 @@ _empty() { jq -nc '{is_review_comment:false, state:"unknown", complete:false, ve
 
 # --- Identify: marker-based, both states ---
 is_review=false
-if printf '%s' "$input" | grep -qE 'actions/runs/[0-9]+|Code Review|agent-merge'; then
+if printf '%s' "$input" | grep -qE '^### Code Review|^### PR Review in Progress|actions/runs/[0-9]+|agent-merge-'; then
   is_review=true
 fi
 if [ "$is_review" != true ]; then _empty; exit 0; fi
@@ -46,7 +46,7 @@ complete=false; [ "$state" = complete ] && complete=true
 
 # --- Verdict ---
 verdict_label=$(printf '%s' "$input" | grep -oE 'agent-merge-[a-z-]+' | head -1 || true)
-if printf '%s' "$input" | grep -qE '\*\*Approved\*\*' || [[ "$verdict_label" == *approved* ]]; then
+if printf '%s' "$input" | grep -qiE '\*\*Approved\*\*' || [[ "$verdict_label" == *approved* ]]; then
   verdict="approved"
 elif printf '%s' "$input" | grep -qiE '\*\*Changes requested\*\*|changes-requested|agent-merge-blocked' || [[ "$verdict_label" == *changes* || "$verdict_label" == *blocked* ]]; then
   verdict="changes"
