@@ -1,6 +1,6 @@
 ---
 name: plan-review
-description: "Use to review an implementation plan BEFORE writing code — check it's executable, complete, and won't collapse on contact with the codebase. Tells: \"review the plan\", \"is this plan ready\", \"poke holes in the plan\", \"did we miss a step\". Pairs with the \`plan\` skill; runs between plan and execution in the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow."
+description: "Use to review an implementation plan BEFORE writing code — check it's executable, complete, and won't collapse on contact with the codebase. Tells: \"review the plan\", \"is this plan ready\", \"poke holes in the plan\", \"did we miss a step\". Pairs with the `plan` skill; runs between plan and execution in the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow."
 ---
 
 # Plan Review

@@ -1,6 +1,6 @@
 ---
 name: execution-review
-description: "Use after implementing, to review the executed work BEFORE calling it done — does it match the plan, is every error handled (never suppressed), are tests real-data, is the gate green. Tells: \"review the execution\", \"review what I built\", \"is this done\", \"audit the implementation\". Pairs with the \`execution\` skill; runs between execution and test in the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow. For deep correctness bug-hunting, defer to /code-review."
+description: "Use after implementing, to review the executed work BEFORE calling it done — does it match the plan, is every error handled (never suppressed), are tests real-data, is the gate green. Tells: \"review the execution\", \"review what I built\", \"is this done\", \"audit the implementation\". Pairs with the `execution` skill; runs between execution and test in the claudness brainstorm → spec → spec-review → plan → plan-review → execution → execution-review → test workflow. For deep correctness bug-hunting, defer to /code-review."
 ---
 
 # Execution Review
