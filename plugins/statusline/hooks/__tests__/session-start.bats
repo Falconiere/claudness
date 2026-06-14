@@ -19,7 +19,9 @@ teardown() {
   dst="$TMP/cfg/statusline/statusline.sh"
   [ -L "$dst" ]
   target=$(readlink "$dst")
-  [[ "$target" == *"/statusline.sh" ]]
+  # Tight: assert the target lives under the statusline plugin dir, not just any
+  # */statusline.sh (a misrouted symlink to claudness's leftover would else pass).
+  [[ "$target" == *"/statusline/statusline.sh" ]]
   [ -f "$target" ]
 }
 

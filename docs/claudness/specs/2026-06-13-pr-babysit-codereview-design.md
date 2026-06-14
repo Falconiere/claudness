@@ -4,7 +4,7 @@
 
 ## Problem
 
-The PR babysitter (`/claudness:address-pr-comments`) decides a PR is "done" from GitHub **check conclusions** and **review threads**, and it filters out every `[bot]` comment. But this repo's CI review bot posts its findings as ONE `claude[bot]` issue comment that it **edits in place** — and the `review / review` check reports `SUCCESS` even when that comment lists unaddressed `low`/nit findings (verdict can be Approved-with-findings). Result: the babysitter stops "all green" while real findings sit unread, and the human then hand-fixes them — exactly the rework loop we hit on PR #31 (7 low findings, never surfaced). Separately, the 388-line babysitter is buried inside the omnibus `claudness` plugin, and there is no in-repo reviewer to catch these findings *before* the push that triggers the bot.
+The PR babysitter (`/claudness:address-pr-comments`) decides a PR is "done" from GitHub **check conclusions** and **review threads**, and it filters out every `[bot]` comment. But this repo's CI review bot posts its findings as ONE `claude[bot]` issue comment that it **edits in place** — and the `review / review` check reports `SUCCESS` even when that comment lists unaddressed `low`/nit findings (verdict can be Approved-with-findings). Result: the babysitter stops "all green" while real findings sit unread, and the human then hand-fixes them — exactly the rework loop we hit on PR #31 (6 low findings, never surfaced). Separately, the 388-line babysitter is buried inside the omnibus `claudness` plugin, and there is no in-repo reviewer to catch these findings *before* the push that triggers the bot.
 
 ## Non-Goals
 
