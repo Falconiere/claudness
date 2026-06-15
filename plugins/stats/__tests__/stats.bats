@@ -18,11 +18,15 @@ setup() {
 
 run_stats() { run bash "$SCRIPT" "$@"; }
 
-@test "default digest renders headline and a project" {
+@test "default digest renders the dashboard from real transcripts" {
   run_stats
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "Usage —"
-  echo "$output" | grep -q "toolu.sh"
+  echo "$output" | grep -q "Claude Code Usage"   # boxed header
+  echo "$output" | grep -q "┌"                    # box rule
+  echo "$output" | grep -q "█"                     # a bar/gauge cell from real data
+  echo "$output" | grep -q "Trend 14d"             # sparkline section
+  echo "$output" | grep -q "toolu.sh"              # real project (multimodel .cwd)
+  echo "$output" | grep -q "Activity"
 }
 
 @test "--json emits a valid aggregate with both sessions" {
@@ -30,6 +34,20 @@ run_stats() { run bash "$SCRIPT" "$@"; }
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.totals.sessions == 2' >/dev/null
   echo "$output" | jq -e '.by_model|length >= 1' >/dev/null
+}
+
+@test "--html writes a self-contained report from real transcripts (no browser)" {
+  run env STATS_NO_OPEN=1 bash "$SCRIPT" --html
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "Wrote HTML report"
+  local f="$CLAUDE_CONFIG_DIR/stats/report.html"
+  [ -f "$f" ]
+  grep -q "<!DOCTYPE html>" "$f"
+  grep -q "Claude Code Usage" "$f"
+  grep -qF "toolu.sh" "$f"                          # real project populated a row
+  grep -qF 'class="fill" style="width:' "$f"        # a CSS bar from real data
+  grep -qF '<svg class="spark"' "$f"                # sparkline rendered
+  ! grep -qF "{{" "$f"                              # no placeholder left
 }
 
 @test "--today records the today window" {

@@ -1,7 +1,7 @@
 {
   "name": "stats",
   "version": "0.1.0",
-  "description": "On-demand /stats report of measured Claude Code token/cost/cache usage and toolu activity, read straight from the session transcripts. Standalone, no dependencies.",
+  "description": "A visual /stats dashboard for Claude Code — see real token, cost, and cache-hit usage by project, model, and day as in-terminal bar charts and a sparkline trend, or export a self-contained HTML report with --html. Measured from session transcripts, not estimated. Standalone — only needs jq.",
   "author": {
     "name": "Falconiere Barbosa",
     "email": "hello@falconiere.io"
@@ -9,5 +9,5 @@
   "homepage": "https://github.com/falconiere/toolu",
   "repository": "https://github.com/falconiere/toolu.git",
   "license": "MIT",
-  "keywords": ["claude-code", "stats", "tokens", "cost", "usage"]
+  "keywords": ["claude-code", "stats", "tokens", "cost", "usage", "dashboard", "html"]
 }

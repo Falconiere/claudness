@@ -4,7 +4,7 @@
 # per-session rollup cache it maintains under $CLAUDE_CONFIG_DIR/stats/.
 #
 #   stats.sh [--today|--week|--all] [--project P] [--model M] [--session ID]
-#            [--this-session] [--since YYYY-MM-DD] [--limit N] [--json] [--rescan]
+#            [--this-session] [--since YYYY-MM-DD] [--limit N] [--json] [--html] [--rescan]
 #
 # Cost figures are sticker-price estimates, not a bill.
 set -u
@@ -23,6 +23,8 @@ source "$LIB/scan.sh"
 source "$LIB/aggregate.sh"
 # shellcheck source=/dev/null
 source "$LIB/render.sh"
+# shellcheck source=/dev/null
+source "$LIB/render_html.sh"
 
 usage() {
   sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
@@ -35,6 +37,7 @@ while [ $# -gt 0 ]; do
     --week)  WINDOW=week ;;
     --all)   WINDOW=all ;;
     --json)        export STATS_OUTPUT=json ;;
+    --html)        export STATS_OUTPUT=html ;;
     --rescan)      export STATS_FORCE_RESCAN=1 ;;
     --this-session) THIS=1 ;;
     --project) shift; export STATS_PROJECT="${1:-}" ;;

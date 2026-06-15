@@ -69,6 +69,12 @@ stats_aggregate() {
                      { today: ( sumt([ $days[] | select(.key == $today) | .value ]) | {tokens, cost} ),
                        week:  ( sumt([ $days[] | select(weekof(.key) == $week) | .value ]) | {tokens, cost} ),
                        all:   ( sumt([ $days[].value ]) | {tokens, cost} ) } end ),
+        daily: ( if $model != "" then null else
+                   ( [ $days[] | {key, t: .value.tokens} ] | group_by(.key)
+                     | map({ key: .[0].key, value: (map(.t) | add) }) | from_entries ) as $dl
+                   | [ range(0;14) | (($today + "T12:00:00Z" | fromdateiso8601) - (. * 86400) | strftime("%Y-%m-%d")) ]
+                   | reverse
+                   | map(. as $d | { date: $d, tokens: ($dl[$d] // 0) }) end ),
         by_project: ( $sessions | group_by(.project_path)
                       | map({ project: .[0].project, project_path: .[0].project_path,
                               sessions: length,
