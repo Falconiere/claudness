@@ -130,7 +130,7 @@ surface — the retrieval-quality loop (`feedback`/`mine`/`tune`/`eval`/`prune`/
 `gc`/`rebuild`) and **comemory** (`search-code`/`index-code`/`graph`). An older
 binary lacks some of these and will error on them, so session start emits a
 non-fatal upgrade WARN when it detects one. Basics (`search`/`save`/`list`)
-still work. Upgrade with `brew upgrade comemory` or `cargo install comemory`.
+still work. Upgrade with `brew upgrade Falconiere/tap/comemory` (comemory is not published to crates.io; the Homebrew tap or the curl installer are the canonical paths). Run `/comemory:setup` to verify and wire it.
 
 ## Examples
 

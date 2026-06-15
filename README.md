@@ -91,6 +91,18 @@ Add the language gates, search, and docs tooling too:
 
 > **Note** — `comemory`, `rust-quality`, and `ts-quality` depend on `toolu`; `ast-grep`, `context7`, and `exa-search` are standalone (zero deps); `toolu` depends on `code-simplifier` (official) and `caveman`. Adding the marketplaces in step 1 lets Claude Code resolve those automatically. The `push-review` gate is **reviewer-agnostic** — it does not force you to use caveman: `caveman:cavecrew-reviewer` is preferred when present, otherwise the built-in `/code-review` skill satisfies the gate.
 
+The `comemory` plugin wraps the standalone `comemory` binary — install it once (it is **not** on crates.io), then run setup:
+
+```bash
+brew install Falconiere/tap/comemory   # macOS + Linuxbrew (canonical)
+# or the curl installer:
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Falconiere/comemory/releases/latest/download/comemory-installer.sh | sh
+```
+
+```text
+/comemory:setup   # detect+guide the binary, then wire git index-code hooks, an initial index, data dir, and completions
+```
+
 ### pi
 
 toolu is also installable as a **pi package**:
@@ -121,7 +133,7 @@ Ten plugins, one marketplace. Install the core alone, or add the domain plugins.
 | Quality gate | **`rust-quality`** | `0.1.0` | Rust `PostToolUse` checks — file / function / `impl` size limits, `.unwrap()`/`.expect()` bans, no `unsafe`, no lint suppression, tests in a flat `tests/`. Registers into the core engine. |
 | Quality gate | **`ts-quality`** | `0.1.0` | TypeScript `PostToolUse` checks — size limits, no `../` imports, no `as` / hand-rolled guards, colocated `__tests__/`, duplicate-type detection. Registers into the core engine. |
 | Code intel | **`ast-grep`** | `0.1.0` | Structural code search & rewrite (**ast-grep**) — adds the `ast-grep` skill and a `Grep → ast-grep` nudge mirrored into the registry. Standalone. |
-| Code intel | **`comemory`** | `0.1.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with `PreToolUse` scope enforcement and a `SessionStart` memory-count publisher for the statusline. |
+| Code intel | **`comemory`** | `0.2.0` | Persistent cross-session **memory** + code-index search (**comemory ≥ 0.8.0**), with a `/comemory:setup` command (detect+guide the binary, then wire git index-code hooks), `delete`/`context` wrapper verbs, `PreToolUse` scope enforcement, and a `SessionStart` memory-count publisher for the statusline. |
 | Knowledge | **`context7`** | `1.14.0` | Live **library documentation** & code-example lookup via the Context7 REST API. Standalone, no dependencies. |
 | Knowledge | **`exa-search`** | `1.14.0` | **Web / code / URL search** plus deep research via the Exa REST API. Standalone, no dependencies. |
 | Workflow | **`code-review`** | `0.1.0` | `code-review:review` — pre-push review mirroring the CI bot's checklist (correctness, security, perf, coverage, doc accuracy); writes the `push-review` state so the gate passes. Standalone. |
