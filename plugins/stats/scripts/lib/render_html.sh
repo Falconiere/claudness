@@ -8,16 +8,19 @@
 # STATS_NO_OPEN=1 (set in tests).
 set -u
 
+# Disable bash 5.2+ patsub_replacement so `&` (and `\`) in ${var//pat/repl} values
+# are literal, not the matched text. No-op (option unknown) on older bash —
+# including bash 5.0/5.1 and macOS /bin/bash 3.2 — where they are already literal.
+shopt -u patsub_replacement 2>/dev/null || true
+
 # Absolute path of the report file (under the stats config dir).
 stats_html_path() { printf '%s/stats/report.html' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; }
 
-# Substitute {{KEY}} with VALUE in the caller's $tmpl (dynamic scope). bash 5.0+
-# treats a bare & in a replacement as the matched text and \ as an escape, so
-# escape both to keep arbitrary HTML/data literal.
+# Substitute {{KEY}} with VALUE in the caller's $tmpl (dynamic scope). With
+# patsub_replacement disabled (top of file), & and \ are literal in the
+# replacement on every bash version, so arbitrary HTML/data substitutes cleanly.
 _stats_apply() {  # $1=KEY $2=VALUE
-  local v="$2"
-  v="${v//\\/\\\\}"; v="${v//&/\\&}"
-  tmpl="${tmpl//"{{$1}}"/$v}"
+  tmpl="${tmpl//"{{$1}}"/$2}"
 }
 
 # Build one HTML block of <div class="row"> from a jq expression that emits
