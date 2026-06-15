@@ -1,0 +1,3 @@
+# query_id	baseline_target	ast_grep_pattern	lang
+toolu-export-fn	pi/extensions/toolu.ts	export function $N($$$) { $$$ }	ts
+toolu-const-arrow	pi/extensions/toolu.ts	const $N = ($$$) => $$$	ts

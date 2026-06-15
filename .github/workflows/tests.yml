@@ -62,7 +62,7 @@ jobs:
           # Every .bats suite must live in a colocated __tests__/ dir next to the
           # code it exercises. Fail the build (with the offending paths) if any
           # test file sits outside a __tests__ directory.
-          stray=$(find plugins -name "*.bats" -not -path "*/__tests__/*" || true)
+          stray=$(find plugins benchmarks -name "*.bats" -not -path "*/__tests__/*" || true)
           if [ -n "$stray" ]; then
             echo "Test files outside a __tests__/ dir:" >&2
             echo "$stray" >&2
@@ -73,16 +73,27 @@ jobs:
       - name: Run bats suite
         run: |
           set -euo pipefail
-          # Run every bats suite in every plugin (hook and skill tests live
-          # under their owning plugin; discovery is dynamic, so new plugins are
-          # picked up automatically). Skill tests that wrap a REST API stub curl
-          # on PATH, so they never hit real APIs.
-          mapfile -d '' suites < <(find plugins -name "*.bats" -print0)
+          # Run every bats suite in every plugin AND the benchmarks harness (hook
+          # and skill tests live under their owning plugin; discovery is dynamic,
+          # so new plugins are picked up automatically). Skill tests that wrap a
+          # REST API stub curl on PATH, so they never hit real APIs.
+          mapfile -d '' suites < <(find plugins benchmarks -name "*.bats" -print0)
           if [ "${#suites[@]}" -eq 0 ]; then
             echo "No bats suites found — test discovery is broken" >&2
             exit 1
           fi
           bats "${suites[@]}"
+
+      - name: Deterministic benchmarks (hermetic)
+        run: |
+          set -euo pipefail
+          # Regenerate + validate the deterministic retrieval benchmark. No API
+          # key in CI, so token counting is the offline heuristic — fully
+          # hermetic. Guards the harness against regressions; the live tier
+          # (caveman/cavecrew/whole-session) is run manually, never in CI.
+          bash benchmarks/run.sh --tier deterministic
+          f=$(ls benchmarks/results/retrieval-deterministic-*.json | tail -1)
+          bash benchmarks/run.sh --validate "$f"
 
       - name: Context budget guard
         run: |
