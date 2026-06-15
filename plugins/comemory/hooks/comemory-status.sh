@@ -40,7 +40,10 @@ KEY=$(repo_key "$cwd")
 TO=""
 command -v timeout  >/dev/null 2>&1 && TO="timeout 5"
 command -v gtimeout >/dev/null 2>&1 && TO="gtimeout 5"
-count=$($TO comemory list --repo "$KEY" --json 2>/dev/null | jq 'length' 2>/dev/null)
+# comemory 0.9.0 changed `list --json` from a bare array to a paginated envelope
+# {items,total,...}. Handle BOTH shapes (the plugin floor is 0.8.0): an array →
+# its length; an object → its `.total` (the full count, not just this page).
+count=$($TO comemory list --repo "$KEY" --json 2>/dev/null | jq 'if type=="array" then length else .total end' 2>/dev/null)
 [ -n "$count" ] || exit 0   # comemory absent/slow/failed → no marker
 
 dir="$CFG/comemory-status"

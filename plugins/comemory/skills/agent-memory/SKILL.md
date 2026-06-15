@@ -59,6 +59,31 @@ ${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh stats
 ```
 Reports data-directory + index health (maps to `comemory doctor`).
 
+### Headline context lookup
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh context "<query>" --k N
+```
+Repo-scoped headline lookup — bundles the matching code symbol(s) with the
+memories for a key (symbol name, file fragment, or phrase). Auto-injects `--repo`
+like `search`.
+
+### Delete a memory
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/agent-memory/scripts/comemory.sh delete <id>
+```
+Soft-deletes the 8-hex memory id (moves it to `.trash/`). The id is global, so
+no `--repo` is needed. Prefer `--supersedes` on a new `save` when you are
+*replacing* an outdated memory rather than removing it outright.
+
+### First-time setup
+Run `/comemory:setup` once per machine/repo. It detect-and-guides the `comemory`
+binary (printing `brew install Falconiere/tap/comemory` if it is absent — the CLI
+is **not** on crates.io), then wires the data dir, git hooks that auto-refresh the
+code index on commit/merge/checkout, an initial `index-code`, and a completions
+hint. Agents can trigger the same flow with `comemory.sh setup`. As of comemory
+0.9.0 those git hooks also drive **auto-reinforcement** — commits touching a
+memory's referenced files reinforce it with no manual `feedback`.
+
 ## Retrieval-quality loop (autonomous)
 The loop verbs (`feedback`, `mine`, `tune`, `eval`, `prune`, `gc`, `rebuild`, `maintain`) are **LOCAL and token-free** — no LLM, no API, no `--repo`. They run **automatically once per day via the toolu SessionEnd hook**, so you rarely invoke them by hand.
 

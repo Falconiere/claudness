@@ -41,6 +41,22 @@ detect_project_name() {
   if [ -n "$root" ]; then basename "$root"; fi
 }
 
+# `setup` must run BEFORE the binary-presence guard below: guiding the install
+# of an absent comemory CLI is the whole point of setup, so it cannot be gated
+# on the CLI already being present. Resolve the plugin root three levels up from
+# this wrapper (skills/agent-memory/scripts → plugin root) with cd+pwd so a
+# relative invocation still resolves, and hand the remaining args to setup.sh.
+if [ "${1:-}" = setup ]; then
+  shift
+  _root=$(cd "${BASH_SOURCE%/*}/../../.." 2>/dev/null && pwd) || _root=""
+  _setup_sh="${_root:+$_root/}scripts/setup.sh"
+  if [ -x "$_setup_sh" ]; then
+    exec "$_setup_sh" "$@"
+  fi
+  printf 'comemory.sh: setup script not found/executable at %s\n' "${_setup_sh:-<unresolved>}" >&2
+  exit 1
+fi
+
 # No comemory CLI? Graceful no-op so dependent skills don't break — but warn on
 # stderr first so the agent SEES that this operation (e.g. a save) was dropped,
 # not silently swallowed mid-session.
@@ -83,10 +99,18 @@ usage() {
   cat <<'USAGE'
 Usage: comemory.sh <subcommand> [args...]
 
+Setup:
+  setup [--help]                      First-time setup: detect+guide the comemory binary,
+                                      then wire git index-code hooks, an initial index,
+                                      data dir, and completions. Runs even when the binary
+                                      is absent (prints the install command).
+
 Memory (repo-scoped — --repo auto-injected):
   search <query> [flags]              Search memories (--k N to widen; --kind to filter)
   save <title> <content> [flags]      Save a memory (--kind defaults to note)
+  context <query> [flags]             Headline lookup: code symbol + memories matching a key
   list [flags]                        List memories
+  delete <id> [flags]                 Soft-delete a memory by 8-hex id (moves to .trash/)
   summary <content>                   Save a session summary (tags: session-summary; yields to caller --tags)
 
 Code intelligence (repo-scoped — --repo auto-injected):
@@ -127,6 +151,15 @@ case "$subcmd" in
     repo_flag "$@"
     exec comemory search ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query"
     ;;
+  context)
+    # Headline lookup (code symbol + memories). Repo-scoped like search: comemory
+    # accepts an optional --repo, so auto-inject it and pass the query positional
+    # after the `--` end-of-options marker.
+    query="${1:?context requires a query}"
+    shift
+    repo_flag "$@"
+    exec comemory context ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@" -- "$query"
+    ;;
   save)
     title="${1:?save requires a title}"
     content="${2:?save requires content}"
@@ -137,6 +170,14 @@ case "$subcmd" in
   list)
     repo_flag "$@"
     exec comemory list ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} "$@"
+    ;;
+  delete)
+    # Soft-delete by id. The 8-hex id is globally unique, so `comemory delete`
+    # takes NO --repo — dispatch like the retrieval-loop verbs (no auto-inject),
+    # with the id passed as the positional after `--`.
+    id="${1:?delete requires a memory id (8-hex, from search/list)}"
+    shift
+    exec comemory delete "$@" -- "$id"
     ;;
   summary)
     content="${1:?summary requires content}"

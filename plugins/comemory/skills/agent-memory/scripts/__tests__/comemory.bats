@@ -20,9 +20,11 @@ teardown() {
   # empty list and of a missing binary (setup skips, but teardown still runs).
   command -v comemory >/dev/null 2>&1 || return 0
   command -v jq >/dev/null 2>&1 || return 0
+  # 0.9.0's `list --json` is a {items,...} envelope; 0.8.x was a bare array.
+  # Handle both shapes when harvesting ids to clean up.
   local id
   for id in $(comemory list --repo "$TEST_REPO" --json 2>/dev/null \
-      | jq -r '.[].id' 2>/dev/null); do
+      | jq -r 'if type=="array" then .[] else .items[] end | .id' 2>/dev/null); do
     [ -n "$id" ] && comemory delete "$id" --json >/dev/null 2>&1 || true
   done
 }
@@ -52,7 +54,7 @@ teardown() {
   [ -n "$id" ]
   [ "$id" != "null" ]
   # The override landed: kind is the caller's value, not a forced default.
-  run bash -c "comemory list --repo '$TEST_REPO' --json | jq -r '.[] | select(.id==\"$id\") | .kind'"
+  run bash -c "comemory list --repo '$TEST_REPO' --json | jq -r '(if type==\"array\" then .[] else .items[] end) | select(.id==\"$id\") | .kind'"
   [ "$status" -eq 0 ]
   [ "$output" = "decision" ]
 }
@@ -160,7 +162,7 @@ _stub_argv() {
   id=$(echo "$output" | jq -r '.id')
   [ -n "$id" ] && [ "$id" != "null" ]
   # It landed under the caller's repo, not the auto-detected default.
-  run bash -c "comemory list --repo custom-scope --json | jq -r '.[].id'"
+  run bash -c "comemory list --repo custom-scope --json | jq -r 'if type==\"array\" then .[] else .items[] end | .id'"
   [[ "$output" == *"$id"* ]]
 }
 
@@ -214,6 +216,77 @@ _make_repo_with_worktree() {
   from_wt=$(printf '%s\n' "$output" | awk '/^--repo$/{getline; print; exit}')
   [ "$from_main" = "myrepo" ]
   [ "$from_wt" = "$from_main" ]
+}
+
+# ── setup verb: dispatches to scripts/setup.sh, BEFORE the binary guard ───────
+@test "comemory: setup verb dispatches to scripts/setup.sh (binary-independent)" {
+  run bash "$COMEMORY_SH" setup -h
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: setup.sh"* ]]
+}
+
+@test "comemory: setup runs BEFORE the binary-presence guard (absent binary → setup's MISSING, not the wrapper no-op)" {
+  # The short-circuit must fire before the `command -v comemory` guard — else an
+  # absent binary would no-op setup, the one case it exists for. With the COMEMORY
+  # seam pointing at nothing, setup.sh prints MISSING; the wrapper never reaches
+  # its own "not installed — skipped" branch or usage().
+  COMEMORY=/nonexistent/comemory run bash "$COMEMORY_SH" setup
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | awk 'NR==1{print $1}')" = "MISSING" ]
+  [[ "$output" != *"Usage: comemory.sh"* ]]
+  [[ "$output" != *"skipped (no-op)"* ]]
+}
+
+# ── context (repo-scoped, like search) + delete (global, no --repo) ──────────
+@test "comemory: context injects --repo and guards the query with -- (behavioral argv)" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" context "run_migration"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -cx -- '--repo')" -eq 1 ]
+  printf '%s\n' "$output" | grep -qx 'behave'
+  printf '%s\n' "$output" | grep -qx -- '--'             # end-of-options guard
+  printf '%s\n' "$output" | grep -qx 'run_migration'     # query as positional
+}
+
+@test "comemory: delete forwards the id after -- and injects NO --repo (behavioral argv)" {
+  _stub_argv
+  run env PATH="$STUB:$PATH" MY_CLAUDE_COMEMORY_REPO=behave bash "$COMEMORY_SH" delete "a1b2c3d4"
+  [ "$status" -eq 0 ]
+  ! printf '%s\n' "$output" | grep -qx -- '--repo'       # id is global — never scoped
+  printf '%s\n' "$output" | grep -qx -- '--'
+  printf '%s\n' "$output" | grep -qx 'a1b2c3d4'
+}
+
+@test "comemory: save then delete removes the memory from list (real binary)" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-del"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run bash "$COMEMORY_SH" save "del-title" "deletable body" --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ] && [ "$id" != "null" ]
+  # Present before delete.
+  run bash "$COMEMORY_SH" list --json
+  [[ "$output" == *"$id"* ]]
+  # Delete through the wrapper, then it must be gone from list.
+  run bash "$COMEMORY_SH" delete "$id"
+  [ "$status" -eq 0 ]
+  run bash "$COMEMORY_SH" list --json
+  [ "$status" -eq 0 ]
+  ! printf '%s\n' "$output" | grep -q "$id"
+}
+
+@test "comemory: context runs against the real binary and surfaces a saved memory" {
+  export COMEMORY_DATA_DIR="$BATS_TEST_TMPDIR/cm-ctx"
+  mkdir -p "$COMEMORY_DATA_DIR"
+  run bash "$COMEMORY_SH" save "ctx-title" "distinctivecontextterm body" --json
+  [ "$status" -eq 0 ]
+  local id
+  id=$(echo "$output" | jq -r '.id')
+  [ -n "$id" ] && [ "$id" != "null" ]
+  run bash "$COMEMORY_SH" context "distinctivecontextterm"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$id"* ]]
 }
 
 @test "comemory: feedback round-trips against the real binary (isolated store)" {

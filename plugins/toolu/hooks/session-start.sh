@@ -144,7 +144,7 @@ fi
 # older binary lacks the retrieval-loop / code-search verbs and will error on
 # them. Advisory only (non-fatal); the basics still work.
 if [ "$HAS_COMEMORY" = "comemory" ] && toolu_enabled skills comemory && ! comemory_version_ok; then
-  parts+=("WARN: comemory $(comemory_version) is older than the v$COMEMORY_MIN_VERSION toolu targets — feedback/mine/tune/search-code/graph may be unavailable. Upgrade: \`brew upgrade comemory\` or \`cargo install comemory\`.")
+  parts+=("WARN: comemory $(comemory_version) is older than the v$COMEMORY_MIN_VERSION toolu targets — feedback/mine/tune/search-code/graph may be unavailable. Upgrade: \`brew upgrade Falconiere/tap/comemory\` (comemory is not on crates.io).")
 fi
 if [ "$HAS_ASTGREP" != "ast-grep" ] && toolu_enabled skills ast-grep; then
   missing_tools+=("ast-grep (structural code search)")
