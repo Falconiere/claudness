@@ -71,9 +71,8 @@ cavecrew_run_one() {
 }
 
 bench_cavecrew_run() {
-  command -v claude >/dev/null 2>&1 \
-    || { echo "cavecrew: live tier needs the claude CLI" >&2; return 1; }
-
+  # Parse args BEFORE the CLI gate so an unknown arg is a hard 2 regardless of
+  # whether the claude CLI is installed (keeps the contract env-independent).
   local n=5 model="claude-sonnet-4-6" tasks="$_dir/tasks" cwd="$BENCH_ROOT"
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -83,6 +82,9 @@ bench_cavecrew_run() {
       *) echo "cavecrew: unknown arg: $1" >&2; return 2 ;;
     esac
   done
+
+  command -v claude >/dev/null 2>&1 \
+    || { echo "cavecrew: live tier needs the claude CLI" >&2; return 1; }
   [ -d "$tasks" ] || { echo "cavecrew: tasks dir not found: $tasks" >&2; return 1; }
 
   local cases='[]' base_samples="" treat_samples="" notes=""
