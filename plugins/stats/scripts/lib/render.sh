@@ -18,6 +18,10 @@ stats_format_tokens() {
 stats_render() {
   local agg; agg="$(cat)"
   if [ "${STATS_OUTPUT:-text}" = "json" ]; then printf '%s\n' "$agg" | jq .; return 0; fi
+  # jq emits dot-decimal numbers, but a comma-decimal locale makes `printf '%.2f'`
+  # reject "4.2" outright ("invalid number" → $0.00). Pin LC_ALL=C — it overrides
+  # an inherited LC_ALL/LC_NUMERIC, which a bare LC_NUMERIC=C would not.
+  export LC_ALL=C
 
   local tok cost hit sess
   IFS=' ' read -r tok cost hit sess < <(printf '%s' "$agg" | jq -r '.totals | "\(.tokens) \(.cost) \(.cache_hit_pct) \(.sessions)"')
