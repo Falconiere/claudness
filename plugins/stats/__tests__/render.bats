@@ -57,6 +57,21 @@ rnd() { echo "$AGG" | stats_render; }
   echo "$output" | grep -q "n/a under --model filter"
 }
 
+@test "cost renders with a dot under a comma-decimal locale" {
+  # Find an installed comma-decimal locale; skip on minimal images that lack one.
+  local loc="" c
+  for c in de_DE.UTF-8 fr_FR.UTF-8 nl_NL.UTF-8 pt_BR.UTF-8 es_ES.UTF-8; do
+    locale -a 2>/dev/null | grep -qiF "$c" || continue
+    # Probe with an INTEGER (parses in any locale); a comma in the output marks a
+    # comma-decimal locale. (A dot-input probe would itself error under one.)
+    [ "$(LC_ALL=$c printf '%.1f' 1 2>/dev/null)" = "1,0" ] && { loc="$c"; break; }
+  done
+  [ -n "$loc" ] || skip "no comma-decimal locale installed"
+  export LC_ALL="$loc"; run rnd; unset LC_ALL
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '\$4\.20'      # dot + correct value, not $4,00 or a printf error
+}
+
 @test "empty usage degrades to a friendly notice" {
   AGG="$(echo '[]' | stats_aggregate)"
   run rnd

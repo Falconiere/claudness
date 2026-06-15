@@ -20,7 +20,10 @@ stats_usage_rollup() {
   local lib; lib="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   # shellcheck source=/dev/null
   source "$lib/pricing.sh"
-  cat -- "$@" 2>/dev/null | jq -Rs "$(stats_pricing_jq)"'
+  # Append a newline after each file so the last line of one transcript never
+  # fuses with the first line of the next (a missing trailing newline would
+  # otherwise make both lines unparseable). Empty lines are dropped by fromjson?.
+  { for _f in "$@"; do cat -- "$_f" 2>/dev/null; printf '\n'; done; } | jq -Rs "$(stats_pricing_jq)"'
     def bucket(ts): (ts | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | strflocaltime("%Y-%m-%d"));
     def sums:
       { tokens:      (map(.tokens)      | add // 0),
