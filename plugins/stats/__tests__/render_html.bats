@@ -39,20 +39,20 @@ html() { echo "$AGG" | stats_render_html; }
 
 @test "leaves no unsubstituted placeholder" {
   html
-  ! grep -qF "{{" "$REPORT"
+  run grep -qF "{{" "$REPORT"; [ "$status" -ne 0 ]
 }
 
 @test "HTML-escapes special characters in names" {
   html
   grep -qF "a &amp; b &lt;x&gt;" "$REPORT"
-  ! grep -qF "<x>" "$REPORT"
+  run grep -qF "<x>" "$REPORT"; [ "$status" -ne 0 ]
 }
 
 @test "entities survive substitution with patsub_replacement off (bash <5.2)" {
   shopt -u patsub_replacement 2>/dev/null || true   # simulate bash 5.0/5.1/3.2
   html
   grep -qF "a &amp; b &lt;x&gt;" "$REPORT"
-  ! grep -qF '\&amp;' "$REPORT"   # not corrupted to a literal backslash-entity
+  run grep -qF '\&amp;' "$REPORT"; [ "$status" -ne 0 ]   # not corrupted to literal backslash-entity
 }
 
 @test "draws CSS bar fills and an inline SVG sparkline" {
