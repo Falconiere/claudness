@@ -1,0 +1,60 @@
+{
+  "mechanism": "retrieval",
+  "tier": "deterministic",
+  "method": "tool-bytes",
+  "tokenizer": {
+    "mode": "heuristic",
+    "source": "bytes-div-4"
+  },
+  "provenance": {
+    "model": null,
+    "date": "2026-06-15",
+    "commit": "9abb85e2f3851b3265504f09f445c9ce8b4c5f33",
+    "n_runs": 1,
+    "pricing_id": "2026-06"
+  },
+  "baseline": {
+    "label": "full-read",
+    "tokens": {
+      "input": 5590,
+      "output": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "total": 5590
+    },
+    "cost": null
+  },
+  "treatment": {
+    "label": "ast-grep",
+    "tokens": {
+      "input": 1546,
+      "output": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "total": 1546
+    },
+    "cost": null
+  },
+  "delta": {
+    "tokens_pct": 72,
+    "cost_pct": null,
+    "abs_tokens": 4044,
+    "mean": null,
+    "stddev": null
+  },
+  "cases": [
+    {
+      "id": "toolu-export-fn",
+      "baseline_tokens": 2795,
+      "treatment_tokens": 1456,
+      "saved": 47
+    },
+    {
+      "id": "toolu-const-arrow",
+      "baseline_tokens": 2795,
+      "treatment_tokens": 90,
+      "saved": 96
+    }
+  ],
+  "notes": ""
+}

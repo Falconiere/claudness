@@ -1,0 +1,3 @@
+# id	target	pattern	lang
+target	sample.ts	export function targetSymbol($$$): $$$ { $$$ }	ts
+missing	does-not-exist.ts	export function $N($$$) { $$$ }	ts
