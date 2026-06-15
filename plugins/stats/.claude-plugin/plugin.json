@@ -1,0 +1,13 @@
+{
+  "name": "stats",
+  "version": "0.1.0",
+  "description": "On-demand /stats report of measured Claude Code token/cost/cache usage and toolu activity, read straight from the session transcripts. Standalone, no dependencies.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": ["claude-code", "stats", "tokens", "cost", "usage"]
+}
