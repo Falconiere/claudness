@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-634%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](#testing)
 [![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%2B%20pi-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 

@@ -114,6 +114,16 @@ elif [[ "$prompt_lower" =~ ${WB}(review|audit)${WE} ]]; then
   intent="Review: forbidden syntax, quality gates, test coverage."
 fi
 
+# 2b. Orchestration nudge — independent of the single intent hint above (a task
+# can be both a "fix" AND broad). Fires on breadth / multi-step signals so big
+# work gets decomposed and delegated to subagents instead of run inline,
+# bloating main context. WB/WE-wrapped like the other hints to avoid substring
+# false positives. Deliberately tight: strong breadth verbs + scope words only.
+orchestrate=""
+if [[ "$prompt_lower" =~ ${WB}(refactor|migrate|rewrite|redesign|overhaul|audit|across|throughout|codebase-wide|end-to-end)${WE} ]]; then
+  orchestrate="Broad/multi-step task — delegate exploration, searches & reviews and parallelize independent work via subagents; return conclusions, not bytes, to keep main context lean. See the orchestrator skill."
+fi
+
 # 3. Per-project context hook — opt-in. Project may emit any string.
 project_ctx=""
 if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/.claude/context.sh" ]; then
@@ -125,6 +135,7 @@ fi
 parts=()
 [[ -n "$recall" ]] && parts+=("$recall")
 [[ -n "$intent" ]] && parts+=("$intent")
+[[ -n "$orchestrate" ]] && parts+=("$orchestrate")
 [[ -n "$project_ctx" ]] && parts+=("$project_ctx")
 [[ -n "$quality_gate_hint" ]] && parts+=("$quality_gate_hint")
 

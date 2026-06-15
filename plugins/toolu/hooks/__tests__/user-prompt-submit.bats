@@ -176,3 +176,38 @@ write_failing_gate() {
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -qE 'Branch: .*(clean|uncommitted)'
 }
+
+@test "user-prompt-submit: orchestration nudge fires on a broad/multi-step prompt" {
+  payload=$(build_input "refactor the auth module across the codebase")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'orchestrator skill'
+}
+
+@test "user-prompt-submit: orchestration nudge is independent of the intent hint" {
+  # "fix" -> intent hint; "across" -> orchestration nudge. Both must appear.
+  payload=$(build_input "fix the login bug across all services")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  echo "$ctx" | grep -q 'Fix in code'
+  echo "$ctx" | grep -q 'orchestrator skill'
+}
+
+@test "user-prompt-submit: no orchestration nudge for a narrow single-file prompt" {
+  payload=$(build_input "add a button to the settings page")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'orchestrator skill'
+}
+
+@test "user-prompt-submit: 'auditor' does NOT trigger the orchestration nudge" {
+  # Word-boundary regression: 'audit' must not match inside 'auditor'.
+  payload=$(build_input "add an auditor name field to the form")
+  run bash "$HOOK" <<<"$payload"
+  [ "$status" -eq 0 ]
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // ""')
+  ! echo "$ctx" | grep -q 'orchestrator skill'
+}
