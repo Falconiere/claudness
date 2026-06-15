@@ -18,8 +18,10 @@ STATS_SCHEMA_VERSION=1
 stats_projects_root() { printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"; }
 stats_cache_dir()     { printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/stats/sessions"; }
 
-# Portable mtime (epoch seconds): macOS stat, then GNU stat, then 0.
-stats_mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
+# Portable mtime (epoch seconds). GNU stat FIRST: on Linux `stat -f` means
+# filesystem-status and succeeds with non-numeric output, so the BSD form must be
+# the fallback (macOS stat rejects -c and falls through to -f). Then 0.
+stats_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
 
 # cwd → Claude Code project-dir slug (every non-alphanumeric char becomes '-').
 stats_cwd_to_slug() { printf '%s' "$1" | sed 's/[^A-Za-z0-9]/-/g'; }
