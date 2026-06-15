@@ -48,6 +48,14 @@ j() { echo "$output" | jq -r "$1"; }
   [ "$(j '.windows.all.tokens')" = "270" ]      # +50
 }
 
+@test "daily: 14-day series, oldest-first, today last with summed tokens" {
+  run agg
+  [ "$(j '.daily|length')" = "14" ]
+  [ "$(j '.daily[-1].date')" = "$TODAY" ]
+  [ "$(j '.daily[-1].tokens')" = "220" ]          # 100+80+40 today
+  [ "$(j '[.daily[].tokens]|add')" = "220" ]       # 2020 day falls outside the 14-day window
+}
+
 @test "by_project groups on project_path, not basename (alpha stays split)" {
   run agg
   [ "$(j '.by_project|length')" = "3" ]
@@ -80,6 +88,7 @@ j() { echo "$output" | jq -r "$1"; }
   [ "$status" -eq 0 ]
   [ "$(j '.totals.tokens')" = "190" ]           # opus only: 150 + 40
   [ "$(j '.windows')" = "null" ]
+  [ "$(j '.daily')" = "null" ]
   [ "$(j '.by_model|length')" = "1" ]
 }
 

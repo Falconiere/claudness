@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# render.sh — humanizers, text digest, --json. Aggregate is produced from
-# crafted rollups (reusing aggregate.sh) so the digest reflects real shapes.
+# render.sh — humanizers, the glyph dashboard, --json. The aggregate is produced
+# from crafted rollups (reusing aggregate.sh) so the digest reflects real shapes.
 
 setup() {
   source "${BATS_TEST_DIRNAME}/../scripts/lib/aggregate.sh"
@@ -34,23 +34,36 @@ rnd() { echo "$AGG" | stats_render; }
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.totals.tokens == 1500000' >/dev/null
   echo "$output" | jq -e '.by_project[0].project_path == "/Volumes/Projects/toolu.sh"' >/dev/null
+  echo "$output" | jq -e '.daily | length == 14' >/dev/null
 }
 
-@test "text digest shows headline, windows, tables, activity" {
+@test "dashboard shows boxed header, gauge, trend, sections, activity" {
   run rnd
   [ "$status" -eq 0 ]
-  echo "$output" | grep -q "Usage — 1.5M tokens"
-  echo "$output" | grep -q "today"
-  echo "$output" | grep -q "all-time"
+  echo "$output" | grep -q "Claude Code Usage"
+  echo "$output" | grep -q "1.5M tokens"
+  echo "$output" | grep -q "cache hit 0%"
+  echo "$output" | grep -q "Trend 14d"
+  echo "$output" | grep -q "today 1.5M"
+  echo "$output" | grep -q "Projects"
   echo "$output" | grep -q "toolu.sh"
+  echo "$output" | grep -q "Models"
   echo "$output" | grep -q "claude-opus-4-8"
+  echo "$output" | grep -q "Top sessions"
   echo "$output" | grep -q "Read:5"
   echo "$output" | grep -q "Bash:2"
   echo "$output" | grep -q "phases: execution:3"
   echo "$output" | grep -q "gate:"
 }
 
-@test "model-filtered aggregate renders windows as n/a" {
+@test "dashboard draws bar glyphs and a box rule" {
+  run rnd
+  echo "$output" | grep -q "█"
+  echo "$output" | grep -q "┌"
+  echo "$output" | grep -q "└"
+}
+
+@test "model-filtered aggregate renders trend/windows as n/a" {
   export STATS_MODEL=opus; AGG="$(echo "$ROLLUPS" | stats_aggregate)"; unset STATS_MODEL
   run rnd
   [ "$status" -eq 0 ]
