@@ -10,6 +10,7 @@
 Orchestrate from main; work in subagents; keep context minimal.
 - Delegate exploration, searches, builds, reviews; edit in main only for trivial single-file work.
 - Return conclusions, not bytes; parallelize independent tasks.
+- Broad/multi-step task? Use the `orchestrator` skill (agent selection, model tiers, fan-out budget).
 
 ## Mandatory
 - Quality gate: never advance while any error/warning/test failure stands, even unrelated.
